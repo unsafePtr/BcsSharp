@@ -1,0 +1,179 @@
+use anyhow::Result;
+use serde::Serialize;
+use std::fs;
+
+mod types;
+use types::*;
+
+fn main() -> Result<()> {
+    println!("🚀 Sui BCS Serialization Demo");
+    println!("{}", "=".repeat(40));
+
+    // Create sample data structures
+    let user = User {
+        id: 12345,
+        name: "Alice".to_string(),
+        email: "alice@example.com".to_string(),
+        balance: 1000,
+        is_verified: true,
+    };
+
+    let asset = GameAsset {
+        asset_id: "sword_001".to_string(),
+        asset_type: AssetType::Weapon,
+        rarity: Rarity::Epic,
+        level: 15,
+        attributes: vec![
+            Attribute {
+                name: "damage".to_string(),
+                value: 85,
+            },
+            Attribute {
+                name: "speed".to_string(),
+                value: 12,
+            },
+        ],
+    };
+
+    let transaction = Transaction {
+        tx_id: "0x1234567890abcdef".to_string(),
+        from_user: user.id,
+        to_user: 67890,
+        amount: 250,
+        timestamp: 1640995200, // 2022-01-01 00:00:00 UTC
+        tx_type: TransactionType::Transfer,
+    };
+
+    let marketplace_item = MarketplaceItem {
+        item_id: "market_001".to_string(),
+        seller: user.id,
+        asset: asset.clone(),
+        price: 500,
+        listed_at: 1640995200,
+        is_active: true,
+    };
+
+    // Create tuple examples
+    let tuple_examples = TupleExamples {
+        simple_pair: ("hello".to_string(), 42),
+        triple: (123u64, true, "world".to_string()),
+        nested_tuple: ("asset_ref".to_string(), asset.clone()),
+        tuple_with_array: ("numbers".to_string(), vec![1, 2, 3, 4, 5]),
+        complex_tuple: (user.clone(), transaction.clone(), false),
+    };
+
+    // Demonstrate BCS serialization
+    println!("\n📦 Serializing structs to BCS format...\n");
+
+    serialize_and_display("User", &user)?;
+    serialize_and_display("GameAsset", &asset)?;
+    serialize_and_display("Transaction", &transaction)?;
+    serialize_and_display("MarketplaceItem", &marketplace_item)?;
+    serialize_and_display("TupleExamples", &tuple_examples)?;
+
+    // Demonstrate deserialization
+    println!("\n🔄 Testing serialization round-trip...\n");
+    
+    let user_bytes = bcs::to_bytes(&user)?;
+    let deserialized_user: User = bcs::from_bytes(&user_bytes)?;
+    println!("✅ User serialization round-trip successful");
+    println!("   Original: {} ({})", user.name, user.email);
+    println!("   Restored: {} ({})", deserialized_user.name, deserialized_user.email);
+
+    // Show BCS format compliance
+    println!("\n🔗 BCS format compliance test...");
+    test_bcs_compliance()?;
+
+    // Export serialized bytes to files for C# comparison
+    println!("\n💾 Exporting serialized bytes to files for C# comparison...");
+    export_serialized_bytes(&user, &asset, &transaction, &marketplace_item, &tuple_examples)?;
+
+    Ok(())
+}
+
+fn serialize_and_display<T: Serialize>(name: &str, data: &T) -> Result<()> {
+    let bytes = bcs::to_bytes(data)?;
+    println!("📋 {} serialized:", name);
+    println!("   Size: {} bytes", bytes.len());
+    println!("   Hex:  {}", hex::encode(&bytes[..std::cmp::min(32, bytes.len())]));
+    if bytes.len() > 32 {
+        println!("   ... (truncated)");
+    }
+    println!();
+    Ok(())
+}
+
+fn test_bcs_compliance() -> Result<()> {
+    // Create a simple structure that demonstrates BCS encoding
+    let bcs_data = SuiCompatibleData {
+        owner: "0x123456789abcdef123456789abcdef123456789abcdef123456789abcdef12".to_string(),
+        balance: 1000u64,
+        metadata: vec![0x01, 0x02, 0x03, 0x04],
+    };
+
+    let serialized = bcs::to_bytes(&bcs_data)?;
+    let deserialized: SuiCompatibleData = bcs::from_bytes(&serialized)?;
+    
+    println!("   ✅ BCS-compatible data structure serialized successfully");
+    println!("   Size: {} bytes", serialized.len());
+    println!("   Owner: {}", &deserialized.owner[..10]);
+    
+    // Test deterministic property of BCS
+    let serialized2 = bcs::to_bytes(&bcs_data)?;
+    if serialized == serialized2 {
+        println!("   ✅ BCS deterministic property verified");
+    }
+    
+    Ok(())
+}
+
+fn export_serialized_bytes(
+    user: &User,
+    asset: &GameAsset,
+    transaction: &Transaction,
+    marketplace_item: &MarketplaceItem,
+    tuple_examples: &TupleExamples
+) -> Result<()> {
+    // Serialize each struct to bytes
+    let user_bytes = bcs::to_bytes(user)?;
+    let asset_bytes = bcs::to_bytes(asset)?;
+    let transaction_bytes = bcs::to_bytes(transaction)?;
+    let marketplace_bytes = bcs::to_bytes(marketplace_item)?;
+    let tuple_bytes = bcs::to_bytes(tuple_examples)?;
+
+    // Write bytes to files
+    fs::write("user.bcs", &user_bytes)?;
+    fs::write("asset.bcs", &asset_bytes)?;
+    fs::write("transaction.bcs", &transaction_bytes)?;
+    fs::write("marketplace.bcs", &marketplace_bytes)?;
+    fs::write("tuples.bcs", &tuple_bytes)?;
+
+    // Also create a summary file with hex dumps for easier debugging
+    let summary = format!(
+        "Rust BCS Serialization Results\n\
+         ===============================\n\n\
+         User: {} bytes\n\
+         Hex: {}\n\n\
+         GameAsset: {} bytes\n\
+         Hex: {}\n\n\
+         Transaction: {} bytes\n\
+         Hex: {}\n\n\
+         MarketplaceItem: {} bytes\n\
+         Hex: {}\n\n\
+         TupleExamples: {} bytes\n\
+         Hex: {}\n",
+        user_bytes.len(), hex::encode(&user_bytes),
+        asset_bytes.len(), hex::encode(&asset_bytes),
+        transaction_bytes.len(), hex::encode(&transaction_bytes),
+        marketplace_bytes.len(), hex::encode(&marketplace_bytes),
+        tuple_bytes.len(), hex::encode(&tuple_bytes)
+    );
+    
+    fs::write("rust_results.txt", summary)?;
+
+    println!("   ✅ Exported binary files: user.bcs, asset.bcs, transaction.bcs, marketplace.bcs, tuples.bcs");
+    println!("   ✅ Created summary file: rust_results.txt");
+    println!("   📁 Files saved in current directory for C# comparison");
+
+    Ok(())
+}

@@ -1,0 +1,14 @@
+[package]
+name = "sui-bcs-serialization"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Standard BCS serialization - latest 0.1.x
+bcs = "0.1.6"
+# Serde for derive macros - latest 1.0.x
+serde = { version = "1.0.219", features = ["derive"] }
+# Error handling - latest 1.0.x
+anyhow = "1.0.98"
+# Hex encoding for display - latest 0.4.x
+hex = "0.4.3"
