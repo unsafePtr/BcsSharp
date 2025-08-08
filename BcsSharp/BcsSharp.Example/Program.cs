@@ -42,7 +42,7 @@ namespace BcsSharp.Example
         static void BasicTypesExample()
         {
             Console.WriteLine("1. Basic Types Example:");
-            
+
             // Serialize basic types
             var u32Value = 123456u;
             var stringValue = "Hello, BCS!";
@@ -68,7 +68,7 @@ namespace BcsSharp.Example
         static void VectorExample()
         {
             Console.WriteLine("2. Vector Example:");
-            
+
             var vectorType = Bcs.Vector(Bcs.U32);
             var numbers = new uint[] { 1, 2, 3, 4, 5 };
 
@@ -83,15 +83,15 @@ namespace BcsSharp.Example
         static void OptionExample()
         {
             Console.WriteLine("3. Option Example:");
-            
+
             // Manual Option demonstration since OptionType needs refinement
             var writer = new BcsWriter();
-            
+
             // Some value (true + value)
             writer.Reset();
             writer.WriteBool(true).Write32(42u);
             var someSerialized = writer.ToBytes();
-            
+
             var reader = new BcsReader(someSerialized);
             var hasValue = reader.ReadBool();
             var someDeserialized = hasValue ? reader.Read32() : (uint?)null;
@@ -103,7 +103,7 @@ namespace BcsSharp.Example
             writer.Reset();
             writer.WriteBool(false);
             var noneSerialized = writer.ToBytes();
-            
+
             reader = new BcsReader(noneSerialized);
             hasValue = reader.ReadBool();
             var noneDeserialized = hasValue ? reader.Read32() : (uint?)null;
@@ -116,10 +116,10 @@ namespace BcsSharp.Example
         static void EnumExample()
         {
             Console.WriteLine("4. Enum Example:");
-            
+
             var colorEnum = BcsEnum.Create("Color")
                 .AddVariant("Red")
-                .AddVariant("Green") 
+                .AddVariant("Green")
                 .AddVariant("Blue")
                 .Build();
 
@@ -144,13 +144,12 @@ namespace BcsSharp.Example
 
             Console.WriteLine($"   Shape::Circle(10) -> {Convert.ToHexString(circleSerialized).ToLower()}");
             Console.WriteLine($"   Deserialized: {circleDeserialized}");
-            Console.WriteLine();
         }
 
         static void LargeIntegerExample()
         {
             Console.WriteLine("5. Large Integer Example (u128, u256):");
-            
+
             // u128 example
             var u128Value = new UInt128(0x123456789ABCDEF0, 0x0FEDCBA987654321);
             var u128Serialized = Bcs.U128.Serialize(u128Value);
@@ -181,13 +180,13 @@ namespace BcsSharp.Example
         static void StructExample()
         {
             Console.WriteLine("6. Struct Example (Manual):");
-            
+
             // For this example, we'll manually serialize a Person struct
-            var person = new Person 
-            { 
-                Name = "Alice", 
-                Age = 30, 
-                IsActive = true 
+            var person = new Person
+            {
+                Name = "Alice",
+                Age = 30,
+                IsActive = true
             };
 
             // Manual serialization (in a real implementation, you'd use a StructType)

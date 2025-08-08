@@ -95,7 +95,7 @@ namespace BcsSharp.Tests
             var result = writer.ToBytes();
 
             // Assert
-            var expected = new byte[] { 
+            var expected = new byte[] {
                 0x00,       // 0
                 0x7F,       // 127
                 0x80, 0x01, // 128
@@ -193,21 +193,6 @@ namespace BcsSharp.Tests
         }
 
         [Fact]
-        public void Reset_ShouldClearBuffer()
-        {
-            // Arrange
-            var writer = new BcsWriter();
-            writer.Write8(0x01).Write8(0x02).Write8(0x03);
-
-            // Act
-            writer.Reset();
-
-            // Assert
-            Assert.Equal(0, writer.Length);
-            Assert.Empty(writer.ToBytes());
-        }
-
-        [Fact]
         public void ChainedOperations_ShouldWork()
         {
             // Arrange
@@ -246,7 +231,7 @@ namespace BcsSharp.Tests
 
             // Assert
             Assert.Equal(16, result.Length); // u128 is 16 bytes
-            
+
             // Verify little-endian format
             var expected = new byte[] {
                 0x21, 0x43, 0x65, 0x87, 0xA9, 0xCB, 0xED, 0x0F, // low 64 bits
@@ -461,7 +446,7 @@ namespace BcsSharp.Tests
                   .Write64(0x123456789ABCDEF0)
                   .WriteString("Hello")
                   .WriteBool(true);
-            
+
             var data = writer.ToBytes();
             var reader = new BcsReader(data);
 

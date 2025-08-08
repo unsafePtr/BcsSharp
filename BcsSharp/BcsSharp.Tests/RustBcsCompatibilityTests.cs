@@ -121,8 +121,6 @@ namespace BcsSharp.Tests
             Assert.Equal(user.Email, deserialized.Email);
             Assert.Equal(user.Balance, deserialized.Balance);
             Assert.Equal(user.IsVerified, deserialized.IsVerified);
-
-            // Validate serialization worked
         }
 
         [Fact]
@@ -157,10 +155,6 @@ namespace BcsSharp.Tests
             Assert.Equal(85u, deserialized.Attributes[0].Value);
             Assert.Equal("speed", deserialized.Attributes[1].Name);
             Assert.Equal(12u, deserialized.Attributes[1].Value);
-
-            Console.WriteLine($"📋 GameAsset serialized:");
-            Console.WriteLine($"   Size: {serialized.Length} bytes");
-            Console.WriteLine($"   Hex:  {Convert.ToHexString(serialized[..Math.Min(32, serialized.Length)])}");
         }
 
         [Fact]
@@ -189,10 +183,6 @@ namespace BcsSharp.Tests
             Assert.Equal(transaction.Amount, deserialized.Amount);
             Assert.Equal(transaction.Timestamp, deserialized.Timestamp);
             Assert.Equal(transaction.TxType, deserialized.TxType);
-
-            Console.WriteLine($"📋 Transaction serialized:");
-            Console.WriteLine($"   Size: {serialized.Length} bytes");
-            Console.WriteLine($"   Hex:  {Convert.ToHexString(serialized[..Math.Min(32, serialized.Length)])}");
         }
 
         [Fact]
@@ -240,10 +230,6 @@ namespace BcsSharp.Tests
             Assert.Equal(asset.Rarity, deserialized.Asset.Rarity);
             Assert.Equal(asset.Level, deserialized.Asset.Level);
             Assert.Equal(2, deserialized.Asset.Attributes.Length);
-
-            Console.WriteLine($"📋 MarketplaceItem serialized:");
-            Console.WriteLine($"   Size: {serialized.Length} bytes");
-            Console.WriteLine($"   Hex:  {Convert.ToHexString(serialized[..Math.Min(32, serialized.Length)])}");
         }
 
         [Fact]
@@ -285,7 +271,7 @@ namespace BcsSharp.Tests
             {
                 Id = 12345,
                 Name = "Alice",
-                Email = "alice@example.com", 
+                Email = "alice@example.com",
                 Balance = 1000,
                 IsVerified = true
             };
@@ -315,7 +301,7 @@ namespace BcsSharp.Tests
 
             var marketplaceItem = new MarketplaceItem
             {
-                ItemId = "market_001", 
+                ItemId = "market_001",
                 Seller = user.Id,
                 Asset = asset,
                 Price = 500,
@@ -344,21 +330,6 @@ namespace BcsSharp.Tests
             Assert.Equal(asset.AssetId, deserializedAsset.AssetId);
             Assert.Equal(transaction.TxId, deserializedTransaction.TxId);
             Assert.Equal(marketplaceItem.ItemId, deserializedMarketplace.ItemId);
-
-            // Print results like Rust demo
-            Console.WriteLine("🚀 C# BCS Serialization Demo");
-            Console.WriteLine($"{"=".PadRight(40, '=')}");
-            Console.WriteLine();
-            Console.WriteLine("📦 All structs serialized successfully:");
-            Console.WriteLine($"   User: {userBytes.Length} bytes");
-            Console.WriteLine($"   GameAsset: {assetBytes.Length} bytes");
-            Console.WriteLine($"   Transaction: {transactionBytes.Length} bytes");
-            Console.WriteLine($"   MarketplaceItem: {marketplaceBytes.Length} bytes");
-            Console.WriteLine();
-            Console.WriteLine("🔄 Testing serialization round-trip...");
-            Console.WriteLine($"   ✅ User serialization round-trip successful");
-            Console.WriteLine($"   Original: {user.Name} ({user.Email})");
-            Console.WriteLine($"   Restored: {deserializedUser.Name} ({deserializedUser.Email})");
         }
     }
 }

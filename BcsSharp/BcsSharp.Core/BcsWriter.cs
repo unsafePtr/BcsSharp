@@ -180,18 +180,6 @@ namespace BcsSharp.Core
         }
 
         /// <summary>
-        /// Write raw bytes
-        /// </summary>
-        public BcsWriter WriteBytes(byte[] bytes)
-        {
-            if (bytes == null)
-                throw new ArgumentNullException(nameof(bytes));
-
-            WriteToBuffer(bytes);
-            return this;
-        }
-
-        /// <summary>
         /// Write raw bytes from span
         /// </summary>
         public BcsWriter WriteBytes(ReadOnlySpan<byte> bytes)

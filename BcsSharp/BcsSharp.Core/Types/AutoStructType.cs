@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Reflection;
 using Nethermind.Int256;
 
@@ -188,7 +185,7 @@ namespace BcsSharp.Core.Types
             if (propertyType.IsArray)
             {
                 var elementType = propertyType.GetElementType()!;
-                
+
                 // Only handle arrays of custom classes - basic arrays are in the main cache
                 if (elementType.IsClass && elementType != typeof(string))
                 {

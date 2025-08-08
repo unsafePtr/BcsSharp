@@ -3,25 +3,6 @@ using System;
 namespace BcsSharp.Core
 {
     /// <summary>
-    /// Supported encodings for string conversion
-    /// </summary>
-    public enum Encoding
-    {
-        Base58,
-        Base64,
-        Hex
-    }
-
-    /// <summary>
-    /// Options for BcsType validation and configuration
-    /// </summary>
-    public class BcsTypeOptions<T>
-    {
-        public string? Name { get; set; }
-        public Action<T>? Validate { get; set; }
-    }
-
-    /// <summary>
     /// Abstract base class for all BCS types
     /// </summary>
     public abstract class BcsType<T>
