@@ -141,7 +141,7 @@ public class SuiSignatureTests
         
         // Assert
         Assert.Equal(97, suiBytes.Length); // 64 (signature) + 32 (pubkey) + 1 (scheme)
-        Assert.Equal((byte)SuiSignatureScheme.Ed25519, suiBytes[^1]); // Last byte is scheme flag
+        Assert.Equal((byte)SuiSignatureScheme.Ed25519, suiBytes[0]); // Last byte is scheme flag
     }
 
     [Fact]

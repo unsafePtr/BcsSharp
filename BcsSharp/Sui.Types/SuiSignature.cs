@@ -45,7 +45,7 @@ public readonly struct SuiSignature : IEquatable<SuiSignature>
 
         SignatureBytes = new byte[64];
         signatureBytes.CopyTo(SignatureBytes, 0);
-        
+
         PublicKeyBytes = publicKey.Export(KeyBlobFormat.RawPublicKey);
         Scheme = SuiSignatureScheme.Ed25519;
         NSecPublicKey = publicKey;
@@ -63,39 +63,39 @@ public readonly struct SuiSignature : IEquatable<SuiSignature>
         // Validate public key length for the scheme
         var compressedLength = scheme.GetCompressedPublicKeyLength();
         var uncompressedLength = scheme.GetUncompressedPublicKeyLength();
-        
+
         if (publicKeyBytes.Length != compressedLength && publicKeyBytes.Length != uncompressedLength)
             throw new ArgumentException($"{scheme} public key must be {compressedLength} (compressed) or {uncompressedLength} (uncompressed) bytes, got {publicKeyBytes.Length}", nameof(publicKeyBytes));
 
         SignatureBytes = new byte[signatureBytes.Length];
         signatureBytes.CopyTo(SignatureBytes, 0);
-        
+
         PublicKeyBytes = new byte[publicKeyBytes.Length];
         publicKeyBytes.CopyTo(PublicKeyBytes, 0);
-        
+
         Scheme = scheme;
-        
+
         // Create NSec PublicKey only for Ed25519
-        NSecPublicKey = scheme == SuiSignatureScheme.Ed25519 
+        NSecPublicKey = scheme == SuiSignatureScheme.Ed25519
             ? PublicKey.Import(SignatureAlgorithm.Ed25519, publicKeyBytes, KeyBlobFormat.RawPublicKey)
             : null;
     }
 
     /// <summary>
     /// Parse a signature from Sui's serialized format:
-    /// [signature_bytes(64) || public_key_bytes(varies) || scheme_flag(1)]
+    /// [scheme_flag(1) || signature_bytes(64) || public_key_bytes(varies)]
     /// </summary>
     public static SuiSignature FromSuiBytes(byte[] suiSignatureBytes)
     {
         if (suiSignatureBytes.Length < 66) // Minimum: 64 (sig) + 1 (flag) + 1 (min key)
             throw new ArgumentException($"Sui signature too short: {suiSignatureBytes.Length} bytes", nameof(suiSignatureBytes));
 
-        var schemeFlag = suiSignatureBytes[^1]; // Last byte is scheme flag
+        var schemeFlag = suiSignatureBytes[0]; // First byte is scheme flag
         var scheme = SuiSignatureSchemeExtensions.FromFlag(schemeFlag);
-        
-        var signatureBytes = suiSignatureBytes[..64]; // First 64 bytes are signature
-        var publicKeyBytes = suiSignatureBytes[64..^1]; // Middle bytes are public key
-        
+
+        var signatureBytes = suiSignatureBytes.AsSpan(1, 64).ToArray();
+        var publicKeyBytes = suiSignatureBytes.AsSpan(65).ToArray();
+
         return new SuiSignature(signatureBytes, publicKeyBytes, scheme);
     }
 
@@ -120,16 +120,16 @@ public readonly struct SuiSignature : IEquatable<SuiSignature>
 
     /// <summary>
     /// Serialize to Sui's signature format:
-    /// [signature_bytes(64) || public_key_bytes(varies) || scheme_flag(1)]
+    /// [scheme_flag(1) || signature_bytes(64) || public_key_bytes(varies)]
     /// </summary>
     public byte[] ToSuiBytes()
     {
         var result = new byte[64 + PublicKeyBytes.Length + 1];
-        
-        SignatureBytes.CopyTo(result, 0);
-        PublicKeyBytes.CopyTo(result, 64);
-        result[^1] = (byte)Scheme;
-        
+
+        result[0] = (byte)Scheme;
+        SignatureBytes.CopyTo(result.AsSpan(1, 64));
+        PublicKeyBytes.CopyTo(result.AsSpan(65, PublicKeyBytes.Length));
+
         return result;
     }
 
@@ -151,10 +151,10 @@ public readonly struct SuiSignature : IEquatable<SuiSignature>
     {
         if (Scheme != SuiSignatureScheme.Ed25519)
             throw new NotSupportedException($"Address derivation for {Scheme} not yet implemented. Only Ed25519 is currently supported.");
-        
+
         if (NSecPublicKey == null)
             throw new InvalidOperationException("NSec PublicKey is null for Ed25519 signature");
-        
+
         return SuiAddress.FromPublicKey(NSecPublicKey);
     }
 
@@ -166,10 +166,10 @@ public readonly struct SuiSignature : IEquatable<SuiSignature>
     {
         if (Scheme != SuiSignatureScheme.Ed25519)
             throw new NotSupportedException($"Signature verification for {Scheme} not yet implemented. Only Ed25519 is currently supported.");
-        
+
         if (NSecPublicKey == null)
             throw new InvalidOperationException("NSec PublicKey is null for Ed25519 signature");
-        
+
         var algorithm = SignatureAlgorithm.Ed25519;
         return algorithm.Verify(NSecPublicKey, data, SignatureBytes);
     }
@@ -190,12 +190,12 @@ public readonly struct SuiSignature : IEquatable<SuiSignature>
     {
         // Intent: [scope, version, app_id]
         var intent = new byte[] { (byte)scope, 0, 0 }; // version=0, app_id=0 for Sui
-        
+
         // Intent message: intent || data
         var intentMessage = new byte[intent.Length + data.Length];
         intent.CopyTo(intentMessage, 0);
         data.CopyTo(intentMessage, intent.Length);
-        
+
         return intentMessage;
     }
 

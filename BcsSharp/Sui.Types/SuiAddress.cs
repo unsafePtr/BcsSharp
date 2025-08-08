@@ -184,7 +184,7 @@ public readonly struct SuiAddress : IEquatable<SuiAddress>, IComparable<SuiAddre
 
     /// <summary>
     /// Convert to scheme-aware hex string including the signature scheme used to derive this address
-    /// Format: 0x[scheme_flag(1), address_bytes(32)]
+    /// Format: 0x[scheme_flag(1) || address_bytes(32)]
     /// </summary>
     /// <param name="scheme">The signature scheme used to derive this address</param>
     /// <returns>Hex string with embedded scheme information (66 hex chars)</returns>
