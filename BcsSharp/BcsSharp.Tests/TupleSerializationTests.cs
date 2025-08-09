@@ -1,18 +1,130 @@
-//using System;
-//using System.IO;
-//using BcsSharp.Core;
+using System;
+using System.IO;
+using BcsSharp.Core;
+using Xunit;
 
-//using Xunit;
+namespace BcsSharp.Tests
+{
+    /// <summary>
+    /// Tuple serialization tests adapted to work with BcsSerializer
+    /// Tests C# ValueTuples which have built-in BCS serialization support
+    /// </summary>
+    public class TupleSerializationTests
+    {
+        [Fact]
+        public void TupleSerialization_SimplePair_ShouldWork()
+        {
+            // Arrange - Simple tuple (string, uint)
+            var simplePair = ("hello", 42u);
 
-//namespace BcsSharp.Tests
-//{
-//    /// <summary>
-//    /// Tuple serialization tests to match Rust tuple examples
-//    /// In C#, we represent tuples as structs with indexed fields to match BCS serialization order
-//    /// </summary>
-//    public class TupleSerializationTests
-//    {
-//        #region C# Enums (same as before)
+            // Act
+            var serialized = BcsSerializer.Serialize(simplePair);
+            var deserialized = BcsSerializer.Deserialize<(string, uint)>(serialized);
+
+            // Assert
+            Assert.Equal(simplePair.Item1, deserialized.Item1);
+            Assert.Equal(simplePair.Item2, deserialized.Item2);
+        }
+
+        [Fact]
+        public void TupleSerialization_Triple_ShouldWork()
+        {
+            // Arrange - Triple (ulong, bool, string)
+            var triple = (123ul, true, "world");
+
+            // Act
+            var serialized = BcsSerializer.Serialize(triple);
+            var deserialized = BcsSerializer.Deserialize<(ulong, bool, string)>(serialized);
+
+            // Assert
+            Assert.Equal(triple.Item1, deserialized.Item1);
+            Assert.Equal(triple.Item2, deserialized.Item2);
+            Assert.Equal(triple.Item3, deserialized.Item3);
+        }
+
+        [Fact]
+        public void TupleSerialization_WithArrays_ShouldWork()
+        {
+            // Arrange - Tuple with array (string, uint[])
+            var tupleWithArray = ("numbers", new uint[] { 1, 2, 3, 4, 5 });
+
+            // Act
+            var serialized = BcsSerializer.Serialize(tupleWithArray);
+            var deserialized = BcsSerializer.Deserialize<(string, uint[])>(serialized);
+
+            // Assert
+            Assert.Equal(tupleWithArray.Item1, deserialized.Item1);
+            Assert.Equal(tupleWithArray.Item2, deserialized.Item2);
+        }
+
+        [Fact]
+        public void TupleSerialization_Nested_ShouldWork()
+        {
+            // Arrange - Nested tuples
+            var nestedTuple = ("outer", (42, true));
+
+            // Act
+            var serialized = BcsSerializer.Serialize(nestedTuple);
+            var deserialized = BcsSerializer.Deserialize<(string, (int, bool))>(serialized);
+
+            // Assert
+            Assert.Equal(nestedTuple.Item1, deserialized.Item1);
+            Assert.Equal(nestedTuple.Item2.Item1, deserialized.Item2.Item1);
+            Assert.Equal(nestedTuple.Item2.Item2, deserialized.Item2.Item2);
+        }
+
+        [Fact]
+        public void TupleSerialization_FourElementTuple_ShouldWork()
+        {
+            // Arrange - 4-element tuple (supported by the library)
+            var largeTuple = ("test", 42u, true, (byte)255);
+
+            // Act
+            var serialized = BcsSerializer.Serialize(largeTuple);
+            var deserialized = BcsSerializer.Deserialize<(string, uint, bool, byte)>(serialized);
+
+            // Assert
+            Assert.Equal(largeTuple.Item1, deserialized.Item1);
+            Assert.Equal(largeTuple.Item2, deserialized.Item2);
+            Assert.Equal(largeTuple.Item3, deserialized.Item3);
+            Assert.Equal(largeTuple.Item4, deserialized.Item4);
+        }
+
+        [Fact]
+        public void TupleSerialization_EmptyString_ShouldWork()
+        {
+            // Arrange - Test with empty string
+            var tupleWithEmpty = ("", 0u);
+
+            // Act
+            var serialized = BcsSerializer.Serialize(tupleWithEmpty);
+            var deserialized = BcsSerializer.Deserialize<(string, uint)>(serialized);
+
+            // Assert
+            Assert.Equal("", deserialized.Item1);
+            Assert.Equal(0u, deserialized.Item2);
+        }
+
+        [Fact]
+        public void TupleSerialization_DeterministicEncoding_ShouldWork()
+        {
+            // Arrange - Test deterministic property
+            var testTuple = ("consistent", 42u, true);
+
+            // Act - Serialize multiple times
+            var serialization1 = BcsSerializer.Serialize(testTuple);
+            var serialization2 = BcsSerializer.Serialize(testTuple);
+            var serialization3 = BcsSerializer.Serialize(testTuple);
+
+            // Assert - All serializations should be identical
+            Assert.Equal(serialization1, serialization2);
+            Assert.Equal(serialization2, serialization3);
+        }
+
+        // Comment out the old complex struct-based tests until BcsStruct is implemented
+        /* ORIGINAL BCSSTRUCT-BASED TESTS COMMENTED OUT
+
+        #region C# Enums (same as before)
 
 //        public enum AssetType : byte
 //        {
@@ -311,5 +423,7 @@
 //            Assert.True(tupleBytes.Length > 0);
 //            Assert.Equal(193, tupleBytes.Length); // Expected tuple example size
 //        }
-//    }
-//}
+        
+        END OF ORIGINAL TESTS */
+    }
+}

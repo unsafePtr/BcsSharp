@@ -98,6 +98,15 @@ namespace BcsSharp.Core
             
             return formatter.GetSerializedSize(value);
         }
+
+        /// <summary>
+        /// Get formatter for type
+        /// </summary>
+        public static IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? resolver = null)
+        {
+            resolver ??= _defaultResolver;
+            return resolver.GetFormatter<T>();
+        }
         
         /// <summary>
         /// Serialize to hex string
