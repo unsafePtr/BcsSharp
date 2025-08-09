@@ -10,6 +10,8 @@ namespace BcsSharp.Core
     /// </summary>
     public class BcsWriterOptions
     {
+        public static readonly BcsWriterOptions Default = new BcsWriterOptions();
+
         public int InitialSize { get; set; } = 1024;
     }
 
@@ -23,9 +25,15 @@ namespace BcsSharp.Core
         private readonly ArrayBufferWriter<byte>? _defaultBuffer;
         private readonly bool _ownsBuffer;
 
-        public BcsWriter(BcsWriterOptions? options = null)
+        public BcsWriter()
         {
-            options ??= new BcsWriterOptions();
+            _defaultBuffer = new ArrayBufferWriter<byte>(BcsWriterOptions.Default.InitialSize);
+            _bufferWriter = _defaultBuffer;
+            _ownsBuffer = true;
+        }
+
+        public BcsWriter(BcsWriterOptions options)
+        {
             _defaultBuffer = new ArrayBufferWriter<byte>(options.InitialSize);
             _bufferWriter = _defaultBuffer;
             _ownsBuffer = true;

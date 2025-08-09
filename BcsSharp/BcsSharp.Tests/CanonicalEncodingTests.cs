@@ -59,7 +59,7 @@ namespace BcsSharp.Tests
 
             foreach (var (value, expectedCanonical) in testValues)
             {
-                var writer = new BcsWriter();
+                var writer = new BcsWriter(new BcsWriterOptions());
                 writer.WriteULEB(value);
                 var actualEncoding = writer.ToBytes();
 

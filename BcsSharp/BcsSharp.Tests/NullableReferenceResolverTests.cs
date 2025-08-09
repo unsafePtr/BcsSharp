@@ -75,7 +75,7 @@ namespace BcsSharp.Tests
             Assert.NotNull(formatter);
 
             // Act & Assert - Null string should be 1 byte (discriminant only)
-            var nullSize = formatter.GetSerializedSize(null);
+            var nullSize = formatter.GetSerializedSize(null!);
             Assert.Equal(1, nullSize);
 
             // Act & Assert - Non-null string should be discriminant + ULEB length + string bytes
