@@ -9,7 +9,7 @@ namespace BcsSharp.Core
     /// </summary>
     public static class BcsSerializer
     {
-        private static IFormatterResolver _defaultResolver = StandardResolver.Instance;
+        private static IFormatterResolver _defaultResolver = CompositeResolver.Default;
         
         /// <summary>
         /// Default resolver used when none is specified
@@ -25,7 +25,7 @@ namespace BcsSharp.Core
         /// </summary>
         public static byte[] Serialize<T>(T value, IFormatterResolver? resolver = null)
         {
-            var writer = new BcsWriter();
+            var writer = new BcsWriter(new BcsWriterOptions());
             Serialize(ref writer, value, resolver);
             return writer.ToBytes();
         }
@@ -104,7 +104,7 @@ namespace BcsSharp.Core
         /// </summary>
         public static string SerializeToHex<T>(T value, IFormatterResolver? resolver = null)
         {
-            var writer = new BcsWriter();
+            var writer = new BcsWriter(new BcsWriterOptions());
             Serialize(ref writer, value, resolver);
             return writer.ToHex();
         }
@@ -114,7 +114,7 @@ namespace BcsSharp.Core
         /// </summary>
         public static string SerializeToBase64<T>(T value, IFormatterResolver? resolver = null)
         {
-            var writer = new BcsWriter();
+            var writer = new BcsWriter(new BcsWriterOptions());
             Serialize(ref writer, value, resolver);
             return writer.ToBase64();
         }

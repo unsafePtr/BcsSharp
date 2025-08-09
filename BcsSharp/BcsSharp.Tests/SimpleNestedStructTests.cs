@@ -1,6 +1,6 @@
 using System;
 using BcsSharp.Core;
-using BcsSharp.Core.Types;
+
 using Nethermind.Int256;
 using Xunit;
 

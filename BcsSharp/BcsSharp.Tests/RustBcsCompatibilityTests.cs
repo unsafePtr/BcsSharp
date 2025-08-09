@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using BcsSharp.Core;
-using BcsSharp.Core.Types;
 using Xunit;
 
 namespace BcsSharp.Tests

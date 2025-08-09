@@ -1,6 +1,6 @@
 using System;
 using BcsSharp.Core;
-using BcsSharp.Core.Types;
+
 using Xunit;
 
 namespace BcsSharp.Tests
