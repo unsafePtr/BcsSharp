@@ -15,8 +15,8 @@ namespace BcsSharp.Core.Types
             PropertyName = propertyName;
         }
 
-        public abstract void Read(object instance, BcsReader reader);
-        public abstract void Write(object instance, BcsWriter writer);
+        public abstract void Read(object instance, ref BcsReader reader);
+        public abstract void Write(object instance, ref BcsWriter writer);
         public abstract int? GetSize(object instance);
     }
 
@@ -35,7 +35,7 @@ namespace BcsSharp.Core.Types
             _bcsTypeInstance = bcsTypeInstance;
         }
 
-        public override void Read(object instance, BcsReader reader)
+        public override void Read(object instance, ref BcsReader reader)
         {
             // Use reflection to call Read method on the BCS type
             var readMethod = _bcsTypeInstance.GetType().GetMethod("Read");
@@ -45,7 +45,7 @@ namespace BcsSharp.Core.Types
             _property.SetValue(instance, value);
         }
 
-        public override void Write(object instance, BcsWriter writer)
+        public override void Write(object instance, ref BcsWriter writer)
         {
             var value = _property.GetValue(instance);
             if (value == null) return;
@@ -86,13 +86,13 @@ namespace BcsSharp.Core.Types
             _bcsType = bcsType;
         }
 
-        public override void Read(object instance, BcsReader reader)
+        public override void Read(object instance, ref BcsReader reader)
         {
             var value = _bcsType.Read(reader);
             _property.SetValue(instance, value);
         }
 
-        public override void Write(object instance, BcsWriter writer)
+        public override void Write(object instance, ref BcsWriter writer)
         {
             var value = (TProperty)_property.GetValue(instance)!;
             _bcsType.Write(value, writer);
@@ -120,18 +120,18 @@ namespace BcsSharp.Core.Types
             _enumType = enumType;
         }
 
-        public override void Read(object instance, BcsReader reader)
+        public override void Read(object instance, ref BcsReader reader)
         {
             var byteValue = reader.Read8();
             var enumValue = Enum.ToObject(_enumType, byteValue);
             _property.SetValue(instance, enumValue);
         }
 
-        public override void Write(object instance, BcsWriter writer)
+        public override void Write(object instance, ref BcsWriter writer)
         {
             var enumValue = _property.GetValue(instance)!;
             var byteValue = Convert.ToByte(enumValue);
-            writer.Write8(byteValue);
+            writer.Write(byteValue);
         }
 
         public override int? GetSize(object instance)

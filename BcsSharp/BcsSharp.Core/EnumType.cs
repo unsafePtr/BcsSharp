@@ -85,7 +85,10 @@ namespace BcsSharp.Core
                 if (readMethod == null)
                     throw new InvalidOperationException($"No Read method found for variant {variant.Name}");
                 
-                var data = readMethod.Invoke(variant.BcsType, new object[] { reader });
+                // Since BcsReader is a ref struct, we need special handling for reflection
+                var parameters = new object[] { reader };
+                var data = readMethod.Invoke(variant.BcsType, parameters);
+                reader = (BcsReader)parameters[0]; // Update reader position
                 return new EnumVariant(variant.Name, data, variant.DataType);
             }
             else
@@ -115,7 +118,10 @@ namespace BcsSharp.Core
                 if (writeMethod == null)
                     throw new InvalidOperationException($"No Write method found for variant {variant.Name}");
                 
-                writeMethod.Invoke(variant.BcsType, new object[] { value.Data!, writer });
+                // Since BcsWriter is a ref struct, we need special handling for reflection
+                var parameters = new object[] { value.Data!, writer };
+                writeMethod.Invoke(variant.BcsType, parameters);
+                writer = (BcsWriter)parameters[1]; // Update writer state
             }
             else if (value.HasData)
             {

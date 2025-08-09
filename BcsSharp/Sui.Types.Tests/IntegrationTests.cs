@@ -191,9 +191,9 @@ public class IntegrationTests
         var bcsWriter = new BcsSharp.Core.BcsWriter();
 
         // Write transaction components (simplified Pay transaction)
-        bcsWriter.Write8(0x00); // Transaction kind
-        bcsWriter.Write64(1000000000); // Gas budget (1 SUI in MIST)
-        bcsWriter.Write64(1000); // Gas price
+        bcsWriter.Write((byte)0x00); // Transaction kind
+        bcsWriter.Write((ulong)1000000000); // Gas budget (1 SUI in MIST)
+        bcsWriter.Write((ulong)1000); // Gas price
 
         // Write sender address
         bcsWriter.WriteBytes(senderAddress.Bytes);
@@ -202,13 +202,13 @@ public class IntegrationTests
         bcsWriter.WriteBytes(recipientAddress.Bytes);
 
         // Write amount (0.5 SUI in MIST)
-        bcsWriter.Write64(500000000);
+        bcsWriter.Write((ulong)500000000);
 
         // Write gas object reference (simulated)
         var gasObjectId = ObjectId.Random();
         var gasDigest = ObjectDigest.Random();
         bcsWriter.WriteBytes(gasObjectId.Bytes);
-        bcsWriter.Write64(1); // version
+        bcsWriter.Write((ulong)1); // version
         bcsWriter.WriteBytes(gasDigest.Bytes);
 
         var transactionBytes = bcsWriter.ToBytes();

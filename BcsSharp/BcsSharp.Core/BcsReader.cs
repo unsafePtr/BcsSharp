@@ -8,7 +8,7 @@ namespace BcsSharp.Core
     /// <summary>
     /// Class used for reading BCS data chunk by chunk.
     /// </summary>
-    public class BcsReader
+    public ref struct BcsReader
     {
         private readonly ReadOnlyMemory<byte> _data;
         private int _position;
@@ -16,12 +16,6 @@ namespace BcsSharp.Core
         public BcsReader(byte[] data)
         {
             _data = data;
-            _position = 0;
-        }
-
-        public BcsReader(ReadOnlySpan<byte> data)
-        {
-            _data = data.ToArray().AsMemory();
             _position = 0;
         }
 

@@ -19,12 +19,12 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read value from BcsReader
         /// </summary>
-        public abstract T Read(BcsReader reader);
+        public abstract T Read(ref BcsReader reader);
 
         /// <summary>
         /// Write value to BcsWriter
         /// </summary>
-        public abstract void Write(T value, BcsWriter writer);
+        public abstract void Write(T value, ref BcsWriter writer);
 
         /// <summary>
         /// Get serialized size of value (null if dynamic size)
@@ -38,7 +38,7 @@ namespace BcsSharp.Core
         {
             ValidateValue(value);
             var writer = new BcsWriter(options);
-            Write(value, writer);
+            Write(value, ref writer);
             return writer.ToBytes();
         }
 
@@ -51,7 +51,7 @@ namespace BcsSharp.Core
                 throw new ArgumentNullException(nameof(bytes));
 
             var reader = new BcsReader(bytes);
-            return Read(reader);
+            return Read(ref reader);
         }
 
         /// <summary>
@@ -150,9 +150,9 @@ namespace BcsSharp.Core
             _inputValidate = validate;
         }
 
-        public override TOutput Read(BcsReader reader)
+        public override TOutput Read(ref BcsReader reader)
         {
-            var originalValue = _originalType.Read(reader);
+            var originalValue = _originalType.Read(ref reader);
 
             if (_outputTransform != null)
             {
@@ -162,7 +162,7 @@ namespace BcsSharp.Core
             return (TOutput)(object)originalValue!;
         }
 
-        public override void Write(TOutput value, BcsWriter writer)
+        public override void Write(TOutput value, ref BcsWriter writer)
         {
             // This is complex due to type transformation - would need more specific implementation
             throw new NotImplementedException("Write method for transformed types needs specific implementation");

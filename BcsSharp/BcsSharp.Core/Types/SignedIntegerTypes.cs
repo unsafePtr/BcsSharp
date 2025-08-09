@@ -12,7 +12,7 @@ namespace BcsSharp.Core.Types
 
         public override sbyte Read(BcsReader reader) => reader.ReadI8();
 
-        public override void Write(sbyte value, BcsWriter writer) => writer.WriteI8(value);
+        public override void Write(sbyte value, BcsWriter writer) => writer.Write(value);
 
         public override int? SerializedSize(sbyte value) => 1;
     }
@@ -26,7 +26,7 @@ namespace BcsSharp.Core.Types
 
         public override short Read(BcsReader reader) => reader.ReadI16();
 
-        public override void Write(short value, BcsWriter writer) => writer.WriteI16(value);
+        public override void Write(short value, BcsWriter writer) => writer.Write(value);
 
         public override int? SerializedSize(short value) => 2;
     }
@@ -40,7 +40,7 @@ namespace BcsSharp.Core.Types
 
         public override int Read(BcsReader reader) => reader.ReadI32();
 
-        public override void Write(int value, BcsWriter writer) => writer.WriteI32(value);
+        public override void Write(int value, BcsWriter writer) => writer.Write(value);
 
         public override int? SerializedSize(int value) => 4;
     }
@@ -54,7 +54,7 @@ namespace BcsSharp.Core.Types
 
         public override long Read(BcsReader reader) => reader.ReadI64();
 
-        public override void Write(long value, BcsWriter writer) => writer.WriteI64(value);
+        public override void Write(long value, BcsWriter writer) => writer.Write(value);
 
         public override int? SerializedSize(long value) => 8;
     }
@@ -68,7 +68,7 @@ namespace BcsSharp.Core.Types
 
         public override Int128 Read(BcsReader reader) => reader.ReadI128();
 
-        public override void Write(Int128 value, BcsWriter writer) => writer.WriteI128(value);
+        public override void Write(Int128 value, BcsWriter writer) => writer.Write(value);
 
         public override int? SerializedSize(Int128 value) => 16;
     }

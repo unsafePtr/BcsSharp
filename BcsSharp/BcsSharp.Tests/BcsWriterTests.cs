@@ -16,7 +16,7 @@ namespace BcsSharp.Tests
             var writer = new BcsWriter();
 
             // Act
-            writer.Write8(0xFF).Write8(0x00).Write8(0x42);
+            writer.Write((byte)0xFF).Write8(0x00).Write8(0x42);
             var result = writer.ToBytes();
 
             // Assert
@@ -30,7 +30,7 @@ namespace BcsSharp.Tests
             var writer = new BcsWriter();
 
             // Act
-            writer.Write16(0x1234);
+            writer.Write((ushort)0x1234);
             var result = writer.ToBytes();
 
             // Assert
@@ -44,7 +44,7 @@ namespace BcsSharp.Tests
             var writer = new BcsWriter();
 
             // Act
-            writer.Write32(0x12345678u);
+            writer.Write(0x12345678u);
             var result = writer.ToBytes();
 
             // Assert
@@ -58,7 +58,7 @@ namespace BcsSharp.Tests
             var writer = new BcsWriter();
 
             // Act
-            writer.Write64(0x0123456789ABCDEFul);
+            writer.Write(0x0123456789ABCDEFul);
             var result = writer.ToBytes();
 
             // Assert
@@ -154,7 +154,7 @@ namespace BcsSharp.Tests
         {
             // Arrange
             var writer = new BcsWriter();
-            writer.Write8(0xFF).Write8(0x00).Write8(0xAB);
+            writer.Write((byte)0xFF).Write8(0x00).Write8(0xAB);
 
             // Act
             var result = writer.ToHex();
@@ -186,9 +186,9 @@ namespace BcsSharp.Tests
 
             // Act & Assert
             Assert.Equal(0, writer.Length);
-            writer.Write8(0x01);
+            writer.Write((byte)0x01);
             Assert.Equal(1, writer.Length);
-            writer.Write32(0x12345678);
+            writer.Write((uint)0x12345678);
             Assert.Equal(5, writer.Length);
         }
 
@@ -200,7 +200,7 @@ namespace BcsSharp.Tests
 
             // Act
             var result = writer
-                .Write8(0x01)
+                .Write((byte)0x01)
                 .Write16(0x0203)
                 .Write32(0x04050607)
                 .WriteBool(true)
@@ -226,7 +226,7 @@ namespace BcsSharp.Tests
             var value = new UInt128(0x123456789ABCDEF0, 0x0FEDCBA987654321);
 
             // Act
-            writer.Write128(value);
+            writer.Write(value);
             var result = writer.ToBytes();
 
             // Assert
@@ -248,7 +248,7 @@ namespace BcsSharp.Tests
             var value = new UInt256(0x12345678);
 
             // Act
-            writer.Write256(value);
+            writer.Write(value);
             var result = writer.ToBytes();
 
             // Assert
@@ -267,7 +267,7 @@ namespace BcsSharp.Tests
             var value = UInt256.Zero;
 
             // Act
-            writer.Write256(value);
+            writer.Write(value);
             var result = writer.ToBytes();
 
             // Assert
@@ -283,7 +283,7 @@ namespace BcsSharp.Tests
             var value = UInt256.MaxValue;
 
             // Act
-            writer.Write256(value);
+            writer.Write(value);
             var result = writer.ToBytes();
 
             // Assert
@@ -301,7 +301,7 @@ namespace BcsSharp.Tests
             var value = UInt256.Parse(hexString, System.Globalization.NumberStyles.HexNumber);
 
             // Act
-            writer.Write256(value);
+            writer.Write(value);
             var result = writer.ToBytes();
 
             // Assert
@@ -321,7 +321,7 @@ namespace BcsSharp.Tests
             var value = UInt256.One;
 
             // Act
-            writer.Write256(value);
+            writer.Write(value);
             var result = writer.ToBytes();
 
             // Assert
@@ -342,7 +342,7 @@ namespace BcsSharp.Tests
             var originalValue = new UInt256(0xFEDCBA9876543210UL);
 
             // Act - Write and then read back
-            writer.Write256(originalValue);
+            writer.Write(originalValue);
             var serialized = writer.ToBytes();
             var reader = new BcsReader(serialized);
             var deserializedValue = reader.Read256();
@@ -359,7 +359,7 @@ namespace BcsSharp.Tests
             var writer = new BcsWriter(bufferWriter);
 
             // Act
-            writer.Write8(0x42)
+            writer.Write((byte)0x42)
                   .Write16(0x1234)
                   .Write32(0x56789ABC);
 
@@ -440,7 +440,7 @@ namespace BcsSharp.Tests
         {
             // Arrange
             var writer = new BcsWriter();
-            writer.Write8(0x42)
+            writer.Write((byte)0x42)
                   .Write16(0x1234)
                   .Write32(0x56789ABC)
                   .Write64(0x123456789ABCDEF0)

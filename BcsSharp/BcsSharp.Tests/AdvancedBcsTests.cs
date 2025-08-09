@@ -15,7 +15,7 @@ namespace BcsSharp.Tests
             // Arrange - Create deeply nested vector structure
             var vectorType = Bcs.Vector(Bcs.Vector(Bcs.U8));
             var deeplyNestedData = new List<byte[]>();
-            
+
             // Create 100 nested arrays to test depth limits
             for (int i = 0; i < 100; i++)
             {
@@ -25,7 +25,7 @@ namespace BcsSharp.Tests
             // Act & Assert - Should handle reasonable depth without issues
             var serialized = vectorType.Serialize(deeplyNestedData.ToArray());
             var deserialized = vectorType.Parse(serialized);
-            
+
             Assert.Equal(100, deserialized.Length);
             Assert.Equal(0, deserialized[0][0]);
             Assert.Equal(99, deserialized[99][0]);
@@ -36,14 +36,14 @@ namespace BcsSharp.Tests
         {
             // Arrange - Nested optional types
             var nestedOptionType = Bcs.Option(Bcs.Option(Bcs.Option(Bcs.U32)));
-            
+
             // Test with Some(Some(Some(value)))
             uint value = 42u;
-            
+
             // Act
             var serialized = nestedOptionType.Serialize(value);
             var deserialized = nestedOptionType.Parse(serialized);
-            
+
             // Assert
             Assert.Equal(value, deserialized);
             Assert.Equal(7, serialized.Length); // 3 bool flags (true) + 4 bytes for u32
@@ -54,11 +54,11 @@ namespace BcsSharp.Tests
         {
             // Arrange - Use string option since it supports null
             var optionType = Bcs.Option(Bcs.String);
-            
+
             // Act - Serialize None
             var serialized = optionType.Serialize(null);
             var deserialized = optionType.Parse(serialized);
-            
+
             // Assert
             Assert.Null(deserialized);
             Assert.Single(serialized); // Just one false flag
@@ -101,7 +101,7 @@ namespace BcsSharp.Tests
             // Arrange - Test with reasonably large vector
             var vectorType = Bcs.Vector(Bcs.U8);
             var largeArray = new byte[10000];
-            
+
             // Fill with test pattern
             for (int i = 0; i < largeArray.Length; i++)
             {
@@ -222,7 +222,7 @@ namespace BcsSharp.Tests
         public void ErrorHandling_TruncatedData_ShouldThrow()
         {
             // Test various truncated data scenarios
-            
+
             // Truncated u32
             var truncatedU32 = new byte[] { 0x01, 0x02 }; // Only 2 bytes instead of 4
             var reader1 = new BcsReader(truncatedU32);
@@ -255,8 +255,12 @@ namespace BcsSharp.Tests
             foreach (var invalidValue in invalidBoolValues)
             {
                 var data = new byte[] { invalidValue };
-                var reader = new BcsReader(data);
-                Assert.Throws<InvalidOperationException>(() => reader.ReadBool());
+
+                Assert.Throws<InvalidOperationException>(() =>
+                {
+                    var reader = new BcsReader(data);
+                    reader.ReadBool()
+                });
             }
         }
 
@@ -357,7 +361,7 @@ namespace BcsSharp.Tests
             // Test that serialization/deserialization doesn't create excessive allocations
             var largeVectorType = Bcs.Vector(Bcs.U64);
             var largeData = new ulong[1000];
-            
+
             for (int i = 0; i < largeData.Length; i++)
             {
                 largeData[i] = (ulong)i;
@@ -366,12 +370,12 @@ namespace BcsSharp.Tests
             // Act - Multiple serialization/deserialization cycles
             byte[] serialized = null;
             ulong[] deserialized = null;
-            
+
             for (int cycle = 0; cycle < 10; cycle++)
             {
                 serialized = largeVectorType.Serialize(largeData);
                 deserialized = largeVectorType.Parse(serialized);
-                
+
                 // Verify data integrity
                 Assert.Equal(1000, deserialized.Length);
                 Assert.Equal(0ul, deserialized[0]);
@@ -393,12 +397,12 @@ namespace BcsSharp.Tests
             // Assert all serializations are identical
             Assert.Equal(serialized1, serialized2);
             Assert.Equal(serialized2, serialized3);
-            
+
             // And all deserializations produce the same result
             var deserialized1 = complexType.Parse(serialized1);
             var deserialized2 = complexType.Parse(serialized2);
             var deserialized3 = complexType.Parse(serialized3);
-            
+
             Assert.Equal(deserialized1, deserialized2);
             Assert.Equal(deserialized2, deserialized3);
         }

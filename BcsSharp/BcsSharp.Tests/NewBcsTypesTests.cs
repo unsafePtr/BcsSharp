@@ -238,9 +238,9 @@ namespace BcsSharp.Tests
             var writer = new BcsWriter();
             writer.WriteULEB(2u); // 2 entries
             writer.WriteString("key");
-            writer.Write32(100u);
+            writer.Write(100u);
             writer.WriteString("key"); // Duplicate key
-            writer.Write32(200u);
+            writer.Write(200u);
 
             var invalidData = writer.ToBytes();
 
