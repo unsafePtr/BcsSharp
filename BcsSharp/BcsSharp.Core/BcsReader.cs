@@ -36,18 +36,6 @@ namespace BcsSharp.Core
         public bool HasRemainingBytes => _position < _data.Length;
 
         /// <summary>
-        /// Shift current cursor position by specified number of bytes
-        /// </summary>
-        public BcsReader Shift(int bytes)
-        {
-            if (_position + bytes > _data.Length)
-                throw new InvalidOperationException("Not enough bytes to shift");
-
-            _position += bytes;
-            return this;
-        }
-
-        /// <summary>
         /// Read a single byte (u8)
         /// </summary>
         public byte Read8()
@@ -206,19 +194,6 @@ namespace BcsSharp.Core
             var result = _data.Span.Slice(_position, length).ToArray();
             _position += length;
             return result;
-        }
-
-        /// <summary>
-        /// Read specified number of bytes into a span
-        /// </summary>
-        public void ReadBytes(Span<byte> destination)
-        {
-            var length = destination.Length;
-            if (_position + length > _data.Length)
-                throw new InvalidOperationException($"Not enough bytes to read {length} bytes");
-
-            _data.Span.Slice(_position, length).CopyTo(destination);
-            _position += length;
         }
 
         /// <summary>

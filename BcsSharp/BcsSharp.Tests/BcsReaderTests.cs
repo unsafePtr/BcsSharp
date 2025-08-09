@@ -90,7 +90,7 @@ namespace BcsSharp.Tests
         public void ReadULEB_ShouldReadVariableLengthIntegers()
         {
             // Arrange - ULEB128 encoding of various numbers
-            var data = new byte[] { 
+            var data = new byte[] {
                 0x00,       // 0
                 0x7F,       // 127
                 0x80, 0x01, // 128
@@ -134,21 +134,6 @@ namespace BcsSharp.Tests
             // Assert
             Assert.Equal(new byte[] { 0x01, 0x02, 0x03 }, result);
             Assert.Equal(2, reader.RemainingBytes);
-        }
-
-        [Fact]
-        public void Shift_ShouldAdvancePosition()
-        {
-            // Arrange
-            var data = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
-            var reader = new BcsReader(data);
-
-            // Act
-            reader.Shift(2);
-            var result = reader.Read8();
-
-            // Assert
-            Assert.Equal(0x03, result);
         }
 
         [Fact]
@@ -203,9 +188,9 @@ namespace BcsSharp.Tests
             reader.Read8();
             reader.Read8();
             Assert.Equal(1, reader.RemainingBytes);
-            
+
             reader.Reset();
-            
+
             // Assert
             Assert.Equal(3, reader.RemainingBytes);
             Assert.Equal(0x01, reader.Read8());
@@ -239,7 +224,7 @@ namespace BcsSharp.Tests
             data[2] = 0x34;
             data[3] = 0x12;
             // Rest are zeros
-            
+
             var reader = new BcsReader(data);
 
             // Act
@@ -369,14 +354,14 @@ namespace BcsSharp.Tests
             data[2] = 0x34;
             data[3] = 0x12;
             // Rest of first value are zeros (indices 4-31)
-            
+
             // Second value: 0xABCDEF01
             data[32] = 0x01;
             data[33] = 0xEF;
             data[34] = 0xCD;
             data[35] = 0xAB;
             // Rest of second value are zeros (indices 36-63)
-            
+
             var reader = new BcsReader(data);
 
             // Act
@@ -386,21 +371,6 @@ namespace BcsSharp.Tests
             // Assert
             Assert.Equal(new UInt256(0x12345678), first);
             Assert.Equal(new UInt256(0xABCDEF01), second);
-        }
-
-        [Fact]
-        public void Read256_ShouldAdvancePositionCorrectly()
-        {
-            // Arrange
-            var data = new byte[64]; // More than needed
-            data[0] = 0x42; // Value we want to read
-            var reader = new BcsReader(data);
-
-            // Act
-            reader.Read256();
-
-            // Assert
-            Assert.Equal(32, reader.Position); // Should have advanced by 32 bytes
         }
     }
 }

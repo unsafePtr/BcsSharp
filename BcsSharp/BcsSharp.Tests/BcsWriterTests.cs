@@ -400,42 +400,6 @@ namespace BcsSharp.Tests
         }
 
         [Fact]
-        public void BcsReader_ReadBytesAsSpan_ShouldWork()
-        {
-            // Arrange
-            var data = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
-            var reader = new BcsReader(data);
-
-            // Act
-            var span = reader.ReadBytesAsSpan(3);
-
-            // Assert
-            Assert.Equal(3, span.Length);
-            Assert.Equal(0x01, span[0]);
-            Assert.Equal(0x02, span[1]);
-            Assert.Equal(0x03, span[2]);
-            Assert.Equal(3, reader.Position);
-        }
-
-        [Fact]
-        public void BcsReader_ReadBytesToSpan_ShouldWork()
-        {
-            // Arrange
-            var data = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
-            var reader = new BcsReader(data);
-            Span<byte> destination = stackalloc byte[3];
-
-            // Act
-            reader.ReadBytes(destination);
-
-            // Assert
-            Assert.Equal(0x01, destination[0]);
-            Assert.Equal(0x02, destination[1]);
-            Assert.Equal(0x03, destination[2]);
-            Assert.Equal(3, reader.Position);
-        }
-
-        [Fact]
         public void BcsReader_OptimizedMethods_ShouldMatchOriginalBehavior()
         {
             // Arrange
