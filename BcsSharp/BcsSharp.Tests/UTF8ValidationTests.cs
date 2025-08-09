@@ -1,16 +1,20 @@
-//using System;
-//using System.Text;
-//using BcsSharp.Core;
-//using Xunit;
+using System;
+using System.Text;
+using BcsSharp.Core;
+using Xunit;
 
-//namespace BcsSharp.Tests
-//{
-//    /// <summary>
-//    /// Tests for UTF-8 validation and invalid encoding handling
-//    /// </summary>
-//    public class UTF8ValidationTests
-//    {
-//        [Fact]
+namespace BcsSharp.Tests
+{
+    /// <summary>
+    /// Tests for UTF-8 validation and invalid encoding handling
+    /// NOTE: Most tests are disabled until proper string validation is implemented
+    /// </summary>
+    public class UTF8ValidationTests
+    {
+        // All tests commented out until proper UTF-8 validation is implemented
+        // TODO: Implement UTF-8 validation support
+        
+        //        [Fact]
 //        public void ValidUTF8Strings_ShouldSerializeAndDeserialize()
 //        {
 //            var validStrings = new string[]
@@ -344,5 +348,5 @@
 //                Assert.Equal(testData[i], deserialized[i]);
 //            }
 //        }
-//    }
-//}
+    }
+}
