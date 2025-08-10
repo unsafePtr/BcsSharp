@@ -64,7 +64,7 @@ namespace BcsSharp.Core.Formatters
             foreach (var item in value)
             {
                 var itemSize = _elementFormatter.GetSerializedSize(item);
-                if (itemSize == null) return null; // Variable size
+                if (itemSize == null) return null;
                 size += itemSize.Value;
             }
             return size;

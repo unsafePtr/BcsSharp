@@ -14,22 +14,19 @@ namespace BcsSharp.Core.Formatters
     public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
     {
         private readonly List<BcsFieldInfo> _fields;
-        private readonly Type _objectType;
 
         public Type TargetType => typeof(T);
 
         public BcsObjectFormatter()
         {
-            _objectType = typeof(T);
-
-            var bcsStructAttr = _objectType.GetCustomAttribute<BcsStructAttribute>();
+            var bcsStructAttr = TargetType.GetCustomAttribute<BcsStructAttribute>();
             if (bcsStructAttr == null)
-                throw new InvalidOperationException($"Type {_objectType.Name} must be marked with [BcsStruct] attribute");
+                throw new InvalidOperationException($"Type {TargetType.Name} must be marked with [BcsStruct] attribute");
 
-            _fields = DiscoverFields(_objectType);
+            _fields = DiscoverFields(TargetType);
 
             if (!_fields.Any())
-                throw new InvalidOperationException($"Type {_objectType.Name} has no serializable fields marked with [BcsField]");
+                throw new InvalidOperationException($"Type {TargetType.Name} has no serializable fields marked with [BcsField]");
         }
 
         public void Serialize(ref BcsWriter writer, T value)
@@ -47,10 +44,10 @@ namespace BcsSharp.Core.Formatters
         public T Deserialize(ref BcsReader reader)
         {
             // Handle value types and reference types differently
-            if (_objectType.IsValueType)
+            if (TargetType.IsValueType)
             {
                 // For value types, we need to use boxing to properly set field values
-                object boxedInstance = Activator.CreateInstance(_objectType)!;
+                object boxedInstance = Activator.CreateInstance(TargetType)!;
 
                 foreach (var field in _fields)
                 {
@@ -62,7 +59,7 @@ namespace BcsSharp.Core.Formatters
             }
             else
             {
-                var instance = (T)Activator.CreateInstance(_objectType)!;
+                var instance = (T)Activator.CreateInstance(TargetType)!;
 
                 foreach (var field in _fields)
                 {
