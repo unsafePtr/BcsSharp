@@ -1,4 +1,3 @@
-using System;
 using Nethermind.Int256;
 
 namespace BcsSharp.Core.Formatters

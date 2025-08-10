@@ -1,7 +1,6 @@
 using Nethermind.Int256;
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Runtime.CompilerServices;
 
 namespace BcsSharp.Core
 {
@@ -12,7 +11,7 @@ namespace BcsSharp.Core
     {
         public static readonly BcsWriterOptions Default = new BcsWriterOptions();
 
-        public int InitialSize { get; set; } = 1024;
+        public int InitialBufferSize { get; set; } = 1024;
     }
 
     /// <summary>
@@ -27,14 +26,14 @@ namespace BcsSharp.Core
 
         public BcsWriter()
         {
-            _defaultBuffer = new ArrayBufferWriter<byte>(BcsWriterOptions.Default.InitialSize);
+            _defaultBuffer = new ArrayBufferWriter<byte>(BcsWriterOptions.Default.InitialBufferSize);
             _bufferWriter = _defaultBuffer;
             _ownsBuffer = true;
         }
 
         public BcsWriter(BcsWriterOptions options)
         {
-            _defaultBuffer = new ArrayBufferWriter<byte>(options.InitialSize);
+            _defaultBuffer = new ArrayBufferWriter<byte>(options.InitialBufferSize);
             _bufferWriter = _defaultBuffer;
             _ownsBuffer = true;
         }
@@ -60,7 +59,6 @@ namespace BcsSharp.Core
             var span = _bufferWriter.GetSpan(1);
             span[0] = value;
             _bufferWriter.Advance(1);
-
         }
 
         /// <summary>
@@ -71,7 +69,6 @@ namespace BcsSharp.Core
             var span = _bufferWriter.GetSpan(2);
             BinaryPrimitives.WriteUInt16LittleEndian(span, value);
             _bufferWriter.Advance(2);
-
         }
 
         /// <summary>
@@ -82,7 +79,6 @@ namespace BcsSharp.Core
             var span = _bufferWriter.GetSpan(4);
             BinaryPrimitives.WriteUInt32LittleEndian(span, value);
             _bufferWriter.Advance(4);
-
         }
 
         /// <summary>
@@ -93,7 +89,6 @@ namespace BcsSharp.Core
             var span = _bufferWriter.GetSpan(8);
             BinaryPrimitives.WriteUInt64LittleEndian(span, value);
             _bufferWriter.Advance(8);
-
         }
 
         /// <summary>
@@ -104,7 +99,6 @@ namespace BcsSharp.Core
             var span = _bufferWriter.GetSpan(1);
             span[0] = (byte)value;
             _bufferWriter.Advance(1);
-
         }
 
         /// <summary>
@@ -115,7 +109,6 @@ namespace BcsSharp.Core
             var span = _bufferWriter.GetSpan(2);
             BinaryPrimitives.WriteInt16LittleEndian(span, value);
             _bufferWriter.Advance(2);
-
         }
 
         /// <summary>
@@ -126,7 +119,6 @@ namespace BcsSharp.Core
             var span = _bufferWriter.GetSpan(4);
             BinaryPrimitives.WriteInt32LittleEndian(span, value);
             _bufferWriter.Advance(4);
-
         }
 
         /// <summary>
@@ -137,7 +129,6 @@ namespace BcsSharp.Core
             var span = _bufferWriter.GetSpan(8);
             BinaryPrimitives.WriteInt64LittleEndian(span, value);
             _bufferWriter.Advance(8);
-
         }
 
         /// <summary>
@@ -174,15 +165,6 @@ namespace BcsSharp.Core
             var span = _bufferWriter.GetSpan(32);
             littleEndianBytes.CopyTo(span);
             _bufferWriter.Advance(32);
-
-        }
-
-        /// <summary>
-        /// Write raw bytes from span
-        /// </summary>
-        public void WriteBytes(ReadOnlySpan<byte> bytes)
-        {
-            WriteToBuffer(bytes);
         }
 
         /// <summary>
@@ -244,26 +226,6 @@ namespace BcsSharp.Core
         }
 
         /// <summary>
-        /// Get the written data as hex string
-        /// </summary>
-        public string ToHex()
-        {
-            if (!_ownsBuffer)
-                throw new InvalidOperationException("ToHex is not available when using external IBufferWriter");
-            return Convert.ToHexString(_defaultBuffer!.WrittenSpan).ToLowerInvariant();
-        }
-
-        /// <summary>
-        /// Get the written data as base64 string
-        /// </summary>
-        public string ToBase64()
-        {
-            if (!_ownsBuffer)
-                throw new InvalidOperationException("ToBase64 is not available when using external IBufferWriter");
-            return Convert.ToBase64String(_defaultBuffer!.WrittenSpan);
-        }
-
-        /// <summary>
         /// Reset the writer to empty state
         /// </summary>
         public void Reset()
@@ -271,17 +233,16 @@ namespace BcsSharp.Core
             if (!_ownsBuffer)
                 throw new InvalidOperationException("Reset is not available when using external IBufferWriter");
             _defaultBuffer!.Clear();
-
         }
 
         /// <summary>
-        /// Write bytes to the buffer writer
+        /// Write raw bytes from span
         /// </summary>
-        private void WriteToBuffer(ReadOnlySpan<byte> data)
+        private void WriteBytes(ReadOnlySpan<byte> bytes)
         {
-            var span = _bufferWriter.GetSpan(data.Length);
-            data.CopyTo(span);
-            _bufferWriter.Advance(data.Length);
+            var span = _bufferWriter.GetSpan(bytes.Length);
+            bytes.CopyTo(span);
+            _bufferWriter.Advance(bytes.Length);
         }
 
     }

@@ -1,6 +1,4 @@
-using System;
 using System.Buffers.Binary;
-using System.Text;
 using Nethermind.Int256;
 
 namespace BcsSharp.Core
@@ -261,7 +259,7 @@ namespace BcsSharp.Core
         /// </summary>
         public string ReadString()
         {
-            var length = ReadULEB32(); // String length should fit in 32 bits
+            var length = ReadULEB32();
             var span = ReadBytesAsSpan((int)length);
             return System.Text.Encoding.UTF8.GetString(span);
         }

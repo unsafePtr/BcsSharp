@@ -10,7 +10,7 @@ namespace BcsSharp.Core
     public static class BcsSerializer
     {
         private static IFormatterResolver _defaultResolver = CompositeResolver.Default;
-        
+
         /// <summary>
         /// Default resolver used when none is specified
         /// </summary>
@@ -19,7 +19,7 @@ namespace BcsSharp.Core
             get => _defaultResolver;
             set => _defaultResolver = value ?? throw new ArgumentNullException(nameof(value));
         }
-        
+
         /// <summary>
         /// Serialize value to byte array
         /// </summary>
@@ -29,7 +29,7 @@ namespace BcsSharp.Core
             Serialize(ref writer, value, resolver);
             return writer.ToBytes();
         }
-        
+
         /// <summary>
         /// Serialize value to BcsWriter
         /// </summary>
@@ -37,13 +37,13 @@ namespace BcsSharp.Core
         {
             resolver ??= _defaultResolver;
             var formatter = resolver.GetFormatter<T>();
-            
+
             if (formatter == null)
                 throw new InvalidOperationException($"No formatter found for type {typeof(T)}");
-            
+
             formatter.Serialize(ref writer, value);
         }
-        
+
         /// <summary>
         /// Serialize value to IBufferWriter
         /// </summary>
@@ -52,7 +52,7 @@ namespace BcsSharp.Core
             var writer = new BcsWriter(bufferWriter);
             Serialize(ref writer, value, resolver);
         }
-        
+
         /// <summary>
         /// Deserialize from byte array
         /// </summary>
@@ -61,7 +61,7 @@ namespace BcsSharp.Core
             var reader = new BcsReader(data);
             return Deserialize<T>(ref reader, resolver);
         }
-        
+
         /// <summary>
         /// Deserialize from ReadOnlyMemory
         /// </summary>
@@ -70,7 +70,7 @@ namespace BcsSharp.Core
             var reader = new BcsReader(data);
             return Deserialize<T>(ref reader, resolver);
         }
-        
+
         /// <summary>
         /// Deserialize from BcsReader
         /// </summary>
@@ -78,13 +78,13 @@ namespace BcsSharp.Core
         {
             resolver ??= _defaultResolver;
             var formatter = resolver.GetFormatter<T>();
-            
+
             if (formatter == null)
                 throw new InvalidOperationException($"No formatter found for type {typeof(T)}");
-            
+
             return formatter.Deserialize(ref reader);
         }
-        
+
         /// <summary>
         /// Get serialized size for value if deterministic
         /// </summary>
@@ -92,10 +92,10 @@ namespace BcsSharp.Core
         {
             resolver ??= _defaultResolver;
             var formatter = resolver.GetFormatter<T>();
-            
+
             if (formatter == null)
                 throw new InvalidOperationException($"No formatter found for type {typeof(T)}");
-            
+
             return formatter.GetSerializedSize(value);
         }
 
@@ -106,44 +106,6 @@ namespace BcsSharp.Core
         {
             resolver ??= _defaultResolver;
             return resolver.GetFormatter<T>();
-        }
-        
-        /// <summary>
-        /// Serialize to hex string
-        /// </summary>
-        public static string SerializeToHex<T>(T value, IFormatterResolver? resolver = null)
-        {
-            var writer = new BcsWriter(new BcsWriterOptions());
-            Serialize(ref writer, value, resolver);
-            return writer.ToHex();
-        }
-        
-        /// <summary>
-        /// Serialize to base64 string
-        /// </summary>
-        public static string SerializeToBase64<T>(T value, IFormatterResolver? resolver = null)
-        {
-            var writer = new BcsWriter(new BcsWriterOptions());
-            Serialize(ref writer, value, resolver);
-            return writer.ToBase64();
-        }
-        
-        /// <summary>
-        /// Deserialize from hex string
-        /// </summary>
-        public static T DeserializeFromHex<T>(string hex, IFormatterResolver? resolver = null)
-        {
-            var bytes = Convert.FromHexString(hex);
-            return Deserialize<T>(bytes, resolver);
-        }
-        
-        /// <summary>
-        /// Deserialize from base64 string
-        /// </summary>
-        public static T DeserializeFromBase64<T>(string base64, IFormatterResolver? resolver = null)
-        {
-            var bytes = Convert.FromBase64String(base64);
-            return Deserialize<T>(bytes, resolver);
         }
     }
 }
