@@ -35,7 +35,7 @@ namespace BcsSharp.Core.Resolvers
         public static readonly CompositeResolver Default = new CompositeResolver(
             NullableResolver.Instance,
             OneOfResolver.Instance,
-            NullableReferenceResolver.Instance,
+            NullableReferenceResolver.Instance, // TODO: do we need this actually?
             EnumResolver.Instance,
             ObjectResolver.Instance,
             StandardResolver.Instance

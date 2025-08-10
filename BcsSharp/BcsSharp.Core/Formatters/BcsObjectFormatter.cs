@@ -97,9 +97,11 @@ namespace BcsSharp.Core.Formatters
             var fields = new List<BcsFieldInfo>();
 
             // Get all fields and properties
-            var members = new List<MemberInfo>();
-            members.AddRange(objectType.GetFields(BindingFlags.Public | BindingFlags.Instance));
-            members.AddRange(objectType.GetProperties(BindingFlags.Public | BindingFlags.Instance));
+            List<MemberInfo> members =
+            [
+                .. objectType.GetFields(BindingFlags.Public | BindingFlags.Instance),
+                .. objectType.GetProperties(BindingFlags.Public | BindingFlags.Instance),
+            ];
 
             foreach (var member in members)
             {
@@ -126,8 +128,8 @@ namespace BcsSharp.Core.Formatters
                     if (!property.CanWrite)
                         throw new InvalidOperationException($"Property {member.Name} in {objectType.Name} must be writable");
 
-                    getter = obj => property.GetValue(obj);
-                    setter = (obj, value) => property.SetValue(obj, value);
+                    getter = property.GetValue;
+                    setter = property.SetValue;
                 }
                 else
                 {
@@ -157,10 +159,10 @@ namespace BcsSharp.Core.Formatters
             return [.. fields.OrderBy(f => f.Order)];
         }
 
-        private class BcsFieldInfo
+        private sealed class BcsFieldInfo
         {
-            public string Name { get; set; } = "";
-            public string MemberName { get; set; } = "";
+            public string Name { get; set; } = string.Empty;
+            public string MemberName { get; set; } = string.Empty;
             public int Order { get; set; }
             public Type MemberType { get; set; } = null!;
             public IBcsObjectFormatter Formatter { get; set; } = null!;

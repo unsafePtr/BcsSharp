@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Concurrent;
 using System.Reflection;
 using BcsSharp.Core.Formatters;
@@ -9,6 +8,7 @@ namespace BcsSharp.Core.Resolvers
 {
     /// <summary>
     /// Resolver for OneOf&lt;None, T&gt; types that represent Rust Option&lt;T&gt;
+    /// We will handle this way Nullable reference types, since Roslyn doesn't add any indication to the emitted IL code if object is nullable or not.
     /// </summary>
     public sealed class OneOfResolver : IFormatterResolver
     {
@@ -28,17 +28,17 @@ namespace BcsSharp.Core.Resolvers
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(OneOf<,>))
             {
                 var genericArgs = type.GetGenericArguments();
-                
+
                 // Must be OneOf<None, T> where first type is None
                 if (genericArgs.Length == 2 && genericArgs[0] == typeof(None))
                 {
                     var valueType = genericArgs[1]; // The T in OneOf<None, T>
-                    
+
                     // Get formatter for the value type
                     var valueFormatterMethod = typeof(BcsSerializer).GetMethod(nameof(BcsSerializer.GetFormatter), BindingFlags.Public | BindingFlags.Static);
                     var genericValueFormatterMethod = valueFormatterMethod?.MakeGenericMethod(valueType);
                     var valueFormatter = genericValueFormatterMethod?.Invoke(null, new object?[] { null });
-                    
+
                     if (valueFormatter != null)
                     {
                         // Create OneOfFormatter<T>
