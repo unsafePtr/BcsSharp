@@ -73,11 +73,11 @@ pub struct  Address {
 /// C-style enums for asset categorization
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AssetType {
-    Weapon,
-    Armor,
-    Consumable,
-    Material,
-    Currency,
+    Weapon = 100,
+    Armor = 200,
+    Consumable = 300,
+    Material = 1_000_000,
+    Currency = 2_000_000,
 }
 
 /// Asset attributes (like damage, defense, etc.)

@@ -63,8 +63,7 @@ namespace BcsSharp.Tests
             var deserialized = BcsSerializer.Deserialize<Priority>(serialized);
 
             // Assert
-            Assert.Equal(4, serialized.Length); // Should be 4 bytes (int32)
-            Assert.Equal(300, BitConverter.ToInt32(serialized, 0)); // Priority.High = 300
+            Assert.Single(serialized); // Should be 1 byte
             Assert.Equal(priority, deserialized);
         }
 
@@ -79,8 +78,7 @@ namespace BcsSharp.Tests
             var deserialized = BcsSerializer.Deserialize<Size>(serialized);
 
             // Assert
-            Assert.Equal(2, serialized.Length); // Should be 2 bytes (ushort)
-            Assert.Equal(1000, BitConverter.ToUInt16(serialized, 0)); // Size.Large = 1000
+            Assert.Single(serialized); // Should be 1 byte
             Assert.Equal(size, deserialized);
         }
 
@@ -114,25 +112,6 @@ namespace BcsSharp.Tests
             // Assert
             Assert.Equal(serialized1, serialized2);
             Assert.Equal(serialized2, serialized3);
-        }
-
-        [Fact]
-        public void SimpleEnum_SizeCalculation_ShouldBeAccurate()
-        {
-            // Test that serialized size matches actual size
-            var byteEnum = Status.Active;
-            var intEnum = Priority.High;
-            var ushortEnum = Size.Medium;
-
-            // Act
-            var byteSerialized = BcsSerializer.Serialize(byteEnum);
-            var intSerialized = BcsSerializer.Serialize(intEnum);
-            var ushortSerialized = BcsSerializer.Serialize(ushortEnum);
-
-            // Assert
-            Assert.Equal(1, byteSerialized.Length); // byte
-            Assert.Equal(4, intSerialized.Length); // int32
-            Assert.Equal(2, ushortSerialized.Length); // ushort
         }
     }
 }

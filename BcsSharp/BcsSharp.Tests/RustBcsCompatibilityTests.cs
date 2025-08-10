@@ -16,13 +16,13 @@ namespace BcsSharp.Tests
     {
         #region Enums (C# equivalent of Rust enums)
 
-        public enum AssetType : byte
+        public enum AssetType
         {
-            Weapon = 0,
-            Armor = 1,
-            Consumable = 2,
-            Material = 3,
-            Currency = 4
+            Weapon = 100,
+            Armor = 200,
+            Consumable = 300,
+            Material = 1_000_000,
+            Currency = 2_000_000
         }
 
         // Simple C-style enum for basic rarity (kept for backward compatibility)
@@ -295,7 +295,7 @@ namespace BcsSharp.Tests
             var asset = new GameAsset
             {
                 AssetId = "sword_001",
-                AssetType = AssetType.Weapon, // AssetType::Weapon = 0
+                AssetType = AssetType.Material, // AssetType::Weapon = 0
                 Level = 15,
                 Attributes = new[]
                 {
@@ -359,7 +359,7 @@ namespace BcsSharp.Tests
             var asset = new GameAsset
             {
                 AssetId = "sword_001",
-                AssetType = AssetType.Weapon,
+                AssetType = AssetType.Material,
                 Level = 15,
                 Attributes = new[]
                 {
@@ -418,7 +418,7 @@ namespace BcsSharp.Tests
             var asset = new GameAsset
             {
                 AssetId = "sword_001",
-                AssetType = AssetType.Weapon,
+                AssetType = AssetType.Material,
                 Level = 15,
                 Attributes = new[]
                 {
