@@ -117,12 +117,11 @@ namespace BcsSharp.Core.Formatters
                 if (IsVariantOfEnum(nestedType, enumBaseType))
                 {
                     var index = variantAttr.Index ?? nextIndex;
-                    var name = GetVariantName(nestedType.Name, variantAttr);
 
                     variants.Add(new BcsVariantInfo
                     {
                         Index = index,
-                        Name = name,
+                        Name = nestedType.Name, // Only used for debugging/diagnostics
                         VariantType = nestedType,
                         DataProperties = DiscoverDataProperties(nestedType)
                     });
@@ -151,12 +150,11 @@ namespace BcsSharp.Core.Formatters
                     if (IsVariantOfEnum(type, enumBaseType))
                     {
                         var index = variantAttr.Index ?? nextIndex;
-                        var name = GetVariantName(type.Name, variantAttr);
 
                         variants.Add(new BcsVariantInfo
                         {
                             Index = index,
-                            Name = name,
+                            Name = type.Name, // Only used for debugging/diagnostics
                             VariantType = type,
                             DataProperties = DiscoverDataProperties(type)
                         });
@@ -179,7 +177,10 @@ namespace BcsSharp.Core.Formatters
         private bool IsVariantOfEnum(Type candidateType, Type enumBaseType)
         {
             // Check if the type implements the enum interface/inherits from enum base
-            return enumBaseType.IsAssignableFrom(candidateType) && candidateType != enumBaseType;
+            // Also ensure it's not a generic type definition to avoid issues with generic variants
+            return enumBaseType.IsAssignableFrom(candidateType) && 
+                   candidateType != enumBaseType && 
+                   !candidateType.IsGenericTypeDefinition;
         }
 
         private List<BcsDataProperty> DiscoverDataProperties(Type variantType)
@@ -243,29 +244,6 @@ namespace BcsSharp.Core.Formatters
             return totalSize;
         }
 
-        private string GetVariantName(string typeName, BcsEnumVariantAttribute variantAttr)
-        {
-            if (!string.IsNullOrEmpty(variantAttr.Name))
-                return variantAttr.Name;
-
-            return typeName;
-        }
-
-        private string ToSnakeCase(string input)
-        {
-            if (string.IsNullOrEmpty(input))
-                return input;
-
-            var result = new System.Text.StringBuilder();
-            for (int i = 0; i < input.Length; i++)
-            {
-                char c = input[i];
-                if (char.IsUpper(c) && i > 0)
-                    result.Append('_');
-                result.Append(char.ToLower(c));
-            }
-            return result.ToString();
-        }
 
         private static int GetULEBSize(uint value)
         {
@@ -362,7 +340,7 @@ namespace BcsSharp.Core.Formatters
         {
             var method = typeof(BcsSerializer).GetMethod(nameof(BcsSerializer.GetFormatter), BindingFlags.Public | BindingFlags.Static);
             var genericMethod = method?.MakeGenericMethod(type);
-            var formatter = genericMethod?.Invoke(null, null);
+            var formatter = genericMethod?.Invoke(null, new object?[] { null }); // Pass null for the optional resolver parameter
 
             if (formatter == null)
                 return null;

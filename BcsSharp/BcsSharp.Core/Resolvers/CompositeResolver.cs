@@ -31,12 +31,13 @@ namespace BcsSharp.Core.Resolvers
         }
         
         /// <summary>
-        /// Default instance with recommended resolver chain for nullable types, enums, and standard types
+        /// Default instance with recommended resolver chain for nullable types, enums, objects, and standard types
         /// </summary>
         public static readonly CompositeResolver Default = new CompositeResolver(
             NullableResolver.Instance,
             NullableReferenceResolver.Instance,
             EnumResolver.Instance,
+            ObjectResolver.Instance,
             StandardResolver.Instance
         );
         
@@ -56,7 +57,7 @@ namespace BcsSharp.Core.Resolvers
         /// </summary>
         public static CompositeResolver CreateWithDefaults(params IFormatterResolver[] customResolvers)
         {
-            var defaultResolvers = new IFormatterResolver[] { NullableResolver.Instance, NullableReferenceResolver.Instance, EnumResolver.Instance, StandardResolver.Instance };
+            var defaultResolvers = new IFormatterResolver[] { NullableResolver.Instance, NullableReferenceResolver.Instance, EnumResolver.Instance, ObjectResolver.Instance, StandardResolver.Instance };
             var allResolvers = new IFormatterResolver[defaultResolvers.Length + customResolvers.Length];
             Array.Copy(defaultResolvers, 0, allResolvers, 0, defaultResolvers.Length);
             Array.Copy(customResolvers, 0, allResolvers, defaultResolvers.Length, customResolvers.Length);

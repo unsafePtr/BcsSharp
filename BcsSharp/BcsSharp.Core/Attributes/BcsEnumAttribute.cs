@@ -6,7 +6,7 @@ namespace BcsSharp.Core.Attributes
     /// Marks a type as a BCS-serializable enum following Rust-style enum semantics.
     /// BCS enums use ULEB128-encoded variant indices and support associated data of any BCS type.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false)]
     public sealed class BcsEnumAttribute : Attribute
     {
         // No additional properties needed - BCS is a binary format,
@@ -25,12 +25,6 @@ namespace BcsSharp.Core.Attributes
         /// If not specified, variants are indexed in the order they appear in the enum definition.
         /// </summary>
         public uint? Index { get; }
-
-        /// <summary>
-        /// Gets or sets the name of this variant in BCS serialization.
-        /// If not specified, uses the class name (optionally converted to snake_case).
-        /// </summary>
-        public string? Name { get; set; }
 
         /// <summary>
         /// Initializes a new instance with automatic index assignment.

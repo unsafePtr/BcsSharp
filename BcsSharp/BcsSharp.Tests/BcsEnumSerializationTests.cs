@@ -252,7 +252,7 @@ namespace BcsSharp.Tests
             Assert.Equal(2, serialized.Length); // Index + string length (0)
             Assert.Equal(2, serialized[0]); // Variant index 2
             Assert.Equal(0, serialized[1]); // Empty string length
-            
+
             Assert.IsType<Variant2>(deserialized);
             Assert.Equal("", ((Variant2)deserialized).Value);
         }
@@ -279,23 +279,8 @@ namespace BcsSharp.Tests
             var invalidData = new byte[] { 99 }; // Index 99 doesn't exist
 
             // Act & Assert
-            Assert.Throws<InvalidOperationException>(() => 
+            Assert.Throws<InvalidOperationException>(() =>
                 BcsSerializer.Deserialize<ITestEnum>(invalidData));
-        }
-
-        [Theory]
-        [InlineData(0, typeof(Variant0))]
-        [InlineData(1, typeof(Variant1))]
-        [InlineData(2, typeof(Variant2))]
-        [InlineData(3, typeof(UnitVariant))]
-        [InlineData(4, typeof(ComplexVariant))]
-        public void BcsEnum_VariantIndices_ShouldBeCorrect(byte expectedIndex, Type expectedType)
-        {
-            // This test verifies that the variant indices are correctly assigned
-            // We can't easily test this without creating instances, so this is more of a placeholder
-            // for verification that our index assignments match the BCS specification
-            Assert.True(expectedIndex >= 0 && expectedIndex <= 4);
-            Assert.NotNull(expectedType);
         }
 
         [Fact]
@@ -304,7 +289,7 @@ namespace BcsSharp.Tests
             // Test that ULEB128 encoding works correctly for indices
             // For indices 0-127, ULEB128 is just the byte value
             // For larger indices, it would use multiple bytes
-            
+
             var variants = new ITestEnum[]
             {
                 new Variant0(100),
@@ -322,7 +307,7 @@ namespace BcsSharp.Tests
 
                 // Assert - Should round-trip correctly
                 Assert.Equal(variant.GetType(), deserialized.GetType());
-                
+
                 // First byte should be a valid ULEB128 index (0-4 for our test cases)
                 Assert.True(serialized[0] >= 0 && serialized[0] <= 4);
             }

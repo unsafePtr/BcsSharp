@@ -26,34 +26,25 @@ namespace BcsSharp.Core.Resolvers
 
         private object? CreateFormatter(Type type)
         {
-            try
+            // Check if it's a Rust-style variant enum (marked with [BcsEnum])
+            var bcsEnumAttr = type.GetCustomAttribute<BcsEnumAttribute>();
+            if (bcsEnumAttr != null)
             {
-                // Check if it's a Rust-style variant enum (marked with [BcsEnum])
-                var bcsEnumAttr = type.GetCustomAttribute<BcsEnumAttribute>();
-                if (bcsEnumAttr != null)
-                {
-                    // Create BcsVariantEnumFormatter<T> for tagged unions
-                    var variantFormatterType = typeof(BcsVariantEnumFormatter<>).MakeGenericType(type);
-                    return Activator.CreateInstance(variantFormatterType);
-                }
-
-                // Check if it's a simple C-style enum
-                if (BcsSimpleEnumHelper.IsSimpleEnum(type))
-                {
-                    // Create BcsSimpleEnumFormatter<T> for C-style enums
-                    var simpleFormatterType = typeof(BcsSimpleEnumFormatter<>).MakeGenericType(type);
-                    return Activator.CreateInstance(simpleFormatterType);
-                }
-
-                // Not an enum we can handle
-                return null;
+                // Create BcsVariantEnumFormatter<T> for tagged unions
+                var variantFormatterType = typeof(BcsVariantEnumFormatter<>).MakeGenericType(type);
+                return Activator.CreateInstance(variantFormatterType);
             }
-            catch (Exception ex)
+
+            // Check if it's a simple C-style enum
+            if (BcsSimpleEnumHelper.IsSimpleEnum(type))
             {
-                // Log the exception if needed, but return null to indicate no formatter available
-                System.Diagnostics.Debug.WriteLine($"Failed to create enum formatter for {type.Name}: {ex.Message}");
-                return null;
+                // Create BcsSimpleEnumFormatter<T> for C-style enums
+                var simpleFormatterType = typeof(BcsSimpleEnumFormatter<>).MakeGenericType(type);
+                return Activator.CreateInstance(simpleFormatterType);
             }
+
+            // Not an enum we can handle
+            return null;
         }
 
         /// <summary>
