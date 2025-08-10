@@ -169,21 +169,8 @@ namespace BcsSharp.Tests
             // Some should encode as 1 followed by the value
             string? someValue = "test";
             var someEncoded = BcsSerializer.Serialize(someValue);
-            Assert.Equal(new byte[] { 0x01, 0x04, 0x74, 0x65, 0x73, 0x74 }, someEncoded);
+            Assert.Equal(new byte[] { 0x04, 0x74, 0x65, 0x73, 0x74 }, someEncoded);
         }
-
-        // [Fact] - Commented out until BcsEnum is implemented
-        // public void EnumEncoding_ShouldUseCanonicalVariantIndices()
-        // {
-        //     // TODO: Implement BcsEnum or use byte-based enum encoding
-        //     // Test that variants are encoded with correct indices
-        // }
-
-        // [Fact] - Commented out until BcsEnum is implemented
-        // public void EnumWithDataEncoding_ShouldBeCanonical()
-        // {
-        //     // TODO: Implement BcsEnum or use proper enum serialization
-        // }
 
         [Fact]
         public void RoundTripEncoding_ShouldPreserveCanonicalForm()

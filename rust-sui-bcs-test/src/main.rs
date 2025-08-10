@@ -10,6 +10,32 @@ fn main() -> Result<()> {
     println!("🚀 Sui BCS Serialization Demo");
     println!("{}", "=".repeat(40));
 
+    // Test empty string serialization
+    println!("\n🔤 Testing empty string BCS serialization...");
+    let empty_string = String::new();
+    let serialized_empty = bcs::to_bytes(&empty_string)?;
+    println!("Empty string '' serialized as: {}", hex::encode(&serialized_empty));
+    println!("Length: {} bytes", serialized_empty.len());
+    
+    // Test other strings
+    let test_strings = vec![
+        "".to_string(),
+        "A".to_string(), 
+        "Alice".to_string(),
+        "Plovdiv".to_string(),
+        "12345".to_string(),
+    ];
+    
+    for s in test_strings {
+        let serialized = bcs::to_bytes(&s)?;
+        println!("String '{}' serialized as: {}", s, hex::encode(&serialized));
+    }
+    
+    // Test specific "test" string
+    let test_str = "test".to_string();
+    let test_bytes = bcs::to_bytes(&test_str)?;
+    println!("String 'test' serialized as: {} (length: {} bytes)", hex::encode(&test_bytes), test_bytes.len());
+
     // Create sample data structures
     let user = User {
         id: 12345,

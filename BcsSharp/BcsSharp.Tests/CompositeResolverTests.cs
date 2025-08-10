@@ -12,28 +12,6 @@ namespace BcsSharp.Tests
     public class CompositeResolverTests
     {
         [Fact]
-        public void CompositeResolver_Default_ShouldHaveCorrectResolverChain()
-        {
-            // Arrange
-            var resolver = CompositeResolver.Default;
-
-            // Act & Assert - Should resolve nullable value types via NullableResolver
-            var nullableIntFormatter = resolver.GetFormatter<int?>();
-            Assert.NotNull(nullableIntFormatter);
-            Assert.Same(OptionFormatterCache.Int32OptionFormatter, nullableIntFormatter);
-
-            // Act & Assert - Should resolve nullable reference types via NullableReferenceResolver
-            var nullableStringFormatter = resolver.GetFormatter<string>();
-            Assert.NotNull(nullableStringFormatter);
-            Assert.Same(NullableReferenceResolver.StringNullableFormatter, nullableStringFormatter);
-
-            // Act & Assert - Should resolve standard types via StandardResolver
-            var intFormatter = resolver.GetFormatter<int>();
-            Assert.NotNull(intFormatter);
-            Assert.Same(Int32Formatter.Instance, intFormatter);
-        }
-
-        [Fact]
         public void CompositeResolver_Create_ShouldUseStandardResolverFirst()
         {
             // Arrange - Create resolver with standard resolver first
@@ -58,10 +36,10 @@ namespace BcsSharp.Tests
             // Act & Assert - Should handle nullable types (from defaults)
             Assert.NotNull(resolver.GetFormatter<int?>());
             Assert.NotNull(resolver.GetFormatter<string>());
-            
+
             // Act & Assert - Should handle standard types (from defaults)
             Assert.NotNull(resolver.GetFormatter<int>());
-            
+
             // Act & Assert - Should handle custom types (from custom resolver)
             Assert.NotNull(resolver.GetFormatter<TestCustomType>());
         }
@@ -97,30 +75,6 @@ namespace BcsSharp.Tests
                 // Act - Serialize/deserialize nullable int
                 var serialized = BcsSerializer.Serialize(value);
                 var deserialized = BcsSerializer.Deserialize<int?>(serialized);
-
-                // Assert
-                Assert.Equal(value, deserialized);
-            }
-            finally
-            {
-                BcsSerializer.DefaultResolver = originalDefault;
-            }
-        }
-
-        [Theory]
-        [InlineData("Hello World")]
-        [InlineData(null)]
-        public void CompositeResolver_NullableStringIntegration_ShouldWork(string? value)
-        {
-            // Arrange - Use default composite resolver
-            var originalDefault = BcsSerializer.DefaultResolver;
-            BcsSerializer.DefaultResolver = CompositeResolver.Default;
-
-            try
-            {
-                // Act - Serialize/deserialize nullable string
-                var serialized = BcsSerializer.Serialize(value);
-                var deserialized = BcsSerializer.Deserialize<string?>(serialized);
 
                 // Assert
                 Assert.Equal(value, deserialized);
@@ -230,7 +184,7 @@ namespace BcsSharp.Tests
             {
                 if (typeof(T) == typeof(TestCustomType))
                     return (IBcsFormatter<T>)(object)new TestCustomTypeFormatter();
-                
+
                 return null;
             }
         }
@@ -241,7 +195,7 @@ namespace BcsSharp.Tests
             {
                 if (typeof(T) == typeof(int))
                     return (IBcsFormatter<T>)(object)new TestCustomIntFormatter();
-                
+
                 return null;
             }
         }

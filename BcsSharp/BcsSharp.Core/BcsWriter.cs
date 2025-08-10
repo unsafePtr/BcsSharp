@@ -167,7 +167,7 @@ namespace BcsSharp.Core
         /// </summary>
         public void Write(UInt256 value)
         {
-            // we must do this instead of direct buffer write because there is internal check for buffer size
+            // we must do this instead of direct buffer write because there is internal check for buffer size inside Nethermind library
             Span<byte> littleEndianBytes = stackalloc byte[32];
             value.ToLittleEndian(littleEndianBytes);
 
@@ -186,44 +186,27 @@ namespace BcsSharp.Core
         }
 
         /// <summary>
-        /// Write ULEB128 (Variable Length Encoding) integer
-        /// </summary>
-        public void WriteULEB(UInt128 value)
-        {
-            Span<byte> tempBuffer = stackalloc byte[19]; // Max bytes for 128-bit ULEB128
-            int bytesWritten = 0;
-
-            do
-            {
-                byte b = (byte)(value & 0x7F);
-                value >>= 7;
-
-                if (value != 0)
-                    b |= 0x80;
-
-                tempBuffer[bytesWritten++] = b;
-            } while (value != 0);
-
-            // Copy to avoid scope issues
-            var span = _bufferWriter.GetSpan(bytesWritten);
-            tempBuffer.Slice(0, bytesWritten).CopyTo(span);
-            _bufferWriter.Advance(bytesWritten);
-        }
-
-        /// <summary>
-        /// Write ULEB128 from 32-bit uint
+        /// Write ULEB128 from 32-bit uint. Used typically to write down the length of a string or array.
         /// </summary>
         public void WriteULEB(uint value)
         {
-            WriteULEB(new UInt128(0, value));
-        }
+            Span<byte> span = _bufferWriter.GetSpan(5); // Max 5 bytes for uint
+            int index = 0;
 
-        /// <summary>
-        /// Write ULEB128 from 64-bit ulong
-        /// </summary>
-        public void WriteULEB(ulong value)
-        {
-            WriteULEB(new UInt128(0, value));
+            do
+            {
+                byte b = (byte)(value & 0x7F); // Get lowest 7 bits
+                value >>= 7; // Shift right by 7 bits
+
+                if (value != 0) // If more bits to encode, set continuation bit
+                {
+                    b |= 0x80;
+                }
+
+                span[index++] = b;
+            } while (value != 0);
+
+            _bufferWriter.Advance(index);
         }
 
         /// <summary>
@@ -237,15 +220,17 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write string value (length-prefixed UTF-8)
         /// </summary>
-        public void WriteString(string value)
+        public void WriteString(string? value)
         {
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
+            if (value == null || value == string.Empty)
+            {
+                Write((byte)0); // Write length 0 as single byte
+                return;
+            }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(value);
             WriteULEB((uint)bytes.Length);
             WriteBytes(bytes);
-
         }
 
         /// <summary>
