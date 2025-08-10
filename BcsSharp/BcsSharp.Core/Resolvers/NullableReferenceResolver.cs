@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using BcsSharp.Core.Formatters;
 
@@ -18,6 +19,41 @@ namespace BcsSharp.Core.Resolvers
         public IBcsFormatter<T>? GetFormatter<T>()
         {
             return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), CreateFormatter);
+        }
+
+        /// <summary>
+        /// Get formatter for a specific property context (needed for nullable reference type detection)
+        /// </summary>
+        public IBcsFormatter<T>? GetFormatterForProperty<T>(PropertyInfo propertyInfo)
+        {
+            return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), _ => CreateFormatterForProperty<T>(propertyInfo));
+        }
+
+        private object? CreateFormatterForProperty<T>(PropertyInfo propertyInfo)
+        {
+            var type = typeof(T);
+
+            // Only handle reference types
+            if (type.IsValueType)
+                return null;
+
+            // Check if this property is marked as nullable using NullableAttribute
+            if (IsNullableReferenceTypeProperty(propertyInfo))
+            {
+                // For string, return the direct StringFormatter (we fixed this earlier)
+                if (type == typeof(string))
+                    return StringFormatter.Instance;
+
+                // For other reference types, get the underlying formatter and wrap in NullableReferenceFormatter
+                var underlyingFormatter = GetFormatterForUnderlyingType(type);
+                if (underlyingFormatter != null)
+                {
+                    var nullableFormatterType = typeof(NullableReferenceFormatter<>).MakeGenericType(type);
+                    return Activator.CreateInstance(nullableFormatterType, underlyingFormatter);
+                }
+            }
+
+            return null;
         }
 
         private static object? CreateFormatter(Type type)
@@ -100,6 +136,31 @@ namespace BcsSharp.Core.Resolvers
 
             // For now, assume reference types can be nullable, including string
             return !type.IsValueType;
+        }
+
+        /// <summary>
+        /// Check if a property is marked as nullable using NullableAttribute
+        /// </summary>
+        private static bool IsNullableReferenceTypeProperty(PropertyInfo propertyInfo)
+        {
+            // Check for NullableAttribute on the property
+            var nullableAttribute = propertyInfo.GetCustomAttribute<NullableAttribute>();
+            if (nullableAttribute != null)
+            {
+                // NullableAttribute has a single constructor parameter (byte[] flags)
+                // flags[0]: 0 = oblivious, 1 = not null, 2 = nullable
+                var flagsField = typeof(NullableAttribute).GetField("NullableFlags", BindingFlags.Public | BindingFlags.Instance);
+                if (flagsField != null)
+                {
+                    var flags = (byte[]?)flagsField.GetValue(nullableAttribute);
+                    return flags != null && flags.Length > 0 && flags[0] == 2;
+                }
+            }
+
+            // If no explicit attribute, check the nullable context
+            // This is a simplified implementation - full detection would require
+            // analyzing NullableContextAttribute and compiler metadata
+            return false;
         }
     }
 }

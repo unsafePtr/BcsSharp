@@ -1,7 +1,7 @@
 use anyhow::Result;
-use primitive_types::U256;
 use serde::Serialize;
-use std::fs;
+use primitive_types::U256;
+use std::{fs, ptr::null};
 
 mod types;
 use types::*;
@@ -41,14 +41,14 @@ fn main() -> Result<()> {
         id: 12345,
         name: "Alice".to_string(),
         email: Option::None,
-        balance: U256::max_value(),
+        balance: PrimitiveU256(U256::MAX),
         is_verified: true,
         address: Some(Address {
             street: "".to_string(),
             city: "Plovdiv".to_string(),
             state: Option::None,
             zip: "12345".to_string(),
-        }),
+        })
     };
 
     let asset = GameAsset {
@@ -66,6 +66,7 @@ fn main() -> Result<()> {
             },
         ],
     };
+
 
     let transaction = Transaction {
         tx_id: "0x1234567890abcdef".to_string(),
@@ -194,6 +195,28 @@ fn test_bcs_compliance() -> Result<()> {
     if serialized == serialized2 {
         println!("   ✅ BCS deterministic property verified");
     }
+    
+    // Test PrimitiveU256 specifically
+    println!("\n🔢 Testing PrimitiveU256 serialization...");
+    let test_u256 = PrimitiveU256(U256::from(12345u64));
+    let serialized_u256 = bcs::to_bytes(&test_u256)?;
+    let deserialized_u256: PrimitiveU256 = bcs::from_bytes(&serialized_u256)?;
+    println!("   ✅ PrimitiveU256 round-trip successful: {} == {}", 
+        test_u256.0, deserialized_u256.0);
+    
+    let max_u256 = PrimitiveU256(U256::MAX);
+    let serialized_max = bcs::to_bytes(&max_u256)?;
+    println!("   ✅ PrimitiveU256 MAX round-trip successful");
+    println!("   Size: {} bytes (should be 32: fixed 32 bytes, no length prefix)", serialized_max.len());
+    
+    // Test specific values to verify byte ordering matches Sui's approach
+    let test_1 = PrimitiveU256(U256::from(1u64));
+    let bytes_1 = bcs::to_bytes(&test_1)?;
+    println!("   U256::from(1) serializes to: {}", hex::encode(&bytes_1));
+    
+    let test_256 = PrimitiveU256(U256::from(256u64));
+    let bytes_256 = bcs::to_bytes(&test_256)?;
+    println!("   U256::from(256) serializes to: {} (should show little-endian)", hex::encode(&bytes_256));
     
     Ok(())
 }

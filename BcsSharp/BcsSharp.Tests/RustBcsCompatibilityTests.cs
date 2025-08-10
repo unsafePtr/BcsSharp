@@ -2,6 +2,8 @@ using System.IO;
 using BcsSharp.Core;
 using BcsSharp.Core.Attributes;
 using Nethermind.Int256;
+using OneOf;
+using OneOf.Types;
 using Xunit;
 
 namespace BcsSharp.Tests
@@ -120,7 +122,7 @@ namespace BcsSharp.Tests
             [BcsField(4)]
             public bool IsVerified { get; set; }
             [BcsField(5)]
-            public Address? Address { get; set; }
+            public OneOf<None, Address> Address { get; set; }
         }
 
         public class Attribute
@@ -205,13 +207,13 @@ namespace BcsSharp.Tests
             // Test how C# BCS serializes empty strings
             var emptyString = "";
             var serializedEmpty = BcsSerializer.Serialize(emptyString);
-            
+
             // Empty string should serialize as: [0x00] (length 0)
             var expected = new byte[] { 0x00 };
-            
+
             Console.WriteLine($"Empty string serialized as: {Convert.ToHexString(serializedEmpty)}");
             Console.WriteLine($"Expected: {Convert.ToHexString(expected)}");
-            
+
             Assert.Equal(expected, serializedEmpty);
         }
 
@@ -234,16 +236,16 @@ namespace BcsSharp.Tests
                 var serialized = BcsSerializer.Serialize(str);
                 Console.WriteLine($"String '{str}' serialized as: {Convert.ToHexString(serialized)} (length: {serialized.Length} bytes)");
             }
-            
+
             // Specific test for "test" string to compare with Rust
             var testStr = "test";
             var testBytes = BcsSerializer.Serialize(testStr);
             var expectedRust = "0474657374"; // From Rust output
             var actualCSharp = Convert.ToHexString(testBytes);
-            
+
             Console.WriteLine($"Rust 'test': {expectedRust}");
             Console.WriteLine($"C#   'test': {actualCSharp}");
-            
+
             Assert.Equal(expectedRust, actualCSharp);
         }
 
@@ -258,7 +260,7 @@ namespace BcsSharp.Tests
                 Email = null, // Option::None in Rust
                 Balance = UInt256.MaxValue, // U256::max_value() in Rust
                 IsVerified = true,
-                Address = new Address
+                Address = new Address  // Some(Address) in Rust - OneOf implicit conversion
                 {
                     Street = "", // empty string in Rust
                     City = "Plovdiv",
@@ -277,11 +279,110 @@ namespace BcsSharp.Tests
             // Assert - Read expected bytes from user.bcs file and compare
             var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "user.bcs");
             var expectedBytes = File.ReadAllBytes(rustBcsPath);
-            
+
             Console.WriteLine($"Rust User serialized as: {Convert.ToHexString(expectedBytes)}");
             Console.WriteLine($"Length: {expectedBytes.Length} bytes");
 
+            // Analyze field by field to find where they differ
+            AnalyzeUserStructBytes(serialized, expectedBytes);
+
             Assert.Equal(expectedBytes, serialized);
+        }
+
+        private static void AnalyzeUserStructBytes(byte[] csharp, byte[] rust)
+        {
+            Console.WriteLine("\n=== Field-by-field analysis ===");
+
+            var csharpReader = new BcsReader(csharp);
+            var rustReader = new BcsReader(rust);
+
+            try
+            {
+                // Field 0: Id (u64)
+                var csharpId = csharpReader.Read64();
+                var rustId = rustReader.Read64();
+                Console.WriteLine($"Id: C#={csharpId}, Rust={rustId} {(csharpId == rustId ? "✅" : "❌")}");
+
+                // Field 1: Name (String)
+                var csharpName = csharpReader.ReadString();
+                var rustName = rustReader.ReadString();
+                Console.WriteLine($"Name: C#='{csharpName}', Rust='{rustName}' {(csharpName == rustName ? "✅" : "❌")}");
+
+                // Field 2: Email (Option<String>)
+                var csharpEmailOption = csharpReader.Read8();
+                var rustEmailOption = rustReader.Read8();
+                Console.WriteLine($"Email Option: C#={csharpEmailOption}, Rust={rustEmailOption} {(csharpEmailOption == rustEmailOption ? "✅" : "❌")}");
+
+                if (csharpEmailOption == 1)
+                {
+                    var csharpEmail = csharpReader.ReadString();
+                    Console.WriteLine($"Email Value: C#='{csharpEmail}'");
+                }
+                if (rustEmailOption == 1)
+                {
+                    var rustEmail = rustReader.ReadString();
+                    Console.WriteLine($"Email Value: Rust='{rustEmail}'");
+                }
+
+                // Field 3: Balance - This is where the difference likely is
+                Console.WriteLine($"\nPosition before Balance: C#={csharpReader.Position}, Rust={rustReader.Position}");
+
+                // Both now serialize Balance as 32-byte binary
+                if (rustReader.Position < rust.Length && csharpReader.Position < csharp.Length)
+                {
+                    var rustBalance = rustReader.Read256();
+                    var csharpBalance = csharpReader.Read256();
+                    Console.WriteLine($"Balance: C#={csharpBalance}, Rust={rustBalance} {(csharpBalance == rustBalance ? "✅" : "❌")}");
+                }
+
+                // Field 4: IsVerified (bool) 
+                Console.WriteLine($"\nPosition before IsVerified: C#={csharpReader.Position}, Rust={rustReader.Position}");
+                if (csharpReader.Position < csharp.Length && rustReader.Position < rust.Length)
+                {
+                    var csharpVerified = csharpReader.ReadBool();
+                    var rustVerified = rustReader.ReadBool();
+                    Console.WriteLine($"IsVerified: C#={csharpVerified}, Rust={rustVerified} {(csharpVerified == rustVerified ? "✅" : "❌")}");
+                }
+
+                // Field 5: Address (Option<Address>)
+                Console.WriteLine($"\nPosition before Address: C#={csharpReader.Position}, Rust={rustReader.Position}");
+                if (csharpReader.Position < csharp.Length && rustReader.Position < rust.Length)
+                {
+                    var csharpAddressOption = csharpReader.Read8();
+                    var rustAddressOption = rustReader.Read8();
+                    Console.WriteLine($"Address Option: C#={csharpAddressOption}, Rust={rustAddressOption} {(csharpAddressOption == rustAddressOption ? "✅" : "❌")}");
+
+                    if (csharpAddressOption == 1 && rustAddressOption == 1)
+                    {
+                        var csharpStreet = csharpReader.ReadString();
+                        var rustStreet = rustReader.ReadString();
+                        Console.WriteLine($"Street: C#='{csharpStreet}', Rust='{rustStreet}' {(csharpStreet == rustStreet ? "✅" : "❌")}");
+
+                        var csharpCity = csharpReader.ReadString();
+                        var rustCity = rustReader.ReadString();
+                        Console.WriteLine($"City: C#='{csharpCity}', Rust='{rustCity}' {(csharpCity == rustCity ? "✅" : "❌")}");
+
+                        var csharpStateOption = csharpReader.Read8();
+                        var rustStateOption = rustReader.Read8();
+                        Console.WriteLine($"State Option: C#={csharpStateOption}, Rust={rustStateOption} {(csharpStateOption == rustStateOption ? "✅" : "❌")}");
+
+                        var csharpZip = csharpReader.ReadString();
+                        var rustZip = rustReader.ReadString();
+                        Console.WriteLine($"Zip: C#='{csharpZip}', Rust='{rustZip}' {(csharpZip == rustZip ? "✅" : "❌")}");
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error analyzing: {ex.Message}");
+                Console.WriteLine($"C# position: {csharpReader.Position}, Rust position: {rustReader.Position}");
+
+                // Show bytes around position 15
+                Console.WriteLine($"\nBytes around position 15:");
+                Console.WriteLine($"C#:   {Convert.ToHexString(csharp.Skip(10).Take(20).ToArray())}");
+                Console.WriteLine($"Rust: {Convert.ToHexString(rust.Skip(10).Take(20).ToArray())}");
+            }
         }
     }
 }

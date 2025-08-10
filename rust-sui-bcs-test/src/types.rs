@@ -1,5 +1,48 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use primitive_types::U256;
+
+/// Custom wrapper for U256 that implements BCS-compatible serialization
+#[derive(Debug, Clone, PartialEq)]
+pub struct PrimitiveU256(pub U256);
+
+// follow similar approach to Sui's U256 serialization
+// https://github.com/MystenLabs/sui/blob/20ad4d4ae7bc0c0bf1f1f393156ccc57c1080fd0/external-crates/move/crates/move-core-types/src/u256.rs#L127-L145
+
+
+impl Serialize for PrimitiveU256 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Convert U256 to little-endian bytes (32 bytes) - following Sui's approach
+        // primitive-types U256 stores as 4 u64 words, convert each to little-endian
+        let mut bytes = [0u8; 32];
+        for (i, &word) in self.0.0.iter().enumerate() {
+            let start = i * 8;
+            bytes[start..start + 8].copy_from_slice(&word.to_le_bytes());
+        }
+        bytes.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for PrimitiveU256 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Following Sui's approach - deserialize as fixed 32-byte array
+        let bytes: [u8; 32] = <[u8; 32]>::deserialize(deserializer)?;
+        // Convert from little-endian bytes back to U256 (4 x u64 words)
+        let mut words = [0u64; 4];
+        for (i, chunk) in bytes.chunks_exact(8).enumerate() {
+            words[i] = u64::from_le_bytes([
+                chunk[0], chunk[1], chunk[2], chunk[3],
+                chunk[4], chunk[5], chunk[6], chunk[7],
+            ]);
+        }
+        Ok(PrimitiveU256(U256(words)))
+    }
+}
 
 /// Represents a user in the system
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -7,9 +50,14 @@ pub struct User {
     pub id: u64,
     pub name: String,
     pub email: Option<String>,
-    pub balance: U256,
+    pub balance: PrimitiveU256,
     pub is_verified: bool,
-    pub address: Option<Address>,
+    pub address: Option<Address>
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Notes {
+    pub description: String,
 }
 
 /// Represents an address for a user

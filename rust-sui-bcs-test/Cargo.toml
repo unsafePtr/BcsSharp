@@ -12,4 +12,4 @@ serde = { version = "1.0.219", features = ["derive"] }
 anyhow = "1.0.98"
 # Hex encoding for display - latest 0.4.x
 hex = "0.4.3"
-primitive-types = { version = "0.13.1", features = ["serde"] }
+primitive-types = { version = "0.13.1" }
