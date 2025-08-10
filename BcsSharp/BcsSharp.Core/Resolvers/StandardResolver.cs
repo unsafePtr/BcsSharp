@@ -145,9 +145,11 @@ namespace BcsSharp.Core.Resolvers
 
         private static object? GetFormatterForType(Type type)
         {
-            var resolverType = typeof(StandardResolver);
-            var method = resolverType.GetMethod(nameof(GetFormatter))?.MakeGenericMethod(type);
-            return method?.Invoke(Instance, null);
+            // Use the default CompositeResolver to ensure all formatters (including custom ones) are available
+            // This prevents circular dependency issues when arrays/collections contain custom types
+            var resolverType = typeof(IFormatterResolver);
+            var method = resolverType.GetMethod(nameof(IFormatterResolver.GetFormatter))?.MakeGenericMethod(type);
+            return method?.Invoke(CompositeResolver.Default, null);
         }
     }
 }

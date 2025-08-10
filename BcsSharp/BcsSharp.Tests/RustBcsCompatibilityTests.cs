@@ -1,4 +1,5 @@
 using System.IO;
+using System.Reflection;
 using BcsSharp.Core;
 using BcsSharp.Core.Attributes;
 using Nethermind.Int256;
@@ -106,6 +107,68 @@ namespace BcsSharp.Tests
             public byte Level { get; set; }
         }
 
+        [BcsStruct]
+        public class GameAsset
+        {
+            [BcsField(0)]
+            public string AssetId { get; set; } = string.Empty;
+            [BcsField(1)]
+            public AssetType AssetType { get; set; }
+            [BcsField(2)]
+            public byte Level { get; set; }
+            [BcsField(3)]
+            public Attribute[] Attributes { get; set; } = Array.Empty<Attribute>();
+        }
+
+        [BcsStruct]
+        public class Transaction
+        {
+            [BcsField(0)]
+            public string TxId { get; set; } = string.Empty;
+            [BcsField(1)]
+            public ulong FromUser { get; set; }
+            [BcsField(2)]
+            public ulong ToUser { get; set; }
+            [BcsField(3)]
+            public ulong Amount { get; set; }
+            [BcsField(4)]
+            public ulong Timestamp { get; set; }
+            [BcsField(5)]
+            public TransactionType TxType { get; set; }
+        }
+
+        [BcsStruct]
+        public class MarketplaceItem
+        {
+            [BcsField(0)]
+            public string ItemId { get; set; } = string.Empty;
+            [BcsField(1)]
+            public ulong Seller { get; set; }
+            [BcsField(2)]
+            public GameAsset Asset { get; set; } = new();
+            [BcsField(3)]
+            public ulong Price { get; set; }
+            [BcsField(4)]
+            public ulong ListedAt { get; set; }
+            [BcsField(5)]
+            public bool IsActive { get; set; }
+        }
+
+        [BcsStruct]
+        public class TupleExamples
+        {
+            [BcsField(0)]
+            public (string, uint) SimplePair { get; set; }
+            [BcsField(1)]
+            public (ulong, bool, string) Triple { get; set; }
+            [BcsField(2)]
+            public (string, GameAsset) NestedTuple { get; set; }
+            [BcsField(3)]
+            public (string, uint[]) TupleWithArray { get; set; }
+            [BcsField(4)]
+            public (User, Transaction, bool) ComplexTuple { get; set; }
+        }
+
         #region Structs (C# equivalent of Rust structs)
 
         [BcsStruct]
@@ -125,79 +188,15 @@ namespace BcsSharp.Tests
             public OneOf<None, Address> Address { get; set; }
         }
 
+        [BcsStruct]
         public class Attribute
         {
+            [BcsField(0)]
             public string Name { get; set; } = string.Empty;
+            [BcsField(1)]
             public uint Value { get; set; }
         }
 
-        public class GameAsset
-        {
-            public string AssetId { get; set; } = string.Empty;
-            public AssetType AssetType { get; set; }
-            public byte Level { get; set; }
-            public Attribute[] Attributes { get; set; } = Array.Empty<Attribute>();
-        }
-
-        public class Transaction
-        {
-            public string TxId { get; set; } = string.Empty;
-            public ulong FromUser { get; set; }
-            public ulong ToUser { get; set; }
-            public ulong Amount { get; set; }
-            public ulong Timestamp { get; set; }
-            public TransactionType TxType { get; set; }
-        }
-
-        public class MarketplaceItem
-        {
-            public string ItemId { get; set; } = string.Empty;
-            public ulong Seller { get; set; }
-            public GameAsset Asset { get; set; } = new();
-            public ulong Price { get; set; }
-            public ulong ListedAt { get; set; }
-            public bool IsActive { get; set; }
-        }
-
-        public class SuiCompatibleData
-        {
-            public string Owner { get; set; } = string.Empty;
-            public ulong Balance { get; set; }
-            public byte[] Metadata { get; set; } = Array.Empty<byte>();
-        }
-
-        public class SuiObjectExample
-        {
-            public string Id { get; set; } = string.Empty;
-            public ulong Version { get; set; }
-            public string Owner { get; set; } = string.Empty;
-            public byte[] Data { get; set; } = Array.Empty<byte>();
-        }
-
-        public class TupleExamples
-        {
-            public (string, uint) SimplePair { get; set; }
-            public (ulong, bool, string) Triple { get; set; }
-            public (string, GameAsset) NestedTuple { get; set; }
-            public (string, uint[]) TupleWithArray { get; set; }
-            public (User, Transaction, bool) ComplexTuple { get; set; }
-        }
-
-        public class GlobalStats
-        {
-            public ulong TotalUsers { get; set; }
-            public ulong TotalTransactions { get; set; }
-            public ulong TotalVolume { get; set; }
-            public (Rarity, ulong)[] AssetsByRarity { get; set; } = Array.Empty<(Rarity, ulong)>();
-        }
-
-        public class GameState
-        {
-            public User[] Players { get; set; } = Array.Empty<User>();
-            public Transaction[] ActiveTransactions { get; set; } = Array.Empty<Transaction>();
-            public MarketplaceItem[] Marketplace { get; set; } = Array.Empty<MarketplaceItem>();
-            public GlobalStats GlobalStats { get; set; } = new();
-        }
 
         #endregion
 
@@ -285,6 +284,181 @@ namespace BcsSharp.Tests
 
             // Analyze field by field to find where they differ
             AnalyzeUserStructBytes(serialized, expectedBytes);
+
+            Assert.Equal(expectedBytes, serialized);
+        }
+
+        [Fact]
+        public void RustBcsCompatibility_GameAsset_ByteComparison()
+        {
+            // Arrange - Same data as Rust main.rs (lines 54-68)
+            var asset = new GameAsset
+            {
+                AssetId = "sword_001",
+                AssetType = AssetType.Weapon, // AssetType::Weapon = 0
+                Level = 15,
+                Attributes = new[]
+                {
+                    new Attribute { Name = "damage", Value = 85 },
+                    new Attribute { Name = "speed", Value = 12 }
+                }
+            };
+
+            // Act - Serialize the asset
+            var serialized = BcsSerializer.Serialize(asset);
+
+            // Debug output
+            Console.WriteLine($"C# GameAsset serialized as: {Convert.ToHexString(serialized)}");
+            Console.WriteLine($"Length: {serialized.Length} bytes");
+
+            // Assert - Read expected bytes from asset.bcs file and compare
+            var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "asset.bcs");
+            var expectedBytes = File.ReadAllBytes(rustBcsPath);
+
+            Console.WriteLine($"Rust GameAsset serialized as: {Convert.ToHexString(expectedBytes)}");
+            Console.WriteLine($"Length: {expectedBytes.Length} bytes");
+
+            Assert.Equal(expectedBytes, serialized);
+        }
+
+        [Fact]
+        public void RustBcsCompatibility_Transaction_ByteComparison()
+        {
+            // Arrange - Same data as Rust main.rs (lines 71-78)
+            var transaction = new Transaction
+            {
+                TxId = "0x1234567890abcdef",
+                FromUser = 12345, // user.id
+                ToUser = 67890,
+                Amount = 250,
+                Timestamp = 1640995200, // 2022-01-01 00:00:00 UTC
+                TxType = TransactionType.Transfer // TransactionType::Transfer = 0
+            };
+
+            // Act - Serialize the transaction
+            var serialized = BcsSerializer.Serialize(transaction);
+
+            // Debug output
+            Console.WriteLine($"C# Transaction serialized as: {Convert.ToHexString(serialized)}");
+            Console.WriteLine($"Length: {serialized.Length} bytes");
+
+            // Assert - Read expected bytes from transaction.bcs file and compare
+            var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "transaction.bcs");
+            var expectedBytes = File.ReadAllBytes(rustBcsPath);
+
+            Console.WriteLine($"Rust Transaction serialized as: {Convert.ToHexString(expectedBytes)}");
+            Console.WriteLine($"Length: {expectedBytes.Length} bytes");
+
+            Assert.Equal(expectedBytes, serialized);
+        }
+
+        [Fact]
+        public void RustBcsCompatibility_MarketplaceItem_ByteComparison()
+        {
+            // Arrange - Same data as Rust main.rs (lines 80-87)
+            var asset = new GameAsset
+            {
+                AssetId = "sword_001",
+                AssetType = AssetType.Weapon,
+                Level = 15,
+                Attributes = new[]
+                {
+                    new Attribute { Name = "damage", Value = 85 },
+                    new Attribute { Name = "speed", Value = 12 }
+                }
+            };
+
+            var marketplaceItem = new MarketplaceItem
+            {
+                ItemId = "market_001",
+                Seller = 12345, // user.id
+                Asset = asset,
+                Price = 500,
+                ListedAt = 1640995200,
+                IsActive = true
+            };
+
+            // Act - Serialize the marketplace item
+            var serialized = BcsSerializer.Serialize(marketplaceItem);
+
+            // Debug output
+            Console.WriteLine($"C# MarketplaceItem serialized as: {Convert.ToHexString(serialized)}");
+            Console.WriteLine($"Length: {serialized.Length} bytes");
+
+            // Assert - Read expected bytes from marketplace.bcs file and compare
+            var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "marketplace.bcs");
+            var expectedBytes = File.ReadAllBytes(rustBcsPath);
+
+            Console.WriteLine($"Rust MarketplaceItem serialized as: {Convert.ToHexString(expectedBytes)}");
+            Console.WriteLine($"Length: {expectedBytes.Length} bytes");
+
+            Assert.Equal(expectedBytes, serialized);
+        }
+
+        [Fact]
+        public void RustBcsCompatibility_TupleExamples_ByteComparison()
+        {
+            // Arrange - Same data as Rust main.rs (lines 90-96)
+            var user = new User
+            {
+                Id = 12345,
+                Name = "Alice",
+                Email = null,
+                Balance = UInt256.MaxValue,
+                IsVerified = true,
+                Address = new Address
+                {
+                    Street = "",
+                    City = "Plovdiv",
+                    State = null,
+                    Zip = "12345"
+                }
+            };
+
+            var asset = new GameAsset
+            {
+                AssetId = "sword_001",
+                AssetType = AssetType.Weapon,
+                Level = 15,
+                Attributes = new[]
+                {
+                    new Attribute { Name = "damage", Value = 85 },
+                    new Attribute { Name = "speed", Value = 12 }
+                }
+            };
+
+            var transaction = new Transaction
+            {
+                TxId = "0x1234567890abcdef",
+                FromUser = 12345,
+                ToUser = 67890,
+                Amount = 250,
+                Timestamp = 1640995200,
+                TxType = TransactionType.Transfer
+            };
+
+            var tupleExamples = new TupleExamples
+            {
+                SimplePair = ("hello", 42u),
+                Triple = (123ul, true, "world"),
+                NestedTuple = ("asset_ref", asset),
+                TupleWithArray = ("numbers", new uint[] { 1, 2, 3, 4, 5 }),
+                ComplexTuple = (user, transaction, false)
+            };
+
+            // Act - Serialize the tuple examples
+            var serialized = BcsSerializer.Serialize(tupleExamples);
+
+            // Debug output
+            Console.WriteLine($"C# TupleExamples serialized as: {Convert.ToHexString(serialized)}");
+            Console.WriteLine($"Length: {serialized.Length} bytes");
+
+            // Assert - Read expected bytes from tuples.bcs file and compare
+            var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "tuples.bcs");
+            var expectedBytes = File.ReadAllBytes(rustBcsPath);
+
+            Console.WriteLine($"Rust TupleExamples serialized as: {Convert.ToHexString(expectedBytes)}");
+            Console.WriteLine($"Length: {expectedBytes.Length} bytes");
 
             Assert.Equal(expectedBytes, serialized);
         }
