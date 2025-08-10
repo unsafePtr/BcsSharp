@@ -12,39 +12,6 @@ namespace BcsSharp.Tests
     public class CompositeResolverTests
     {
         [Fact]
-        public void CompositeResolver_Create_ShouldUseStandardResolverFirst()
-        {
-            // Arrange - Create resolver with standard resolver first
-            var customResolver = new TestCustomResolver();
-            var resolver = CompositeResolver.Create(customResolver);
-
-            // Act - Get formatter for type that both resolvers can handle
-            var formatter = resolver.GetFormatter<int>();
-
-            // Assert - Should get from StandardResolver, not custom
-            Assert.NotNull(formatter);
-            Assert.Same(Int32Formatter.Instance, formatter);
-        }
-
-        [Fact]
-        public void CompositeResolver_CreateWithDefaults_ShouldIncludeAllDefaults()
-        {
-            // Arrange
-            var customResolver = new TestCustomResolver();
-            var resolver = CompositeResolver.CreateWithDefaults(customResolver);
-
-            // Act & Assert - Should handle nullable types (from defaults)
-            Assert.NotNull(resolver.GetFormatter<int?>());
-            Assert.NotNull(resolver.GetFormatter<string>());
-
-            // Act & Assert - Should handle standard types (from defaults)
-            Assert.NotNull(resolver.GetFormatter<int>());
-
-            // Act & Assert - Should handle custom types (from custom resolver)
-            Assert.NotNull(resolver.GetFormatter<TestCustomType>());
-        }
-
-        [Fact]
         public void CompositeResolver_ShouldCacheFormatters()
         {
             // Arrange

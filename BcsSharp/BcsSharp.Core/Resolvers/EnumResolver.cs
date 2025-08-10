@@ -24,7 +24,7 @@ namespace BcsSharp.Core.Resolvers
             return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), CreateFormatter);
         }
 
-        private object? CreateFormatter(Type type)
+        private static object? CreateFormatter(Type type)
         {
             // Check if it's a Rust-style variant enum (marked with [BcsEnum])
             var bcsEnumAttr = type.GetCustomAttribute<BcsEnumAttribute>();
@@ -45,50 +45,6 @@ namespace BcsSharp.Core.Resolvers
 
             // Not an enum we can handle
             return null;
-        }
-
-        /// <summary>
-        /// Checks if the resolver can handle the specified type.
-        /// </summary>
-        /// <param name="type">The type to check.</param>
-        /// <returns>True if the type is a BCS-compatible enum.</returns>
-        public bool CanResolve(Type type)
-        {
-            return type.GetCustomAttribute<BcsEnumAttribute>() != null || BcsSimpleEnumHelper.IsSimpleEnum(type);
-        }
-
-        /// <summary>
-        /// Gets all supported enum types that have been cached.
-        /// </summary>
-        public Type[] GetCachedEnumTypes()
-        {
-            var types = new Type[_formatterCache.Count];
-            var i = 0;
-            foreach (var kvp in _formatterCache)
-            {
-                if (kvp.Value != null) // Only include successfully created formatters
-                {
-                    types[i++] = kvp.Key;
-                }
-            }
-            
-            // Resize array to actual count
-            if (i < types.Length)
-            {
-                var actualTypes = new Type[i];
-                Array.Copy(types, actualTypes, i);
-                return actualTypes;
-            }
-            
-            return types;
-        }
-
-        /// <summary>
-        /// Clears the formatter cache. Useful for testing or dynamic enum registration.
-        /// </summary>
-        public void ClearCache()
-        {
-            _formatterCache.Clear();
         }
     }
 }

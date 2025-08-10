@@ -18,19 +18,16 @@ namespace BcsSharp.Core.Formatters
     {
         private readonly Dictionary<uint, BcsVariantInfo> _variantsByIndex;
         private readonly Dictionary<Type, BcsVariantInfo> _variantsByType;
-        private readonly Type _enumBaseType;
 
-        public Type TargetType => typeof(T);
+        public Type TargetType { get; } = typeof(T);
 
         public BcsVariantEnumFormatter()
         {
-            _enumBaseType = typeof(T);
-
-            var bcsEnumAttr = _enumBaseType.GetCustomAttribute<BcsEnumAttribute>();
+            var bcsEnumAttr = TargetType.GetCustomAttribute<BcsEnumAttribute>();
             if (bcsEnumAttr == null)
-                throw new InvalidOperationException($"Type {_enumBaseType.Name} must be marked with [BcsEnum] attribute");
+                throw new InvalidOperationException($"Type {TargetType.Name} must be marked with [BcsEnum] attribute");
 
-            var variants = DiscoverVariants(_enumBaseType, bcsEnumAttr);
+            var variants = DiscoverVariants(TargetType);
 
             _variantsByIndex = variants.ToDictionary(v => v.Index);
             _variantsByType = variants.ToDictionary(v => v.VariantType);
@@ -101,7 +98,7 @@ namespace BcsSharp.Core.Formatters
             return indexSize + dataSize.Value;
         }
 
-        private List<BcsVariantInfo> DiscoverVariants(Type enumBaseType, BcsEnumAttribute bcsEnumAttr)
+        private List<BcsVariantInfo> DiscoverVariants(Type enumBaseType)
         {
             var variants = new List<BcsVariantInfo>();
             uint nextIndex = 0;
@@ -178,8 +175,8 @@ namespace BcsSharp.Core.Formatters
         {
             // Check if the type implements the enum interface/inherits from enum base
             // Also ensure it's not a generic type definition to avoid issues with generic variants
-            return enumBaseType.IsAssignableFrom(candidateType) && 
-                   candidateType != enumBaseType && 
+            return enumBaseType.IsAssignableFrom(candidateType) &&
+                   candidateType != enumBaseType &&
                    !candidateType.IsGenericTypeDefinition;
         }
 
