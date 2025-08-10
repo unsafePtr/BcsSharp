@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using BcsSharp.Core.Attributes;
 
@@ -24,13 +21,13 @@ namespace BcsSharp.Core.Formatters
         public BcsObjectFormatter()
         {
             _objectType = typeof(T);
-            
+
             var bcsStructAttr = _objectType.GetCustomAttribute<BcsStructAttribute>();
             if (bcsStructAttr == null)
                 throw new InvalidOperationException($"Type {_objectType.Name} must be marked with [BcsStruct] attribute");
 
             _fields = DiscoverFields(_objectType);
-            
+
             if (!_fields.Any())
                 throw new InvalidOperationException($"Type {_objectType.Name} has no serializable fields marked with [BcsField]");
         }
@@ -54,25 +51,25 @@ namespace BcsSharp.Core.Formatters
             {
                 // For value types, we need to use boxing to properly set field values
                 object boxedInstance = Activator.CreateInstance(_objectType)!;
-                
+
                 foreach (var field in _fields)
                 {
                     var fieldValue = field.Formatter.DeserializeObject(ref reader);
                     field.SetValue(boxedInstance, fieldValue);
                 }
-                
+
                 return (T)boxedInstance;
             }
             else
             {
                 var instance = (T)Activator.CreateInstance(_objectType)!;
-                
+
                 foreach (var field in _fields)
                 {
                     var fieldValue = field.Formatter.DeserializeObject(ref reader);
                     field.SetValue(instance, fieldValue);
                 }
-                
+
                 return instance;
             }
         }
@@ -83,30 +80,30 @@ namespace BcsSharp.Core.Formatters
                 return null;
 
             var totalSize = 0;
-            
+
             foreach (var field in _fields)
             {
                 var fieldValue = field.GetValue(value);
                 var fieldSize = field.Formatter.GetObjectSize(fieldValue);
-                
+
                 if (fieldSize == null)
                     return null; // Variable size
-                    
+
                 totalSize += fieldSize.Value;
             }
-            
+
             return totalSize;
         }
 
         private List<BcsFieldInfo> DiscoverFields(Type objectType)
         {
             var fields = new List<BcsFieldInfo>();
-            
+
             // Get all fields and properties
             var members = new List<MemberInfo>();
             members.AddRange(objectType.GetFields(BindingFlags.Public | BindingFlags.Instance));
             members.AddRange(objectType.GetProperties(BindingFlags.Public | BindingFlags.Instance));
-            
+
             foreach (var member in members)
             {
                 var fieldAttr = member.GetCustomAttribute<BcsFieldAttribute>();
@@ -126,12 +123,12 @@ namespace BcsSharp.Core.Formatters
                 else if (member is PropertyInfo property)
                 {
                     memberType = property.PropertyType;
-                    
+
                     if (!property.CanRead)
                         throw new InvalidOperationException($"Property {member.Name} in {objectType.Name} must be readable");
                     if (!property.CanWrite)
                         throw new InvalidOperationException($"Property {member.Name} in {objectType.Name} must be writable");
-                        
+
                     getter = obj => property.GetValue(obj);
                     setter = (obj, value) => property.SetValue(obj, value);
                 }
@@ -144,8 +141,8 @@ namespace BcsSharp.Core.Formatters
                 if (formatter == null)
                     throw new InvalidOperationException($"No BCS formatter found for field {member.Name} of type {memberType.Name}");
 
-                var fieldName = fieldAttr.Name ?? member.Name;
-                var order = fieldAttr.Order ?? int.MaxValue; // Fields without explicit order go to the end
+                var fieldName = member.Name;
+                var order = fieldAttr.Order;
 
                 fields.Add(new BcsFieldInfo
                 {
@@ -159,12 +156,8 @@ namespace BcsSharp.Core.Formatters
                 });
             }
 
-            // Sort fields: first by explicit order, then lexicographically by name
-            return fields
-                .OrderBy(f => f.Order != int.MaxValue ? 0 : 1) // Explicit order first
-                .ThenBy(f => f.Order)
-                .ThenBy(f => f.Name, StringComparer.Ordinal) // Lexicographic order for fields without explicit order
-                .ToList();
+            // Sort fields by explicit order, then lexicographically by name
+            return [.. fields.OrderBy(f => f.Order)];
         }
 
         private class BcsFieldInfo

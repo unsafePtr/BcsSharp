@@ -12,13 +12,13 @@ namespace BcsSharp.Tests
         [BcsStruct]
         public class Address
         {
-            [BcsField]
+            [BcsField(0)]
             public string Street { get; set; } = "";
 
-            [BcsField]
+            [BcsField(1)]
             public string City { get; set; } = "";
 
-            [BcsField]
+            [BcsField(2)]
             public uint ZipCode { get; set; }
 
             public Address() { }
@@ -33,13 +33,13 @@ namespace BcsSharp.Tests
         [BcsStruct]
         public class Person
         {
-            [BcsField]
+            [BcsField(0)]
             public Address HomeAddress { get; set; } = new Address();
 
-            [BcsField]
+            [BcsField(1)]
             public string Name { get; set; } = "";
 
-            [BcsField]
+            [BcsField(2)]
             public uint Age { get; set; }
 
             public Person() { }

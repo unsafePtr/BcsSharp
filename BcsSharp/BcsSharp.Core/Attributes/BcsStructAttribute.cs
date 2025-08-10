@@ -22,23 +22,8 @@ namespace BcsSharp.Core.Attributes
     {
         /// <summary>
         /// Gets the explicit order of this field in serialization.
-        /// If not specified, fields are ordered lexicographically by name.
         /// </summary>
-        public int? Order { get; }
-
-        /// <summary>
-        /// Gets or sets the field name to use in serialization.
-        /// If not specified, uses the actual field/property name.
-        /// </summary>
-        public string? Name { get; set; }
-
-        /// <summary>
-        /// Initializes a new instance with automatic ordering (lexicographic by name).
-        /// </summary>
-        public BcsFieldAttribute()
-        {
-            Order = null;
-        }
+        public int Order { get; }
 
         /// <summary>
         /// Initializes a new instance with explicit field order.

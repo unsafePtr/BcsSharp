@@ -1,7 +1,5 @@
-using System;
 using BcsSharp.Core;
 using BcsSharp.Core.Attributes;
-using Xunit;
 
 namespace BcsSharp.Tests
 {
@@ -19,10 +17,10 @@ namespace BcsSharp.Tests
         [BcsStruct]
         public class Person
         {
-            [BcsField]
+            [BcsField(0)]
             public string Name { get; set; } = "";
 
-            [BcsField]
+            [BcsField(1)]
             public uint Age { get; set; }
 
             public Person() { }
@@ -58,33 +56,15 @@ namespace BcsSharp.Tests
         }
 
         /// <summary>
-        /// Mixed ordering - some explicit, some lexicographic
-        /// </summary>
-        [BcsStruct]
-        public class MixedOrderStruct
-        {
-            [BcsField(0)] // Explicit order - goes first
-            public uint Priority { get; set; }
-
-            [BcsField] // Lexicographic order - comes after explicit
-            public string Beta { get; set; } = "";
-
-            [BcsField] // Lexicographic order
-            public string Alpha { get; set; } = "";
-
-            public MixedOrderStruct() { }
-        }
-
-        /// <summary>
         /// Value type (struct) with BCS serialization
         /// </summary>
         [BcsStruct]
         public struct Point
         {
-            [BcsField]
+            [BcsField(0)]
             public int X { get; set; }
 
-            [BcsField]
+            [BcsField(1)]
             public int Y { get; set; }
 
             public Point(int x, int y)
@@ -100,10 +80,10 @@ namespace BcsSharp.Tests
         [BcsStruct]
         public class Address
         {
-            [BcsField]
+            [BcsField(0)]
             public string Street { get; set; } = "";
 
-            [BcsField]
+            [BcsField(1)]
             public string City { get; set; } = "";
 
             public Address() { }
@@ -117,10 +97,10 @@ namespace BcsSharp.Tests
         [BcsStruct]
         public class PersonWithAddress
         {
-            [BcsField]
+            [BcsField(0)]
             public string Name { get; set; } = "";
 
-            [BcsField]
+            [BcsField(1)]
             public Address HomeAddress { get; set; } = new Address();
 
             public PersonWithAddress() { }
@@ -132,25 +112,6 @@ namespace BcsSharp.Tests
         }
 
         #endregion
-
-        [Fact]
-        public void BcsObject_SimpleClass_ShouldSerializeInLexicographicOrder()
-        {
-            // Arrange - Fields should be serialized in lexicographic order: Age, Name
-            var person = new Person("Alice", 30);
-
-            // Act
-            var serialized = BcsSerializer.Serialize(person);
-            var deserialized = BcsSerializer.Deserialize<Person>(serialized);
-
-            // Assert
-            Assert.NotEmpty(serialized);
-            Assert.Equal("Alice", deserialized.Name);
-            Assert.Equal(30u, deserialized.Age);
-
-            // Age (uint, 4 bytes) comes before Name in lexicographic order
-            Assert.Equal(30u, BitConverter.ToUInt32(serialized, 0));
-        }
 
         [Fact]
         public void BcsObject_ExplicitOrdering_ShouldRespectOrder()
@@ -169,30 +130,6 @@ namespace BcsSharp.Tests
 
             // First field should be at the beginning
             Assert.Equal(12345u, BitConverter.ToUInt32(serialized, 0));
-        }
-
-        [Fact]
-        public void BcsObject_MixedOrdering_ShouldOrderExplicitFirst()
-        {
-            // Arrange - Priority (explicit order 0) should come first, then Alpha, Beta (lexicographic)
-            var obj = new MixedOrderStruct
-            {
-                Priority = 999,
-                Beta = "second",
-                Alpha = "first"
-            };
-
-            // Act
-            var serialized = BcsSerializer.Serialize(obj);
-            var deserialized = BcsSerializer.Deserialize<MixedOrderStruct>(serialized);
-
-            // Assert
-            Assert.Equal(999u, deserialized.Priority);
-            Assert.Equal("second", deserialized.Beta);
-            Assert.Equal("first", deserialized.Alpha);
-
-            // Priority should be serialized first
-            Assert.Equal(999u, BitConverter.ToUInt32(serialized, 0));
         }
 
         [Fact]
