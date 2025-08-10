@@ -23,19 +23,6 @@ impl SuiBcsUtils {
         Ok(bcs::to_bytes(data)?.len())
     }
 
-    /// Convert serialized data to hex string for display/debugging
-    /// This format is compatible with Sui CLI and RPC calls
-    pub fn to_hex_string<T: serde::Serialize>(data: &T) -> Result<String> {
-        let bytes = Self::serialize(data)?;
-        Ok(format!("0x{}", hex::encode(bytes)))
-    }
-
-    /// Create a BCS-serialized representation ready for Sui transactions
-    /// In Sui, this would typically be used for function arguments
-    pub fn prepare_for_sui_call<T: serde::Serialize>(data: &T) -> Result<Vec<u8>> {
-        Self::serialize(data)
-    }
-
     /// Validate that the serialized data follows BCS format constraints
     /// BCS has specific rules about deterministic serialization
     pub fn validate_bcs_format<T: serde::Serialize + for<'de> serde::Deserialize<'de> + PartialEq>(

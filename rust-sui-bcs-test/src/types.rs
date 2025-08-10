@@ -1,16 +1,28 @@
 use serde::{Deserialize, Serialize};
+use primitive_types::U256;
 
 /// Represents a user in the system
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct User {
     pub id: u64,
     pub name: String,
-    pub email: String,
-    pub balance: u64,
+    pub email: Option<String>,
+    pub balance: U256,
     pub is_verified: bool,
+    pub address: Option<Address>,
+}
+
+/// Represents an address for a user
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct  Address {
+    pub street: String,
+    pub city: String,
+    pub state: Option<String>,
+    pub zip: String,
 }
 
 /// Different types of game assets
+/// C-style enums for asset categorization
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AssetType {
     Weapon,
@@ -18,16 +30,6 @@ pub enum AssetType {
     Consumable,
     Material,
     Currency,
-}
-
-/// Asset rarity levels
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum Rarity {
-    Common,
-    Uncommon,
-    Rare,
-    Epic,
-    Legendary,
 }
 
 /// Asset attributes (like damage, defense, etc.)
@@ -42,7 +44,6 @@ pub struct Attribute {
 pub struct GameAsset {
     pub asset_id: String,
     pub asset_type: AssetType,
-    pub rarity: Rarity,
     pub level: u8,
     pub attributes: Vec<Attribute>,
 }
@@ -86,6 +87,23 @@ pub struct GameState {
     pub active_transactions: Vec<Transaction>,
     pub marketplace: Vec<MarketplaceItem>,
     pub global_stats: GlobalStats,
+}
+
+/// legendary asset with additional properties
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LegendaryAsset {
+    pub asset_id: String,
+    pub level: u8
+}
+
+/// rarity levels for game assets
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum Rarity {
+    Common,
+    Uncommon(u32),
+    Rare(Vec<u32>),
+    Epic(String),
+    Legendary((String, u64, LegendaryAsset)),
 }
 
 /// Global game statistics

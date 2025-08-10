@@ -1,4 +1,5 @@
 use anyhow::Result;
+use primitive_types::U256;
 use serde::Serialize;
 use std::fs;
 
@@ -13,15 +14,20 @@ fn main() -> Result<()> {
     let user = User {
         id: 12345,
         name: "Alice".to_string(),
-        email: "alice@example.com".to_string(),
-        balance: 1000,
+        email: Option::None,
+        balance: U256::max_value(),
         is_verified: true,
+        address: Some(Address {
+            street: "".to_string(),
+            city: "Plovdiv".to_string(),
+            state: Option::None,
+            zip: "12345".to_string(),
+        }),
     };
 
     let asset = GameAsset {
         asset_id: "sword_001".to_string(),
         asset_type: AssetType::Weapon,
-        rarity: Rarity::Epic,
         level: 15,
         attributes: vec![
             Attribute {
@@ -65,20 +71,59 @@ fn main() -> Result<()> {
     // Demonstrate BCS serialization
     println!("\n📦 Serializing structs to BCS format...\n");
 
+    // Serialize each object separately
     serialize_and_display("User", &user)?;
     serialize_and_display("GameAsset", &asset)?;
     serialize_and_display("Transaction", &transaction)?;
     serialize_and_display("MarketplaceItem", &marketplace_item)?;
     serialize_and_display("TupleExamples", &tuple_examples)?;
 
+    // Serialize GlobalStats for each object, stats are different each time
+    println!("\n🌐 Serializing GlobalStats with each object...\n");
+    let stats_user = GlobalStats {
+        total_users: 1,
+        total_transactions: 0,
+        total_volume: 0,
+        assets_by_rarity: vec![(Rarity::Epic("Sword".to_string()), 1)],
+    };
+    serialize_and_display("GlobalStats (User)", &stats_user)?;
+    let stats_asset = GlobalStats {
+        total_users: 0,
+        total_transactions: 0,
+        total_volume: 0,
+        assets_by_rarity: vec![(Rarity::Rare(vec![15]), 1)],
+    };
+    serialize_and_display("GlobalStats (GameAsset)", &stats_asset)?;
+    let stats_tx = GlobalStats {
+        total_users: 2,
+        total_transactions: 1,
+        total_volume: transaction.amount,
+        assets_by_rarity: vec![],
+    };
+    serialize_and_display("GlobalStats (Transaction)", &stats_tx)?;
+    let stats_market = GlobalStats {
+        total_users: 1,
+        total_transactions: 0,
+        total_volume: marketplace_item.price,
+        assets_by_rarity: vec![(Rarity::Common, 1)],
+    };
+    serialize_and_display("GlobalStats (MarketplaceItem)", &stats_market)?;
+    let stats_tuple = GlobalStats {
+        total_users: 1,
+        total_transactions: 1,
+        total_volume: 250,
+        assets_by_rarity: vec![(Rarity::Uncommon(42), 1)],
+    };
+    serialize_and_display("GlobalStats (TupleExamples)", &stats_tuple)?;
+
     // Demonstrate deserialization
     println!("\n🔄 Testing serialization round-trip...\n");
-    
+
     let user_bytes = bcs::to_bytes(&user)?;
     let deserialized_user: User = bcs::from_bytes(&user_bytes)?;
     println!("✅ User serialization round-trip successful");
-    println!("   Original: {} ({})", user.name, user.email);
-    println!("   Restored: {} ({})", deserialized_user.name, deserialized_user.email);
+    println!("   Original: {} ({:?})", user.name, user.email);
+    println!("   Restored: {} ({:?})", deserialized_user.name, deserialized_user.email);
 
     // Show BCS format compliance
     println!("\n🔗 BCS format compliance test...");
