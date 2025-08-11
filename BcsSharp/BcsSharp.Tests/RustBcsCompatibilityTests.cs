@@ -1,12 +1,8 @@
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
 using BcsSharp.Core;
 using BcsSharp.Core.Attributes;
 using Nethermind.Int256;
 using OneOf;
 using OneOf.Types;
-using Xunit;
 
 namespace BcsSharp.Tests
 {
@@ -175,7 +171,7 @@ namespace BcsSharp.Tests
         {
             [BcsField(0)]
             public Dictionary<string, uint> StringToNumber { get; set; } = new();
-            [BcsField(1)] 
+            [BcsField(1)]
             public Dictionary<uint, string> NumberToString { get; set; } = new();
             [BcsField(2)]
             public Dictionary<string, Attribute> UserAttributes { get; set; } = new();
@@ -489,7 +485,7 @@ namespace BcsSharp.Tests
             var numberToString = new Dictionary<uint, string>
             {
                 [1] = "common",
-                [2] = "rare", 
+                [2] = "rare",
                 [3] = "epic"
             };
 
@@ -521,6 +517,87 @@ namespace BcsSharp.Tests
             Console.WriteLine($"Length: {expectedBytes.Length} bytes");
 
             Assert.Equal(expectedBytes, serialized);
+        }
+
+        [Fact]
+        public void RustBcsCompatibility_LargeStringMap_ByteComparison()
+        {
+            // Arrange - Same data as Rust large_string_map (15 key-value pairs)
+            var largeStringMap = new Dictionary<string, uint>
+            {
+                ["zebra"] = 1000,
+                ["alpha"] = 2000,
+                ["beta"] = 3000,
+                ["gamma"] = 4000,
+                ["delta"] = 5000,
+                ["epsilon"] = 6000,
+                ["zeta"] = 7000,
+                ["eta"] = 8000,
+                ["theta"] = 9000,
+                ["iota"] = 10000,
+                ["kappa"] = 11000,
+                ["lambda"] = 12000,
+                ["mu"] = 13000,
+                ["nu"] = 14000,
+                ["xi"] = 15000
+            };
+
+            // Act - Serialize the large string map
+            var serialized = BcsSerializer.Serialize(largeStringMap);
+
+            // Debug output
+            Console.WriteLine($"C# LargeStringMap serialized as: {Convert.ToHexString(serialized)}");
+            Console.WriteLine($"Length: {serialized.Length} bytes");
+
+            // Assert - Read expected bytes from large_string_map.bcs file and compare
+            var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "large_string_map.bcs");
+            var expectedBytes = File.ReadAllBytes(rustBcsPath);
+
+            Console.WriteLine($"Rust LargeStringMap serialized as: {Convert.ToHexString(expectedBytes)}");
+            Console.WriteLine($"Length: {expectedBytes.Length} bytes");
+
+            // Analyze key ordering if there's a mismatch
+            if (!serialized.SequenceEqual(expectedBytes))
+            {
+                Console.WriteLine("\n🔍 Analyzing key ordering...");
+                AnalyzeLargeStringMapBytes(serialized, expectedBytes);
+            }
+
+            Assert.Equal(expectedBytes, serialized);
+        }
+
+        private static void AnalyzeLargeStringMapBytes(byte[] csharp, byte[] rust)
+        {
+            Console.WriteLine("\n=== Large String Map Key Order Analysis ===");
+
+            var csharpReader = new BcsReader(csharp);
+            var rustReader = new BcsReader(rust);
+
+            try
+            {
+                // Read count
+                var csharpCount = csharpReader.ReadULEB32();
+                var rustCount = rustReader.ReadULEB32();
+                Console.WriteLine($"Count: C#={csharpCount}, Rust={rustCount} {(csharpCount == rustCount ? "✅" : "❌")}");
+
+                Console.WriteLine("\nKey ordering comparison:");
+
+                for (uint i = 0; i < Math.Min(csharpCount, rustCount); i++)
+                {
+                    var csharpKey = csharpReader.ReadString();
+                    var csharpValue = csharpReader.Read32();
+
+                    var rustKey = rustReader.ReadString();
+                    var rustValue = rustReader.Read32();
+
+                    var match = csharpKey == rustKey && csharpValue == rustValue;
+                    Console.WriteLine($"  {i + 1,2}: C#='{csharpKey}'→{csharpValue}, Rust='{rustKey}'→{rustValue} {(match ? "✅" : "❌")}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error analyzing: {ex.Message}");
+            }
         }
 
         private static void AnalyzeUserStructBytes(byte[] csharp, byte[] rust)

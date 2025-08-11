@@ -96,6 +96,24 @@ fn main() -> Result<()> {
         user_attributes,
     };
 
+    // Create larger string map for testing BCS key ordering
+    let mut large_string_map = BTreeMap::new();
+    large_string_map.insert("zebra".to_string(), 1000);
+    large_string_map.insert("alpha".to_string(), 2000);  
+    large_string_map.insert("beta".to_string(), 3000);
+    large_string_map.insert("gamma".to_string(), 4000);
+    large_string_map.insert("delta".to_string(), 5000);
+    large_string_map.insert("epsilon".to_string(), 6000);
+    large_string_map.insert("zeta".to_string(), 7000);
+    large_string_map.insert("eta".to_string(), 8000);
+    large_string_map.insert("theta".to_string(), 9000);
+    large_string_map.insert("iota".to_string(), 10000);
+    large_string_map.insert("kappa".to_string(), 11000);
+    large_string_map.insert("lambda".to_string(), 12000);
+    large_string_map.insert("mu".to_string(), 13000);
+    large_string_map.insert("nu".to_string(), 14000);
+    large_string_map.insert("xi".to_string(), 15000);
+
     // Demonstrate BCS serialization
     println!("\n📦 Serializing structs to BCS format...\n");
 
@@ -106,6 +124,7 @@ fn main() -> Result<()> {
     serialize_and_display("MarketplaceItem", &marketplace_item)?;
     serialize_and_display("TupleExamples", &tuple_examples)?;
     serialize_and_display("MapExamples", &map_examples)?;
+    serialize_and_display("LargeStringMap", &large_string_map)?;
 
     // Serialize GlobalStats for each object, stats are different each time
     println!("\n🌐 Serializing GlobalStats with each object...\n");
@@ -160,7 +179,7 @@ fn main() -> Result<()> {
 
     // Export serialized bytes to files for C# comparison
     println!("\n💾 Exporting serialized bytes to files for C# comparison...");
-    export_serialized_bytes(&user, &asset, &transaction, &marketplace_item, &tuple_examples, &map_examples)?;
+    export_serialized_bytes(&user, &asset, &transaction, &marketplace_item, &tuple_examples, &map_examples, &large_string_map)?;
 
     Ok(())
 }
@@ -229,7 +248,8 @@ fn export_serialized_bytes(
     transaction: &Transaction,
     marketplace_item: &MarketplaceItem,
     tuple_examples: &TupleExamples,
-    map_examples: &MapExamples
+    map_examples: &MapExamples,
+    large_string_map: &BTreeMap<String, u32>
 ) -> Result<()> {
     // Serialize each struct to bytes
     let user_bytes = bcs::to_bytes(user)?;
@@ -238,6 +258,7 @@ fn export_serialized_bytes(
     let marketplace_bytes = bcs::to_bytes(marketplace_item)?;
     let tuple_bytes = bcs::to_bytes(tuple_examples)?;
     let map_bytes = bcs::to_bytes(map_examples)?;
+    let large_string_map_bytes = bcs::to_bytes(large_string_map)?;
 
     // Write bytes to files
     fs::write("user.bcs", &user_bytes)?;
@@ -246,6 +267,7 @@ fn export_serialized_bytes(
     fs::write("marketplace.bcs", &marketplace_bytes)?;
     fs::write("tuples.bcs", &tuple_bytes)?;
     fs::write("maps.bcs", &map_bytes)?;
+    fs::write("large_string_map.bcs", &large_string_map_bytes)?;
 
     // Also create a summary file with hex dumps for easier debugging
     let summary = format!(
@@ -262,18 +284,21 @@ fn export_serialized_bytes(
          TupleExamples: {} bytes\n\
          Hex: {}\n\n\
          MapExamples: {} bytes\n\
+         Hex: {}\n\n\
+         LargeStringMap: {} bytes\n\
          Hex: {}\n",
         user_bytes.len(), hex::encode(&user_bytes),
         asset_bytes.len(), hex::encode(&asset_bytes),
         transaction_bytes.len(), hex::encode(&transaction_bytes),
         marketplace_bytes.len(), hex::encode(&marketplace_bytes),
         tuple_bytes.len(), hex::encode(&tuple_bytes),
-        map_bytes.len(), hex::encode(&map_bytes)
+        map_bytes.len(), hex::encode(&map_bytes),
+        large_string_map_bytes.len(), hex::encode(&large_string_map_bytes)
     );
     
     fs::write("rust_results.txt", summary)?;
 
-    println!("   ✅ Exported binary files: user.bcs, asset.bcs, transaction.bcs, marketplace.bcs, tuples.bcs, maps.bcs");
+    println!("   ✅ Exported binary files: user.bcs, asset.bcs, transaction.bcs, marketplace.bcs, tuples.bcs, maps.bcs, large_string_map.bcs");
     println!("   ✅ Created summary file: rust_results.txt");
     println!("   📁 Files saved in current directory for C# comparison");
 
