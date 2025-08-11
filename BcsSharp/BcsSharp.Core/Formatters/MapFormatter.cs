@@ -37,7 +37,6 @@ namespace BcsSharp.Core.Formatters
                 var keyWriter = new BcsWriter();
                 _keyFormatter.Serialize(ref keyWriter, kvp.Key);
 
-                // TODO: get formatter instead, as value might be of a complex type
                 var valueWriter = new BcsWriter();
                 _valueFormatter.Serialize(ref valueWriter, kvp.Value);
 
@@ -146,7 +145,7 @@ namespace BcsSharp.Core.Formatters
             }
             return a.Length.CompareTo(b.Length);
         }
-        
+
         /// <summary>
         /// Compares two ReadOnlyMemory&lt;byte&gt; lexicographically
         /// </summary>
