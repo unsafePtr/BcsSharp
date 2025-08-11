@@ -1,13 +1,16 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using BcsSharp.Core.Attributes;
 
 namespace BcsSharp.Core.Formatters
 {
 	/// <summary>
-	/// Formatter for Rust-style variant enums (tagged unions) following the official BCS specification.
+	/// High-performance formatter for Rust-style variant enums (tagged unions) following the official BCS specification.
+	/// Uses compiled expression trees for fast object creation and property access.
 	/// Uses ULEB128-encoded variant indices and supports associated data of any BCS type.
 	/// 
 	/// BCS Format: [ULEB128 variant_index] + [associated_data...]
@@ -18,6 +21,9 @@ namespace BcsSharp.Core.Formatters
 	{
 		private readonly Dictionary<uint, BcsVariantInfo> _variantsByIndex;
 		private readonly Dictionary<Type, BcsVariantInfo> _variantsByType;
+
+		// Static cache for constructor delegates to avoid recompilation
+		private static readonly ConcurrentDictionary<Type, Func<object>> _constructorCache = new();
 
 		public Type TargetType { get; } = typeof(T);
 
@@ -61,8 +67,8 @@ namespace BcsSharp.Core.Formatters
 			if (!_variantsByIndex.TryGetValue(variantIndex, out var variant))
 				throw new InvalidOperationException($"Unknown variant index: {variantIndex}");
 
-			// Create instance of variant type
-			var instance = Activator.CreateInstance(variant.VariantType);
+			// Create instance of variant type using compiled constructor delegate
+			var instance = variant.Constructor();
 			if (instance == null)
 				throw new InvalidOperationException($"Failed to create instance of {variant.VariantType.Name}");
 
@@ -120,6 +126,7 @@ namespace BcsSharp.Core.Formatters
 						Index = index,
 						Name = nestedType.Name, // Only used for debugging/diagnostics
 						VariantType = nestedType,
+						Constructor = GetOrCreateConstructorDelegate(nestedType),
 						DataProperties = DiscoverDataProperties(nestedType)
 					});
 
@@ -153,6 +160,7 @@ namespace BcsSharp.Core.Formatters
 							Index = index,
 							Name = type.Name, // Only used for debugging/diagnostics
 							VariantType = type,
+							Constructor = GetOrCreateConstructorDelegate(type),
 							DataProperties = DiscoverDataProperties(type)
 						});
 
@@ -198,7 +206,9 @@ namespace BcsSharp.Core.Formatters
 				{
 					Property = prop,
 					Order = dataAttr.Order ?? properties.Count,
-					Formatter = formatter
+					Formatter = formatter,
+					GetValue = CompilePropertyGetter(prop),
+					SetValue = CompilePropertySetter(prop)
 				});
 			}
 
@@ -209,7 +219,8 @@ namespace BcsSharp.Core.Formatters
 		{
 			foreach (var dataProp in variant.DataProperties)
 			{
-				var value = dataProp.Property.GetValue(instance);
+				// Use compiled expression-based getter for optimal performance
+				var value = dataProp.GetValue(instance);
 				dataProp.Formatter.SerializeObject(ref writer, value);
 			}
 		}
@@ -219,7 +230,8 @@ namespace BcsSharp.Core.Formatters
 			foreach (var dataProp in variant.DataProperties)
 			{
 				var value = dataProp.Formatter.DeserializeObject(ref reader);
-				dataProp.Property.SetValue(instance, value);
+				// Use compiled expression-based setter for optimal performance
+				dataProp.SetValue(instance, value);
 			}
 		}
 
@@ -229,7 +241,8 @@ namespace BcsSharp.Core.Formatters
 
 			foreach (var dataProp in variant.DataProperties)
 			{
-				var value = dataProp.Property.GetValue(instance);
+				// Use compiled expression-based getter for optimal performance
+				var value = dataProp.GetValue(instance);
 				var size = dataProp.Formatter.GetObjectSize(value);
 
 				if (size == null)
@@ -251,11 +264,71 @@ namespace BcsSharp.Core.Formatters
 			return 5;
 		}
 
+		/// <summary>
+		/// Creates or retrieves a cached constructor delegate for fast object instantiation
+		/// </summary>
+		private static Func<object> GetOrCreateConstructorDelegate(Type type)
+		{
+			return _constructorCache.GetOrAdd(type, CreateConstructorDelegate);
+		}
+
+		/// <summary>
+		/// Creates a high-performance constructor delegate using compiled expressions
+		/// </summary>
+		private static Func<object> CreateConstructorDelegate(Type type)
+		{
+			if (type.IsValueType)
+			{
+				// For value types, use default(T) and box it
+				var defaultExpression = Expression.Default(type);
+				var boxedExpression = Expression.Convert(defaultExpression, typeof(object));
+				return Expression.Lambda<Func<object>>(boxedExpression).Compile();
+			}
+			else
+			{
+				// For reference types, use the parameterless constructor
+				var constructor = type.GetConstructor(Type.EmptyTypes);
+				if (constructor == null)
+					throw new InvalidOperationException($"Type {type.Name} must have a parameterless constructor for BCS deserialization");
+
+				var newExpression = Expression.New(constructor);
+				var convertExpression = Expression.Convert(newExpression, typeof(object));
+				return Expression.Lambda<Func<object>>(convertExpression).Compile();
+			}
+		}
+
+		/// <summary>
+		/// Compiles a high-performance property getter using expression trees
+		/// </summary>
+		private static Func<object, object?> CompilePropertyGetter(PropertyInfo property)
+		{
+			var objParam = Expression.Parameter(typeof(object), "obj");
+			var convertedObj = Expression.Convert(objParam, property.DeclaringType!);
+			var propertyAccess = Expression.Property(convertedObj, property);
+			var boxed = Expression.Convert(propertyAccess, typeof(object));
+			return Expression.Lambda<Func<object, object?>>(boxed, objParam).Compile();
+		}
+
+		/// <summary>
+		/// Compiles a high-performance property setter using expression trees
+		/// </summary>
+		private static Action<object, object?> CompilePropertySetter(PropertyInfo property)
+		{
+			var objParam = Expression.Parameter(typeof(object), "obj");
+			var valueParam = Expression.Parameter(typeof(object), "value");
+			var convertedObj = Expression.Convert(objParam, property.DeclaringType!);
+			var convertedValue = Expression.Convert(valueParam, property.PropertyType);
+			var propertyAccess = Expression.Property(convertedObj, property);
+			var assignment = Expression.Assign(propertyAccess, convertedValue);
+			return Expression.Lambda<Action<object, object?>>(assignment, objParam, valueParam).Compile();
+		}
+
 		private class BcsVariantInfo
 		{
 			public uint Index { get; set; }
 			public string Name { get; set; } = "";
 			public Type VariantType { get; set; } = null!;
+			public Func<object> Constructor { get; set; } = null!;
 			public List<BcsDataProperty> DataProperties { get; set; } = new();
 		}
 
@@ -264,6 +337,10 @@ namespace BcsSharp.Core.Formatters
 			public PropertyInfo Property { get; set; } = null!;
 			public int Order { get; set; }
 			public IBcsObjectFormatter Formatter { get; set; } = null!;
+
+			// Compiled expression-based accessors for maximum performance
+			public Func<object, object?> GetValue { get; set; } = null!;
+			public Action<object, object?> SetValue { get; set; } = null!;
 		}
 	}
 

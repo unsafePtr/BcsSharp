@@ -1,11 +1,13 @@
 using System;
+using System.Collections.Concurrent;
 using System.Reflection;
 using BcsSharp.Core.Attributes;
 
 namespace BcsSharp.Core.Formatters
 {
     /// <summary>
-    /// Formatter for simple C-style enums (integer-backed enums).
+    /// High-performance formatter for simple C-style enums (integer-backed enums).
+    /// Uses cached enum values arrays to avoid repeated reflection calls.
     /// BCS specification: Serializes based on ordinal position (index) within enum definition, not assigned values.
     /// Always serializes as a single byte representing the position (0-255).
     /// 
@@ -17,6 +19,11 @@ namespace BcsSharp.Core.Formatters
         where T : struct, Enum
     {
         private readonly IBcsFormatter<byte> _byteFormatter;
+        private readonly T[] _cachedEnumValues;
+        private readonly int _enumCount;
+
+        // Static cache for enum values to avoid repeated Enum.GetValues calls
+        private static readonly ConcurrentDictionary<Type, Array> _enumValuesCache = new();
 
         public Type TargetType => typeof(T);
 
@@ -24,23 +31,28 @@ namespace BcsSharp.Core.Formatters
         {
             // Always initialize byte formatter since we serialize ordinal positions as bytes
             _byteFormatter = ByteFormatter.Instance;
+            
+            // Cache enum values for high-performance access
+            var enumValues = GetOrCreateCachedEnumValues(typeof(T));
+            _cachedEnumValues = (T[])enumValues;
+            _enumCount = _cachedEnumValues.Length;
+            
+            if (_enumCount > 256)
+            {
+                throw new InvalidOperationException($"Enum {typeof(T).Name} has too many values ({_enumCount}). BCS C-style enums support maximum 256 values (0-255).");
+            }
         }
 
         public void Serialize(ref BcsWriter writer, T value)
         {
             // BCS C-style enum serialization: Use ordinal position (index) within enum definition, not assigned values
             // This ensures consistent serialization regardless of actual enum values
-            var enumValues = Enum.GetValues(typeof(T));
-            var position = Array.IndexOf(enumValues, value);
+            // Use cached enum values for optimal performance
+            var position = Array.IndexOf(_cachedEnumValues, value);
 
             if (position == -1)
             {
                 throw new InvalidOperationException($"Enum value {value} not found in {typeof(T).Name}");
-            }
-
-            if (position > 255)
-            {
-                throw new InvalidOperationException($"Enum {typeof(T).Name} has too many values ({position + 1}). BCS C-style enums support maximum 256 values (0-255).");
             }
 
             // Always serialize as byte representing the ordinal position
@@ -51,20 +63,28 @@ namespace BcsSharp.Core.Formatters
         {
             // BCS C-style enum deserialization: Read ordinal position and convert to enum value
             var position = _byteFormatter.Deserialize(ref reader);
-            var enumValues = Enum.GetValues(typeof(T));
 
-            if (position >= enumValues.Length)
+            if (position >= _enumCount)
             {
-                throw new InvalidOperationException($"Invalid enum position {position} for {typeof(T).Name}. Enum has {enumValues.Length} values (0-{enumValues.Length - 1}).");
+                throw new InvalidOperationException($"Invalid enum position {position} for {typeof(T).Name}. Enum has {_enumCount} values (0-{_enumCount - 1}).");
             }
 
-            return (T)enumValues.GetValue(position)!;
+            // Use cached enum values array for optimal performance (no reflection)
+            return _cachedEnumValues[position];
         }
 
         public int? GetSerializedSize(T value)
         {
             // BCS C-style enums always serialize as 1 byte (ordinal position)
             return 1;
+        }
+        
+        /// <summary>
+        /// Gets or creates cached enum values for a specific enum type to avoid repeated reflection
+        /// </summary>
+        private static Array GetOrCreateCachedEnumValues(Type enumType)
+        {
+            return _enumValuesCache.GetOrAdd(enumType, type => Enum.GetValues(type));
         }
     }
 

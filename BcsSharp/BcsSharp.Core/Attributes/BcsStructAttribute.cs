@@ -1,11 +1,8 @@
-using System;
-
 namespace BcsSharp.Core.Attributes
 {
     /// <summary>
     /// Marks a type as a BCS-serializable struct.
-    /// BCS structs serialize their fields in lexicographic order by field name,
-    /// unless explicit ordering is specified via BcsFieldAttribute.
+    /// BCS structs serialize their fields in order specified via BcsFieldAttribute.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
     public sealed class BcsStructAttribute : Attribute

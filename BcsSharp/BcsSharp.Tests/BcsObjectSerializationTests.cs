@@ -3,10 +3,6 @@ using BcsSharp.Core.Attributes;
 
 namespace BcsSharp.Tests
 {
-    /// <summary>
-    /// Tests for BCS object serialization using [BcsStruct] and [BcsField] attributes.
-    /// BCS structs serialize fields in lexicographic order by name, unless explicit ordering is specified.
-    /// </summary>
     public class BcsObjectSerializationTests
     {
         #region Test Object Definitions

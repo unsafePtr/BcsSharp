@@ -144,14 +144,7 @@ namespace BcsSharp.Core.Formatters
         /// </summary>
         private static int CompareByteArrays(byte[] a, byte[] b)
         {
-            int minLength = Math.Min(a.Length, b.Length);
-            for (int i = 0; i < minLength; i++)
-            {
-                int comparison = a[i].CompareTo(b[i]);
-                if (comparison != 0)
-                    return comparison;
-            }
-            return a.Length.CompareTo(b.Length);
+            return a.AsSpan().SequenceCompareTo(b.AsSpan());
         }
     }
 }
