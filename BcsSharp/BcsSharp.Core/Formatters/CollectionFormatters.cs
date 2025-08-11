@@ -122,7 +122,7 @@ namespace BcsSharp.Core.Formatters
         {
             var length = reader.ReadULEB32();
             if (length == 0)
-                return new List<T>();
+                return []; // Use collection expression for empty list
 
             var result = new List<T>((int)length);
             for (int i = 0; i < length; i++)

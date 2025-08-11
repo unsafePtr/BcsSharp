@@ -214,20 +214,27 @@ namespace BcsSharp.Core
         }
 
         /// <summary>
-        /// Write string value (length-prefixed UTF-8)
+        /// Write string value (length-prefixed UTF-8). Optimized to avoid intermediate allocations.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteString(string? value)
         {
             if (value == null || value == string.Empty)
             {
-                Write((byte)0); // Write length 0 as single byte
+                WriteULEB(0); // Write length 0 using ULEB128
                 return;
             }
 
-            var bytes = System.Text.Encoding.UTF8.GetBytes(value);
-            WriteULEB((uint)bytes.Length);
-            WriteBytes(bytes);
+            var valueSpan = value.AsSpan();
+
+            // Get UTF-8 byte count without allocating
+            var byteCount = System.Text.Encoding.UTF8.GetByteCount(valueSpan);
+            WriteULEB((uint)byteCount);
+
+            // Write UTF-8 bytes directly to buffer without intermediate allocation
+            var span = _bufferWriter.GetSpan(byteCount);
+            var actualBytes = System.Text.Encoding.UTF8.GetBytes(valueSpan, span);
+            _bufferWriter.Advance(actualBytes);
         }
 
         /// <summary>
