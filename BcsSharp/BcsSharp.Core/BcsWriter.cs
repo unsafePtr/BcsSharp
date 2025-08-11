@@ -3,6 +3,7 @@ using Nethermind.Int256;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace BcsSharp.Core
 {
@@ -235,6 +236,42 @@ namespace BcsSharp.Core
             var span = _bufferWriter.GetSpan(byteCount);
             var actualBytes = System.Text.Encoding.UTF8.GetBytes(valueSpan, span);
             _bufferWriter.Advance(actualBytes);
+        }
+
+        /// <summary>
+        /// Write primitive array using vectorized operations for maximum performance.
+        /// Uses MemoryMarshal to directly copy memory without element-by-element serialization.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WritePrimitiveArray<T>(ReadOnlySpan<T> values) where T : unmanaged
+        {
+            if (BitConverter.IsLittleEndian)
+            {
+                // System is little-endian; write bytes directly
+                var byteSpan = MemoryMarshal.AsBytes(values);
+                var span = _bufferWriter.GetSpan(byteSpan.Length);
+                byteSpan.CopyTo(span);
+                _bufferWriter.Advance(byteSpan.Length);
+            }
+            else
+            {
+                // slow path for big-endian systems
+                // System is big-endian; convert each T to little-endian
+                int typeSize = Unsafe.SizeOf<T>();
+                var span = _bufferWriter.GetSpan(values.Length * typeSize);
+                for (int i = 0; i < values.Length; i++)
+                {
+                    // Get the bytes of the current T value
+                    var valueBytes = MemoryMarshal.AsBytes(values.Slice(i, 1));
+                    // Reverse the bytes to convert to little-endian
+                    for (int j = 0; j < typeSize; j++)
+                    {
+                        span[i * typeSize + j] = valueBytes[typeSize - 1 - j];
+                    }
+                }
+
+                _bufferWriter.Advance(values.Length * typeSize);
+            }
         }
 
         /// <summary>

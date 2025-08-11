@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace BcsSharp.Core.Formatters
 {
     /// <summary>
@@ -142,6 +144,7 @@ namespace BcsSharp.Core.Formatters
         /// <summary>
         /// Compares two byte arrays lexicographically
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int CompareByteArrays(byte[] a, byte[] b)
         {
             return a.AsSpan().SequenceCompareTo(b.AsSpan());

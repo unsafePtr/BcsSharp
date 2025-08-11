@@ -36,7 +36,7 @@ namespace BcsSharp.Core.Resolvers
             if (type == typeof(Nethermind.Int256.UInt256)) return UInt256Formatter.Instance;
             if (type == typeof(bool)) return BoolFormatter.Instance;
             if (type == typeof(string)) return StringFormatter.Instance;
-            
+
             // Unit type
             if (type == typeof(Unit)) return UnitFormatter.Instance;
 
@@ -51,13 +51,23 @@ namespace BcsSharp.Core.Resolvers
             if (type.IsArray && type.GetArrayRank() == 1)
             {
                 var elementType = type.GetElementType()!;
-                var elementFormatterType = typeof(IBcsFormatter<>).MakeGenericType(elementType);
-                var elementFormatter = GetFormatterForType(elementType);
-                if (elementFormatter != null)
+
+                // Use specialized primitive formatter for primitive types
+                if (IsPrimitiveType(elementType))
                 {
-                    var arrayFormatterType = typeof(ArrayFormatter<>).MakeGenericType(elementType);
-                    var getInstanceMethod = arrayFormatterType.GetMethod("GetInstance");
-                    return getInstanceMethod?.Invoke(null, new[] { elementFormatter });
+                    var primitiveArrayFormatterType = typeof(PrimitiveArrayFormatter<>).MakeGenericType(elementType);
+                    var getInstanceMethod = primitiveArrayFormatterType.GetMethod("GetInstance");
+                    return getInstanceMethod?.Invoke(null, null);
+                }
+                else
+                {
+                    var elementFormatter = GetFormatterForType(elementType);
+                    if (elementFormatter != null)
+                    {
+                        var arrayFormatterType = typeof(ArrayFormatter<>).MakeGenericType(elementType);
+                        var getInstanceMethod = arrayFormatterType.GetMethod("GetInstance");
+                        return getInstanceMethod?.Invoke(null, new[] { elementFormatter });
+                    }
                 }
             }
 
@@ -65,12 +75,23 @@ namespace BcsSharp.Core.Resolvers
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
             {
                 var elementType = type.GetGenericArguments()[0];
-                var elementFormatter = GetFormatterForType(elementType);
-                if (elementFormatter != null)
+
+                // Use specialized primitive formatter for primitive types
+                if (IsPrimitiveType(elementType))
                 {
-                    var listFormatterType = typeof(ListFormatter<>).MakeGenericType(elementType);
-                    var getInstanceMethod = listFormatterType.GetMethod("GetInstance");
-                    return getInstanceMethod?.Invoke(null, new[] { elementFormatter });
+                    var primitiveListFormatterType = typeof(PrimitiveListFormatter<>).MakeGenericType(elementType);
+                    var getInstanceMethod = primitiveListFormatterType.GetMethod("GetInstance");
+                    return getInstanceMethod?.Invoke(null, null);
+                }
+                else
+                {
+                    var elementFormatter = GetFormatterForType(elementType);
+                    if (elementFormatter != null)
+                    {
+                        var listFormatterType = typeof(ListFormatter<>).MakeGenericType(elementType);
+                        var getInstanceMethod = listFormatterType.GetMethod("GetInstance");
+                        return getInstanceMethod?.Invoke(null, new[] { elementFormatter });
+                    }
                 }
             }
 
@@ -80,14 +101,14 @@ namespace BcsSharp.Core.Resolvers
                 var typeArgs = type.GetGenericArguments();
                 var keyType = typeArgs[0];
                 var valueType = typeArgs[1];
-                
+
                 // Key must implement IComparable<TKey> for BCS maps
                 var comparableInterface = typeof(IComparable<>).MakeGenericType(keyType);
                 if (comparableInterface.IsAssignableFrom(keyType))
                 {
                     var keyFormatter = GetFormatterForType(keyType);
                     var valueFormatter = GetFormatterForType(valueType);
-                    
+
                     if (keyFormatter != null && valueFormatter != null)
                     {
                         var mapFormatterType = typeof(MapFormatter<,>).MakeGenericType(keyType, valueType);
@@ -101,12 +122,12 @@ namespace BcsSharp.Core.Resolvers
             {
                 var genericTypeDef = type.GetGenericTypeDefinition();
                 var typeArgs = type.GetGenericArguments();
-                
+
                 if (genericTypeDef == typeof(ValueTuple<,>) && typeArgs.Length == 2)
                 {
                     var formatter1 = GetFormatterForType(typeArgs[0]);
                     var formatter2 = GetFormatterForType(typeArgs[1]);
-                    
+
                     if (formatter1 != null && formatter2 != null)
                     {
                         var tupleFormatterType = typeof(TupleFormatter<,>).MakeGenericType(typeArgs[0], typeArgs[1]);
@@ -118,7 +139,7 @@ namespace BcsSharp.Core.Resolvers
                     var formatter1 = GetFormatterForType(typeArgs[0]);
                     var formatter2 = GetFormatterForType(typeArgs[1]);
                     var formatter3 = GetFormatterForType(typeArgs[2]);
-                    
+
                     if (formatter1 != null && formatter2 != null && formatter3 != null)
                     {
                         var tupleFormatterType = typeof(TupleFormatter<,,>).MakeGenericType(typeArgs[0], typeArgs[1], typeArgs[2]);
@@ -131,7 +152,7 @@ namespace BcsSharp.Core.Resolvers
                     var formatter2 = GetFormatterForType(typeArgs[1]);
                     var formatter3 = GetFormatterForType(typeArgs[2]);
                     var formatter4 = GetFormatterForType(typeArgs[3]);
-                    
+
                     if (formatter1 != null && formatter2 != null && formatter3 != null && formatter4 != null)
                     {
                         var tupleFormatterType = typeof(TupleFormatter<,,,>).MakeGenericType(typeArgs[0], typeArgs[1], typeArgs[2], typeArgs[3]);
@@ -150,6 +171,15 @@ namespace BcsSharp.Core.Resolvers
             var resolverType = typeof(IFormatterResolver);
             var method = resolverType.GetMethod(nameof(IFormatterResolver.GetFormatter))?.MakeGenericMethod(type);
             return method?.Invoke(CompositeResolver.Default, null);
+        }
+
+        private static bool IsPrimitiveType(Type type)
+        {
+            return type == typeof(bool) || type == typeof(byte) || type == typeof(sbyte) ||
+                   type == typeof(ushort) || type == typeof(short) ||
+                   type == typeof(uint) || type == typeof(int) ||
+                   type == typeof(ulong) || type == typeof(long) ||
+                   type == typeof(UInt128) || type == typeof(Int128);
         }
     }
 }

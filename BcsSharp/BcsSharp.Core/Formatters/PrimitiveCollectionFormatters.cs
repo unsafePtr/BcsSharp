@@ -1,29 +1,26 @@
+using System.Runtime.InteropServices;
+
 namespace BcsSharp.Core.Formatters
 {
     /// <summary>
-    /// BCS type for vectors (arrays) of other types
+    /// High-performance array formatter for primitive types using vectorized operations
     /// </summary>
-    public sealed class ArrayFormatter<T> : IBcsFormatter<T[]>
+    public sealed class PrimitiveArrayFormatter<T> : IBcsFormatter<T[]>
+        where T : unmanaged
     {
         private static readonly Dictionary<Type, object> _instances = new();
-        private readonly IBcsFormatter<T> _elementFormatter;
 
         public Type TargetType => typeof(T[]);
 
-        public ArrayFormatter(IBcsFormatter<T> elementFormatter)
-        {
-            _elementFormatter = elementFormatter;
-        }
-
-        public static ArrayFormatter<T> GetInstance(IBcsFormatter<T> elementFormatter)
+        public static PrimitiveArrayFormatter<T> GetInstance()
         {
             if (!_instances.TryGetValue(typeof(T), out var instance))
             {
-                instance = new ArrayFormatter<T>(elementFormatter);
+                instance = new PrimitiveArrayFormatter<T>();
                 _instances[typeof(T)] = instance;
             }
 
-            return (ArrayFormatter<T>)instance;
+            return (PrimitiveArrayFormatter<T>)instance;
         }
 
         public void Serialize(ref BcsWriter writer, T[] value)
@@ -35,10 +32,7 @@ namespace BcsSharp.Core.Formatters
             }
 
             writer.WriteULEB((uint)value.Length);
-            foreach (var item in value)
-            {
-                _elementFormatter.Serialize(ref writer, item);
-            }
+            writer.WritePrimitiveArray<T>(value.AsSpan());
         }
 
         public T[] Deserialize(ref BcsReader reader)
@@ -48,10 +42,7 @@ namespace BcsSharp.Core.Formatters
                 return Array.Empty<T>();
 
             var result = new T[length];
-            for (int i = 0; i < length; i++)
-            {
-                result[i] = _elementFormatter.Deserialize(ref reader);
-            }
+            reader.ReadPrimitiveArray(result.AsSpan());
             return result;
         }
 
@@ -60,13 +51,9 @@ namespace BcsSharp.Core.Formatters
             if (value == null)
                 return GetULEBSize(0);
 
+            var elementSize = Marshal.SizeOf<T>();
             var size = GetULEBSize((uint)value.Length);
-            foreach (var item in value)
-            {
-                var itemSize = _elementFormatter.GetSerializedSize(item);
-                if (itemSize == null) return null;
-                size += itemSize.Value;
-            }
+            size += value.Length * elementSize;
             return size;
         }
 
@@ -78,30 +65,26 @@ namespace BcsSharp.Core.Formatters
             if (value < 0x10000000) return 4;
             return 5;
         }
-
     }
 
-    public sealed class ListFormatter<T> : IBcsFormatter<List<T>>
+    /// <summary>
+    /// High-performance list formatter for primitive types using vectorized operations
+    /// </summary>
+    public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T : unmanaged
     {
         private static readonly Dictionary<Type, object> _instances = new();
-        private readonly IBcsFormatter<T> _elementFormatter;
 
         public Type TargetType => typeof(List<T>);
 
-        public ListFormatter(IBcsFormatter<T> elementFormatter)
-        {
-            _elementFormatter = elementFormatter;
-        }
-
-        public static ListFormatter<T> GetInstance(IBcsFormatter<T> elementFormatter)
+        public static PrimitiveListFormatter<T> GetInstance()
         {
             if (!_instances.TryGetValue(typeof(T), out var instance))
             {
-                instance = new ListFormatter<T>(elementFormatter);
+                instance = new PrimitiveListFormatter<T>();
                 _instances[typeof(T)] = instance;
             }
 
-            return (ListFormatter<T>)instance;
+            return (PrimitiveListFormatter<T>)instance;
         }
 
         public void Serialize(ref BcsWriter writer, List<T> value)
@@ -113,23 +96,20 @@ namespace BcsSharp.Core.Formatters
             }
 
             writer.WriteULEB((uint)value.Count);
-            foreach (var item in value)
-            {
-                _elementFormatter.Serialize(ref writer, item);
-            }
+            // Convert List to Span for vectorized operations
+            var span = CollectionsMarshal.AsSpan(value);
+            writer.WritePrimitiveArray<T>(span);
         }
 
         public List<T> Deserialize(ref BcsReader reader)
         {
             var length = reader.ReadULEB32();
             if (length == 0)
-                return []; // Use collection expression for empty list
+                return [];
 
             var result = new List<T>((int)length);
-            for (int i = 0; i < length; i++)
-            {
-                result.Add(_elementFormatter.Deserialize(ref reader));
-            }
+            var span = CollectionsMarshal.AsSpan(result);
+            reader.ReadPrimitiveArray(span);
             return result;
         }
 
@@ -138,13 +118,9 @@ namespace BcsSharp.Core.Formatters
             if (value == null)
                 return GetULEBSize(0);
 
+            var elementSize = Marshal.SizeOf<T>();
             var size = GetULEBSize((uint)value.Count);
-            foreach (var item in value)
-            {
-                var itemSize = _elementFormatter.GetSerializedSize(item);
-                if (itemSize == null) return null;
-                size += itemSize.Value;
-            }
+            size += value.Count * elementSize;
             return size;
         }
 

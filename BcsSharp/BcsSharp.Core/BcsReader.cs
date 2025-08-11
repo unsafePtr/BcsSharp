@@ -2,6 +2,7 @@ using BcsSharp.Core.Helpers;
 using Nethermind.Int256;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace BcsSharp.Core
 {
@@ -281,9 +282,17 @@ namespace BcsSharp.Core
         public bool ReadBool()
         {
             var value = Read8();
-            if (value > 1)
-                throw new InvalidOperationException($"Invalid boolean value: {value}");
+            if (value > 1) // corrupted or invalid boolean value
+            {
+                ThrowInvalidOperationException($"Invalid boolean value: {value}");
+            }
+
             return value == 1;
+
+            void ThrowInvalidOperationException(string message)
+            {
+                throw new InvalidOperationException(message);
+            }
         }
 
         /// <summary>
@@ -295,6 +304,22 @@ namespace BcsSharp.Core
             var length = ReadULEB32();
             var span = ReadBytesAsSpan((int)length);
             return System.Text.Encoding.UTF8.GetString(span);
+        }
+
+        /// <summary>
+        /// Read primitive array using vectorized operations for maximum performance.
+        /// Uses MemoryMarshal to directly copy memory without element-by-element deserialization.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ReadPrimitiveArray<T>(Span<T> destination) where T : unmanaged
+        {
+            var byteLength = destination.Length * Marshal.SizeOf<T>();
+            EnsureEnoughBytes(byteLength);
+
+            var sourceBytes = _data.Span.Slice(_position, byteLength);
+            var destBytes = MemoryMarshal.AsBytes(destination);
+            sourceBytes.CopyTo(destBytes);
+            _position += byteLength;
         }
 
         /// <summary>
