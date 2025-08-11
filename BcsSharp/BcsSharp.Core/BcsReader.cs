@@ -1,5 +1,6 @@
-using System.Buffers.Binary;
+using BcsSharp.Core.Helpers;
 using Nethermind.Int256;
+using System.Buffers.Binary;
 
 namespace BcsSharp.Core
 {
@@ -215,12 +216,14 @@ namespace BcsSharp.Core
         /// </summary>
         public uint ReadULEB32()
         {
+            if (_position >= _data.Span.Length)
+            {
+                ThrowHelper.ThrowInvalidOperationException("Incomplete ULEB128 encoding");
+            }
+
             // loop unrolled
             uint result = 0;
             ReadOnlySpan<byte> span = _data.Span;
-
-            if (_position >= span.Length)
-                throw new InvalidOperationException("Incomplete ULEB128 encoding");
 
             // Byte 1
             byte b = span[_position++];
@@ -249,10 +252,12 @@ namespace BcsSharp.Core
             // Byte 5
             b = span[_position++];
             result |= (uint)(b & 0x7F) << 28;
-            if ((b & 0x80) == 0)
-                return result;
+            if ((b & 0x80) != 0) // last bit indicating there are more bytes for ULEB128
+            {
+                ThrowHelper.ThrowInvalidOperationException("ULEB128 encoding too long for uint");
+            }
 
-            throw new InvalidOperationException("ULEB128 encoding too long for uint");
+            return result;
 
             // Original implementation
             //UInt128 result = 0;
