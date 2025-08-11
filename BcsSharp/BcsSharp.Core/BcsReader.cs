@@ -1,6 +1,7 @@
 using BcsSharp.Core.Helpers;
 using Nethermind.Int256;
 using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
 
 namespace BcsSharp.Core
 {
@@ -37,10 +38,10 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read a single byte (u8)
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public byte Read8()
         {
-            if (_position >= _data.Length)
-                throw new InvalidOperationException("Not enough bytes to read u8");
+            EnsureEnoughBytes(1);
 
             return _data.Span[_position++];
         }
@@ -48,10 +49,10 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read 16-bit unsigned integer (u16) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ushort Read16()
         {
-            if (_position + 2 > _data.Length)
-                throw new InvalidOperationException("Not enough bytes to read u16");
+            EnsureEnoughBytes(2);
 
             var result = BinaryPrimitives.ReadUInt16LittleEndian(_data.Span.Slice(_position, 2));
             _position += 2;
@@ -61,11 +62,10 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read 32-bit unsigned integer (u32) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public uint Read32()
         {
-            if (_position + 4 > _data.Length)
-                throw new InvalidOperationException("Not enough bytes to read u32");
-
+            EnsureEnoughBytes(4);
             var result = BinaryPrimitives.ReadUInt32LittleEndian(_data.Span.Slice(_position, 4));
             _position += 4;
             return result;
@@ -74,11 +74,10 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read 64-bit unsigned integer (u64) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ulong Read64()
         {
-            if (_position + 8 > _data.Length)
-                throw new InvalidOperationException("Not enough bytes to read u64");
-
+            EnsureEnoughBytes(8);
             var result = BinaryPrimitives.ReadUInt64LittleEndian(_data.Span.Slice(_position, 8));
             _position += 8;
             return result;
@@ -87,10 +86,10 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read signed 8-bit integer (i8)
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public sbyte ReadI8()
         {
-            if (_position >= _data.Length)
-                throw new InvalidOperationException("Not enough bytes to read i8");
+            EnsureEnoughBytes(1);
 
             return (sbyte)_data.Span[_position++];
         }
@@ -98,10 +97,10 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read signed 16-bit integer (i16) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public short ReadI16()
         {
-            if (_position + 2 > _data.Length)
-                throw new InvalidOperationException("Not enough bytes to read i16");
+            EnsureEnoughBytes(2);
 
             var result = BinaryPrimitives.ReadInt16LittleEndian(_data.Span.Slice(_position, 2));
             _position += 2;
@@ -111,11 +110,10 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read signed 32-bit integer (i32) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int ReadI32()
         {
-            if (_position + 4 > _data.Length)
-                throw new InvalidOperationException("Not enough bytes to read i32");
-
+            EnsureEnoughBytes(4);
             var result = BinaryPrimitives.ReadInt32LittleEndian(_data.Span.Slice(_position, 4));
             _position += 4;
             return result;
@@ -124,11 +122,10 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read signed 64-bit integer (i64) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public long ReadI64()
         {
-            if (_position + 8 > _data.Length)
-                throw new InvalidOperationException("Not enough bytes to read i64");
-
+            EnsureEnoughBytes(8);
             var result = BinaryPrimitives.ReadInt64LittleEndian(_data.Span.Slice(_position, 8));
             _position += 8;
             return result;
@@ -137,11 +134,10 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read signed 128-bit integer (i128)
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Int128 ReadI128()
         {
-            if (_position + 16 > _data.Length)
-                throw new InvalidOperationException("Not enough bytes to read i128");
-
+            EnsureEnoughBytes(16);
             var span = _data.Span.Slice(_position, 16);
             _position += 16;
 
@@ -152,11 +148,10 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read 128-bit unsigned integer
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public UInt128 Read128()
         {
-            if (_position + 16 > _data.Length)
-                throw new InvalidOperationException("Not enough bytes to read u128");
-
+            EnsureEnoughBytes(16);
             var span = _data.Span.Slice(_position, 16);
             _position += 16;
 
@@ -167,11 +162,10 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read 256-bit unsigned integer
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public UInt256 Read256()
         {
-            if (_position + 32 > _data.Length)
-                throw new InvalidOperationException("Not enough bytes to read u256");
-
+            EnsureEnoughBytes(32);
             var span = _data.Span.Slice(_position, 32);
             _position += 32;
 
@@ -187,8 +181,7 @@ namespace BcsSharp.Core
             if (length < 0)
                 throw new ArgumentException("Length cannot be negative", nameof(length));
 
-            if (_position + length > _data.Length)
-                throw new InvalidOperationException($"Not enough bytes to read {length} bytes");
+            EnsureEnoughBytes(length);
 
             var result = _data.Span.Slice(_position, length).ToArray();
             _position += length;
@@ -203,8 +196,7 @@ namespace BcsSharp.Core
             if (length < 0)
                 throw new ArgumentException("Length cannot be negative", nameof(length));
 
-            if (_position + length > _data.Length)
-                throw new InvalidOperationException($"Not enough bytes to read {length} bytes");
+            EnsureEnoughBytes(length);
 
             var result = _data.Span.Slice(_position, length);
             _position += length;
@@ -216,11 +208,6 @@ namespace BcsSharp.Core
         /// </summary>
         public uint ReadULEB32()
         {
-            if (_position >= _data.Span.Length)
-            {
-                ThrowHelper.ThrowInvalidOperationException("Incomplete ULEB128 encoding");
-            }
-
             // loop unrolled
             uint result = 0;
             ReadOnlySpan<byte> span = _data.Span;
@@ -290,6 +277,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read boolean value
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool ReadBool()
         {
             var value = Read8();
@@ -301,6 +289,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Read string value (length-prefixed UTF-8)
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public string ReadString()
         {
             var length = ReadULEB32();
@@ -316,9 +305,19 @@ namespace BcsSharp.Core
         /// <summary>
         /// Reset position to beginning
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset()
         {
             _position = 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureEnoughBytes(int count)
+        {
+            if (_position + count > _data.Length)
+            {
+                ThrowHelper.ThrowEndOfStreamException(count);
+            }
         }
     }
 }

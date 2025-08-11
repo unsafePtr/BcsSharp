@@ -238,7 +238,7 @@ namespace BcsSharp.Core
         {
             if (!_ownsBuffer)
             {
-                ThrowHelper.ThrowInvalidOperationException("ToBytes is not available when using external IBufferWriter")
+                ThrowHelper.ThrowInvalidOperationException("ToBytes is not available when using external IBufferWriter");
             }
 
             // Smart buffer detection: avoid unnecessary allocations for small data

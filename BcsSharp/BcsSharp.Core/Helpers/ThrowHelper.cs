@@ -8,4 +8,10 @@ public static class ThrowHelper
     {
         throw new InvalidOperationException(message);
     }
+
+    [DoesNotReturn]
+    public static void ThrowEndOfStreamException(int count)
+    {
+        throw new EndOfStreamException($"Not enough bytes to read {count} bytes");
+    }
 }
