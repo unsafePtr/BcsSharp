@@ -200,27 +200,7 @@ namespace BcsSharp.Core.Formatters
                 });
             }
 
-            // Validate that all fields have explicit ordering and no duplicates
-            ValidateFieldOrdering(fields);
-
-            // Sort fields by explicit order as specified by BCS canonical structure definition
             return [.. fields.OrderBy(f => f.Order)];
-        }
-
-        /// <summary>
-        /// Validates that all fields have explicit ordering and no duplicate orders (BCS compliance)
-        /// </summary>
-        private static void ValidateFieldOrdering(List<CompiledFieldInfo<T>> fields)
-        {
-            // Check for duplicate field orders
-            var orderGroups = fields.GroupBy(f => f.Order).Where(g => g.Count() > 1).ToList();
-            if (orderGroups.Any())
-            {
-                var duplicateOrders = orderGroups.Select(g => $"Order {g.Key}: [{string.Join(", ", g.Select(f => f.Name))}]");
-                throw new InvalidOperationException(
-                    $"BCS struct fields must have unique [BcsField(order)] values. " +
-                    $"Duplicate orders found: {string.Join("; ", duplicateOrders)}");
-            }
         }
 
         /// <summary>
