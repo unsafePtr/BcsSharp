@@ -1,5 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use primitive_types::U256;
+use std::collections::BTreeMap;
 
 /// Custom wrapper for U256 that implements BCS-compatible serialization
 #[derive(Debug, Clone, PartialEq)]
@@ -203,4 +204,16 @@ pub struct TupleExamples {
     pub tuple_with_array: (String, Vec<u32>),
     /// Complex tuple
     pub complex_tuple: (User, Transaction, bool),
+}
+
+/// Map examples for BCS serialization testing
+/// Maps are serialized with keys in sorted order for deterministic output
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MapExamples {
+    /// Simple string to u32 map
+    pub string_to_number: BTreeMap<String, u32>,
+    /// Number to string map  
+    pub number_to_string: BTreeMap<u32, String>,
+    /// Complex map with nested values
+    pub user_attributes: BTreeMap<String, Attribute>,
 }

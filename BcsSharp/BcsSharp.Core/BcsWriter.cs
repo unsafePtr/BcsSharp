@@ -226,6 +226,18 @@ namespace BcsSharp.Core
         }
 
         /// <summary>
+        /// Gets the written data as ReadOnlyMemory<byte>
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        public ReadOnlyMemory<byte> ToMemory()
+        {
+            if (!_ownsBuffer)
+                throw new InvalidOperationException("ToMemory is not available when using external IBufferWriter");
+            return _defaultBuffer!.WrittenMemory;
+        }
+
+        /// <summary>
         /// Reset the writer to empty state
         /// </summary>
         public void Reset()
@@ -238,12 +250,11 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write raw bytes from span
         /// </summary>
-        private void WriteBytes(ReadOnlySpan<byte> bytes)
+        internal void WriteBytes(ReadOnlySpan<byte> bytes)
         {
             var span = _bufferWriter.GetSpan(bytes.Length);
             bytes.CopyTo(span);
             _bufferWriter.Advance(bytes.Length);
         }
-
     }
 }

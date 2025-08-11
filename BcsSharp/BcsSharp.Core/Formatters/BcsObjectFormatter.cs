@@ -3,171 +3,171 @@ using BcsSharp.Core.Attributes;
 
 namespace BcsSharp.Core.Formatters
 {
-    /// <summary>
-    /// Formatter for BCS-serializable objects (structs/classes) marked with [BcsStruct].
-    /// Serializes fields/properties in lexicographic order by name, unless explicit ordering is specified.
-    /// 
-    /// BCS Format: Fields are serialized consecutively in order without any headers or separators.
-    /// Example: struct Person { name: String, age: u32 } -> [name_data...] + [age_data...]
-    /// </summary>
-    /// <typeparam name="T">The object type to serialize.</typeparam>
-    public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
-    {
-        private readonly List<BcsFieldInfo> _fields;
+	/// <summary>
+	/// Formatter for BCS-serializable objects (structs/classes) marked with [BcsStruct].
+	/// Serializes fields/properties in lexicographic order by name, unless explicit ordering is specified.
+	/// 
+	/// BCS Format: Fields are serialized consecutively in order without any headers or separators.
+	/// Example: struct Person { name: String, age: u32 } -> [name_data...] + [age_data...]
+	/// </summary>
+	/// <typeparam name="T">The object type to serialize.</typeparam>
+	public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
+	{
+		private readonly List<BcsFieldInfo> _fields;
 
-        public Type TargetType => typeof(T);
+		public Type TargetType => typeof(T);
 
-        public BcsObjectFormatter()
-        {
-            var bcsStructAttr = TargetType.GetCustomAttribute<BcsStructAttribute>();
-            if (bcsStructAttr == null)
-                throw new InvalidOperationException($"Type {TargetType.Name} must be marked with [BcsStruct] attribute");
+		public BcsObjectFormatter()
+		{
+			var bcsStructAttr = TargetType.GetCustomAttribute<BcsStructAttribute>();
+			if (bcsStructAttr == null)
+				throw new InvalidOperationException($"Type {TargetType.Name} must be marked with [BcsStruct] attribute");
 
-            _fields = DiscoverFields(TargetType);
+			_fields = DiscoverFields(TargetType);
 
-            if (!_fields.Any())
-                throw new InvalidOperationException($"Type {TargetType.Name} has no serializable fields marked with [BcsField]");
-        }
+			if (!_fields.Any())
+				throw new InvalidOperationException($"Type {TargetType.Name} has no serializable fields marked with [BcsField]");
+		}
 
-        public void Serialize(ref BcsWriter writer, T value)
-        {
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
+		public void Serialize(ref BcsWriter writer, T value)
+		{
+			if (value == null)
+				throw new ArgumentNullException(nameof(value));
 
-            foreach (var field in _fields)
-            {
-                var fieldValue = field.GetValue(value);
-                field.Formatter.SerializeObject(ref writer, fieldValue);
-            }
-        }
+			foreach (var field in _fields)
+			{
+				var fieldValue = field.GetValue(value);
+				field.Formatter.SerializeObject(ref writer, fieldValue);
+			}
+		}
 
-        public T Deserialize(ref BcsReader reader)
-        {
-            // Handle value types and reference types differently
-            if (TargetType.IsValueType)
-            {
-                // For value types, we need to use boxing to properly set field values
-                object boxedInstance = Activator.CreateInstance(TargetType)!;
+		public T Deserialize(ref BcsReader reader)
+		{
+			// Handle value types and reference types differently
+			if (TargetType.IsValueType)
+			{
+				// For value types, we need to use boxing to properly set field values
+				object boxedInstance = Activator.CreateInstance(TargetType)!;
 
-                foreach (var field in _fields)
-                {
-                    var fieldValue = field.Formatter.DeserializeObject(ref reader);
-                    field.SetValue(boxedInstance, fieldValue);
-                }
+				foreach (var field in _fields)
+				{
+					var fieldValue = field.Formatter.DeserializeObject(ref reader);
+					field.SetValue(boxedInstance, fieldValue);
+				}
 
-                return (T)boxedInstance;
-            }
-            else
-            {
-                var instance = (T)Activator.CreateInstance(TargetType)!;
+				return (T)boxedInstance;
+			}
+			else
+			{
+				var instance = (T)Activator.CreateInstance(TargetType)!;
 
-                foreach (var field in _fields)
-                {
-                    var fieldValue = field.Formatter.DeserializeObject(ref reader);
-                    field.SetValue(instance, fieldValue);
-                }
+				foreach (var field in _fields)
+				{
+					var fieldValue = field.Formatter.DeserializeObject(ref reader);
+					field.SetValue(instance, fieldValue);
+				}
 
-                return instance;
-            }
-        }
+				return instance;
+			}
+		}
 
-        public int? GetSerializedSize(T value)
-        {
-            if (value == null)
-                return null;
+		public int? GetSerializedSize(T value)
+		{
+			if (value == null)
+				return null;
 
-            var totalSize = 0;
+			var totalSize = 0;
 
-            foreach (var field in _fields)
-            {
-                var fieldValue = field.GetValue(value);
-                var fieldSize = field.Formatter.GetObjectSize(fieldValue);
+			foreach (var field in _fields)
+			{
+				var fieldValue = field.GetValue(value);
+				var fieldSize = field.Formatter.GetObjectSize(fieldValue);
 
-                if (fieldSize == null)
-                    return null; // Variable size
+				if (fieldSize == null)
+					return null;
 
-                totalSize += fieldSize.Value;
-            }
+				totalSize += fieldSize.Value;
+			}
 
-            return totalSize;
-        }
+			return totalSize;
+		}
 
-        private List<BcsFieldInfo> DiscoverFields(Type objectType)
-        {
-            var fields = new List<BcsFieldInfo>();
+		private List<BcsFieldInfo> DiscoverFields(Type objectType)
+		{
+			var fields = new List<BcsFieldInfo>();
 
-            // Get all fields and properties
-            List<MemberInfo> members =
-            [
-                .. objectType.GetFields(BindingFlags.Public | BindingFlags.Instance),
-                .. objectType.GetProperties(BindingFlags.Public | BindingFlags.Instance),
-            ];
+			// Get all fields and properties
+			List<MemberInfo> members =
+			[
+				.. objectType.GetFields(BindingFlags.Public | BindingFlags.Instance),
+				.. objectType.GetProperties(BindingFlags.Public | BindingFlags.Instance),
+			];
 
-            foreach (var member in members)
-            {
-                var fieldAttr = member.GetCustomAttribute<BcsFieldAttribute>();
-                if (fieldAttr == null)
-                    continue;
+			foreach (var member in members)
+			{
+				var fieldAttr = member.GetCustomAttribute<BcsFieldAttribute>();
+				if (fieldAttr == null)
+					continue;
 
-                Type memberType;
-                Func<object, object?> getter;
-                Action<object, object?> setter;
+				Type memberType;
+				Func<object, object?> getter;
+				Action<object, object?> setter;
 
-                if (member is FieldInfo field)
-                {
-                    memberType = field.FieldType;
-                    getter = obj => field.GetValue(obj);
-                    setter = (obj, value) => field.SetValue(obj, value);
-                }
-                else if (member is PropertyInfo property)
-                {
-                    memberType = property.PropertyType;
+				if (member is FieldInfo field)
+				{
+					memberType = field.FieldType;
+					getter = obj => field.GetValue(obj);
+					setter = (obj, value) => field.SetValue(obj, value);
+				}
+				else if (member is PropertyInfo property)
+				{
+					memberType = property.PropertyType;
 
-                    if (!property.CanRead)
-                        throw new InvalidOperationException($"Property {member.Name} in {objectType.Name} must be readable");
-                    if (!property.CanWrite)
-                        throw new InvalidOperationException($"Property {member.Name} in {objectType.Name} must be writable");
+					if (!property.CanRead)
+						throw new InvalidOperationException($"Property {member.Name} in {objectType.Name} must be readable");
+					if (!property.CanWrite)
+						throw new InvalidOperationException($"Property {member.Name} in {objectType.Name} must be writable");
 
-                    getter = property.GetValue;
-                    setter = property.SetValue;
-                }
-                else
-                {
-                    continue; // Should never happen
-                }
+					getter = property.GetValue;
+					setter = property.SetValue;
+				}
+				else
+				{
+					continue; // Should never happen
+				}
 
-                var formatter = BcsSerializerExtensions.GetFormatter(memberType);
-                if (formatter == null)
-                    throw new InvalidOperationException($"No BCS formatter found for field {member.Name} of type {memberType.Name}");
+				var formatter = BcsSerializerExtensions.GetFormatter(memberType);
+				if (formatter == null)
+					throw new InvalidOperationException($"No BCS formatter found for field {member.Name} of type {memberType.Name}");
 
-                var fieldName = member.Name;
-                var order = fieldAttr.Order;
+				var fieldName = member.Name;
+				var order = fieldAttr.Order;
 
-                fields.Add(new BcsFieldInfo
-                {
-                    Name = fieldName,
-                    MemberName = member.Name,
-                    Order = order,
-                    MemberType = memberType,
-                    Formatter = formatter,
-                    GetValue = getter,
-                    SetValue = setter
-                });
-            }
+				fields.Add(new BcsFieldInfo
+				{
+					Name = fieldName,
+					MemberName = member.Name,
+					Order = order,
+					MemberType = memberType,
+					Formatter = formatter,
+					GetValue = getter,
+					SetValue = setter
+				});
+			}
 
-            // Sort fields by explicit order, then lexicographically by name
-            return [.. fields.OrderBy(f => f.Order)];
-        }
+			// Sort fields by explicit order, then lexicographically by name
+			return [.. fields.OrderBy(f => f.Order)];
+		}
 
-        private sealed class BcsFieldInfo
-        {
-            public string Name { get; set; } = string.Empty;
-            public string MemberName { get; set; } = string.Empty;
-            public int Order { get; set; }
-            public Type MemberType { get; set; } = null!;
-            public IBcsObjectFormatter Formatter { get; set; } = null!;
-            public Func<object, object?> GetValue { get; set; } = null!;
-            public Action<object, object?> SetValue { get; set; } = null!;
-        }
-    }
+		private sealed class BcsFieldInfo
+		{
+			public string Name { get; set; } = string.Empty;
+			public string MemberName { get; set; } = string.Empty;
+			public int Order { get; set; }
+			public Type MemberType { get; set; } = null!;
+			public IBcsObjectFormatter Formatter { get; set; } = null!;
+			public Func<object, object?> GetValue { get; set; } = null!;
+			public Action<object, object?> SetValue { get; set; } = null!;
+		}
+	}
 }

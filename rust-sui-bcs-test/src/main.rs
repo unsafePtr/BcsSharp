@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::Serialize;
 use primitive_types::U256;
-use std::{fs};
+use std::{fs, collections::BTreeMap};
 
 mod types;
 use types::*;
@@ -69,6 +69,33 @@ fn main() -> Result<()> {
         complex_tuple: (user.clone(), transaction.clone(), false),
     };
 
+    // Create map examples
+    let mut string_to_number = BTreeMap::new();
+    string_to_number.insert("health".to_string(), 100);
+    string_to_number.insert("damage".to_string(), 85);
+    string_to_number.insert("speed".to_string(), 12);
+    
+    let mut number_to_string = BTreeMap::new();
+    number_to_string.insert(1, "common".to_string());
+    number_to_string.insert(2, "rare".to_string());
+    number_to_string.insert(3, "epic".to_string());
+    
+    let mut user_attributes = BTreeMap::new();
+    user_attributes.insert("power".to_string(), Attribute {
+        name: "power".to_string(),
+        value: 150,
+    });
+    user_attributes.insert("defense".to_string(), Attribute {
+        name: "defense".to_string(), 
+        value: 75,
+    });
+    
+    let map_examples = MapExamples {
+        string_to_number,
+        number_to_string,
+        user_attributes,
+    };
+
     // Demonstrate BCS serialization
     println!("\n📦 Serializing structs to BCS format...\n");
 
@@ -78,6 +105,7 @@ fn main() -> Result<()> {
     serialize_and_display("Transaction", &transaction)?;
     serialize_and_display("MarketplaceItem", &marketplace_item)?;
     serialize_and_display("TupleExamples", &tuple_examples)?;
+    serialize_and_display("MapExamples", &map_examples)?;
 
     // Serialize GlobalStats for each object, stats are different each time
     println!("\n🌐 Serializing GlobalStats with each object...\n");
@@ -132,7 +160,7 @@ fn main() -> Result<()> {
 
     // Export serialized bytes to files for C# comparison
     println!("\n💾 Exporting serialized bytes to files for C# comparison...");
-    export_serialized_bytes(&user, &asset, &transaction, &marketplace_item, &tuple_examples)?;
+    export_serialized_bytes(&user, &asset, &transaction, &marketplace_item, &tuple_examples, &map_examples)?;
 
     Ok(())
 }
@@ -200,7 +228,8 @@ fn export_serialized_bytes(
     asset: &GameAsset,
     transaction: &Transaction,
     marketplace_item: &MarketplaceItem,
-    tuple_examples: &TupleExamples
+    tuple_examples: &TupleExamples,
+    map_examples: &MapExamples
 ) -> Result<()> {
     // Serialize each struct to bytes
     let user_bytes = bcs::to_bytes(user)?;
@@ -208,6 +237,7 @@ fn export_serialized_bytes(
     let transaction_bytes = bcs::to_bytes(transaction)?;
     let marketplace_bytes = bcs::to_bytes(marketplace_item)?;
     let tuple_bytes = bcs::to_bytes(tuple_examples)?;
+    let map_bytes = bcs::to_bytes(map_examples)?;
 
     // Write bytes to files
     fs::write("user.bcs", &user_bytes)?;
@@ -215,6 +245,7 @@ fn export_serialized_bytes(
     fs::write("transaction.bcs", &transaction_bytes)?;
     fs::write("marketplace.bcs", &marketplace_bytes)?;
     fs::write("tuples.bcs", &tuple_bytes)?;
+    fs::write("maps.bcs", &map_bytes)?;
 
     // Also create a summary file with hex dumps for easier debugging
     let summary = format!(
@@ -229,17 +260,20 @@ fn export_serialized_bytes(
          MarketplaceItem: {} bytes\n\
          Hex: {}\n\n\
          TupleExamples: {} bytes\n\
+         Hex: {}\n\n\
+         MapExamples: {} bytes\n\
          Hex: {}\n",
         user_bytes.len(), hex::encode(&user_bytes),
         asset_bytes.len(), hex::encode(&asset_bytes),
         transaction_bytes.len(), hex::encode(&transaction_bytes),
         marketplace_bytes.len(), hex::encode(&marketplace_bytes),
-        tuple_bytes.len(), hex::encode(&tuple_bytes)
+        tuple_bytes.len(), hex::encode(&tuple_bytes),
+        map_bytes.len(), hex::encode(&map_bytes)
     );
     
     fs::write("rust_results.txt", summary)?;
 
-    println!("   ✅ Exported binary files: user.bcs, asset.bcs, transaction.bcs, marketplace.bcs, tuples.bcs");
+    println!("   ✅ Exported binary files: user.bcs, asset.bcs, transaction.bcs, marketplace.bcs, tuples.bcs, maps.bcs");
     println!("   ✅ Created summary file: rust_results.txt");
     println!("   📁 Files saved in current directory for C# comparison");
 

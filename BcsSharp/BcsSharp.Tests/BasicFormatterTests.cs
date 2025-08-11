@@ -141,8 +141,10 @@ namespace BcsSharp.Tests
             reader.ReadI32(); // skip value  
             var key3 = reader.ReadString();
             
-            Assert.Equal("alpha", key1);
-            Assert.Equal("beta", key2);
+            // BCS sorts by lexicographical order of serialized bytes (including length prefix)
+            // "beta" (4 bytes): [04] + ... comes before "alpha" (5 bytes): [05] + ...
+            Assert.Equal("beta", key1);   // 04... < 05...
+            Assert.Equal("alpha", key2);  // 05 61... < 05 7A...
             Assert.Equal("zebra", key3);
         }
         

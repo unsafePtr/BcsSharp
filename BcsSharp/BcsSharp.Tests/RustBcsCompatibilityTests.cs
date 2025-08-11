@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BcsSharp.Core;
@@ -167,6 +168,17 @@ namespace BcsSharp.Tests
             public (string, uint[]) TupleWithArray { get; set; }
             [BcsField(4)]
             public (User, Transaction, bool) ComplexTuple { get; set; }
+        }
+
+        [BcsStruct]
+        public class MapExamples
+        {
+            [BcsField(0)]
+            public Dictionary<string, uint> StringToNumber { get; set; } = new();
+            [BcsField(1)] 
+            public Dictionary<uint, string> NumberToString { get; set; } = new();
+            [BcsField(2)]
+            public Dictionary<string, Attribute> UserAttributes { get; set; } = new();
         }
 
         #region Structs (C# equivalent of Rust structs)
@@ -458,6 +470,54 @@ namespace BcsSharp.Tests
             var expectedBytes = File.ReadAllBytes(rustBcsPath);
 
             Console.WriteLine($"Rust TupleExamples serialized as: {Convert.ToHexString(expectedBytes)}");
+            Console.WriteLine($"Length: {expectedBytes.Length} bytes");
+
+            Assert.Equal(expectedBytes, serialized);
+        }
+
+        [Fact]
+        public void RustBcsCompatibility_MapExamples_ByteComparison()
+        {
+            // Arrange - Same data as Rust MapExamples
+            var stringToNumber = new Dictionary<string, uint>
+            {
+                ["health"] = 100,
+                ["damage"] = 85,
+                ["speed"] = 12
+            };
+
+            var numberToString = new Dictionary<uint, string>
+            {
+                [1] = "common",
+                [2] = "rare", 
+                [3] = "epic"
+            };
+
+            var userAttributes = new Dictionary<string, Attribute>
+            {
+                ["power"] = new Attribute { Name = "power", Value = 150 },
+                ["defense"] = new Attribute { Name = "defense", Value = 75 }
+            };
+
+            var mapExamples = new MapExamples
+            {
+                StringToNumber = stringToNumber,
+                NumberToString = numberToString,
+                UserAttributes = userAttributes
+            };
+
+            // Act - Serialize the map examples
+            var serialized = BcsSerializer.Serialize(mapExamples);
+
+            // Debug output
+            Console.WriteLine($"C# MapExamples serialized as: {Convert.ToHexString(serialized)}");
+            Console.WriteLine($"Length: {serialized.Length} bytes");
+
+            // Assert - Read expected bytes from maps.bcs file and compare
+            var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "maps.bcs");
+            var expectedBytes = File.ReadAllBytes(rustBcsPath);
+
+            Console.WriteLine($"Rust MapExamples serialized as: {Convert.ToHexString(expectedBytes)}");
             Console.WriteLine($"Length: {expectedBytes.Length} bytes");
 
             Assert.Equal(expectedBytes, serialized);
