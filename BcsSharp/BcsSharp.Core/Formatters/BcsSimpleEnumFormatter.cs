@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Reflection;
 using BcsSharp.Core.Attributes;
+using BcsSharp.Core.Extensions;
 
 namespace BcsSharp.Core.Formatters
 {
@@ -23,7 +24,7 @@ namespace BcsSharp.Core.Formatters
         private readonly int _enumCount;
 
         // Static cache for enum values to avoid repeated Enum.GetValues calls
-        private static readonly ConcurrentDictionary<Type, Array> _enumValuesCache = new();
+        private static readonly Dictionary<Type, T[]> _enumValuesCache = new();
 
         public Type TargetType => typeof(T);
 
@@ -31,12 +32,12 @@ namespace BcsSharp.Core.Formatters
         {
             // Always initialize byte formatter since we serialize ordinal positions as bytes
             _byteFormatter = ByteFormatter.Instance;
-            
+
             // Cache enum values for high-performance access
             var enumValues = GetOrCreateCachedEnumValues(typeof(T));
-            _cachedEnumValues = (T[])enumValues;
+            _cachedEnumValues = enumValues;
             _enumCount = _cachedEnumValues.Length;
-            
+
             if (_enumCount > 256)
             {
                 throw new InvalidOperationException($"Enum {typeof(T).Name} has too many values ({_enumCount}). BCS C-style enums support maximum 256 values (0-255).");
@@ -78,13 +79,13 @@ namespace BcsSharp.Core.Formatters
             // BCS C-style enums always serialize as 1 byte (ordinal position)
             return 1;
         }
-        
+
         /// <summary>
         /// Gets or creates cached enum values for a specific enum type to avoid repeated reflection
         /// </summary>
-        private static Array GetOrCreateCachedEnumValues(Type enumType)
+        private static T[] GetOrCreateCachedEnumValues(Type enumType)
         {
-            return _enumValuesCache.GetOrAdd(enumType, type => Enum.GetValues(type));
+            return _enumValuesCache.GetOrAdd(enumType, type => (Enum.GetValues(type)! as T[])!);
         }
     }
 
