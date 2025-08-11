@@ -19,8 +19,9 @@ public class Program
 
         if (args.Length == 0)
         {
-            BenchmarkRunner.Run<SerializationBenchmarks>(config);
-            BenchmarkRunner.Run<SizeBenchmarks>(config);
+            //BenchmarkRunner.Run<SerializationBenchmarks>(config);
+            BenchmarkRunner.Run<PrimitiveBenchmarks>(config);
+            //BenchmarkRunner.Run<SizeBenchmarks>(config);
             return;
         }
 
@@ -30,18 +31,23 @@ public class Program
                 BenchmarkRunner.Run<SerializationBenchmarks>(config);
                 break;
 
+            case "primitives":
+                BenchmarkRunner.Run<PrimitiveBenchmarks>(config);
+                break;
+
             case "size":
                 BenchmarkRunner.Run<SizeBenchmarks>(config);
                 break;
 
             case "all":
                 BenchmarkRunner.Run<SerializationBenchmarks>(config);
+                BenchmarkRunner.Run<PrimitiveBenchmarks>(config);
                 BenchmarkRunner.Run<SizeBenchmarks>(config);
                 break;
 
             default:
                 Console.WriteLine($"Unknown option: {args[0]}");
-                Console.WriteLine("Use 'serialization', 'size', 'all'");
+                Console.WriteLine("Use 'serialization', 'primitives', 'size', 'all'");
                 break;
         }
 

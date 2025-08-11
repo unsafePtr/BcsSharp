@@ -206,6 +206,9 @@ pub struct TupleExamples {
     pub complex_tuple: (User, Transaction, bool),
 }
 
+/// Using BTreeMap because it already sots keys.
+/// If there is need for plain Map serilization this one can be used
+/// https://github.com/diem/bcs/blob/master/src/ser.rs#L457-L516
 /// Map examples for BCS serialization testing
 /// Maps are serialized with keys in sorted order for deterministic output
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
