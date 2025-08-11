@@ -215,32 +215,71 @@ namespace BcsSharp.Core
         /// </summary>
         public uint ReadULEB32()
         {
-            UInt128 result = 0;
-            int shift = 0;
-            int bytesRead = 0;
-
+            // loop unrolled
+            uint result = 0;
             ReadOnlySpan<byte> span = _data.Span;
 
-            while (_position + bytesRead < span.Length)
-            {
-                byte b = span[_position + bytesRead];
-                result |= (UInt128)(b & 0x7F) << shift;
-                shift += 7;
-                bytesRead++;
+            if (_position >= span.Length)
+                throw new InvalidOperationException("Incomplete ULEB128 encoding");
 
-                if ((b & 0x80) == 0)
-                {
-                    break;
-                }
-            }
+            // Byte 1
+            byte b = span[_position++];
+            result = (uint)(b & 0x7F);
+            if ((b & 0x80) == 0)
+                return result;
 
-            if (result > uint.MaxValue) // Check if value exceeds uint because by default when casting UInt128 to uint it will not throw
-            {
-                throw new InvalidOperationException($"ULEB128 value {result} is too large for uint32");
-            }
+            // Byte 2
+            b = span[_position++];
+            result |= (uint)(b & 0x7F) << 7;
+            if ((b & 0x80) == 0)
+                return result;
 
-            _position += bytesRead;
-            return (uint)result;
+            // Byte 3
+            b = span[_position++];
+            result |= (uint)(b & 0x7F) << 14;
+            if ((b & 0x80) == 0)
+                return result;
+
+            // Byte 4
+            b = span[_position++];
+            result |= (uint)(b & 0x7F) << 21;
+            if ((b & 0x80) == 0)
+                return result;
+
+            // Byte 5
+            b = span[_position++];
+            result |= (uint)(b & 0x7F) << 28;
+            if ((b & 0x80) == 0)
+                return result;
+
+            throw new InvalidOperationException("ULEB128 encoding too long for uint");
+
+            // Original implementation
+            //UInt128 result = 0;
+            //int shift = 0;
+            //int bytesRead = 0;
+            //ReadOnlySpan<byte> span = _data.Span;
+
+            //while (_position + bytesRead < span.Length)
+            //{
+            //    byte b = span[_position + bytesRead];
+            //    result |= (UInt128)(b & 0x7F) << shift;
+            //    shift += 7;
+            //    bytesRead++;
+
+            //    if ((b & 0x80) == 0)
+            //    {
+            //        break;
+            //    }
+            //}
+
+            //if (result > uint.MaxValue) // Check if value exceeds uint because by default when casting UInt128 to uint it will not throw
+            //{
+            //    throw new InvalidOperationException($"ULEB128 value {result} is too large for uint32");
+            //}
+
+            //_position += bytesRead;
+            //return (uint)result;
         }
 
         /// <summary>
