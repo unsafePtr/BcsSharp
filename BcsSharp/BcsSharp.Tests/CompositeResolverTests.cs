@@ -1,8 +1,5 @@
-using System;
 using BcsSharp.Core;
-using BcsSharp.Core.Formatters;
 using BcsSharp.Core.Resolvers;
-using Xunit;
 
 namespace BcsSharp.Tests
 {
@@ -78,95 +75,33 @@ namespace BcsSharp.Tests
         }
 
         [Fact]
-        public void CompositeResolver_ThreadSafety_ShouldWork()
+        public async Task CompositeResolver_ThreadSafety_ShouldWork()
         {
             // Arrange
             var resolver = CompositeResolver.Default;
-            var tasks = new System.Threading.Tasks.Task<IBcsFormatter<int>?>[20];
+            var tasks = new Task<IBcsFormatter<int>?>[20];
 
             // Act - Concurrent access from multiple threads
             for (int i = 0; i < tasks.Length; i++)
             {
-                tasks[i] = System.Threading.Tasks.Task.Run(() => resolver.GetFormatter<int>());
+                tasks[i] = Task.Run(resolver.GetFormatter<int>);
             }
 
-            System.Threading.Tasks.Task.WaitAll(tasks);
+            await Task.WhenAll(tasks);
 
             // Assert - All should return the same cached instance
-            var firstFormatter = tasks[0].Result;
+            var firstFormatter = await tasks[0];
             Assert.NotNull(firstFormatter);
 
             for (int i = 1; i < tasks.Length; i++)
             {
-                Assert.Same(firstFormatter, tasks[i].Result);
+                Assert.Same(firstFormatter, await tasks[i]);
             }
         }
-
-        #region Test Helper Classes
 
         public class TestCustomType
         {
             public int Value { get; set; }
         }
-
-        public class TestCustomTypeFormatter : IBcsFormatter<TestCustomType>
-        {
-            public void Serialize(ref BcsWriter writer, TestCustomType value)
-            {
-                writer.Write(value?.Value ?? 0);
-            }
-
-            public TestCustomType Deserialize(ref BcsReader reader)
-            {
-                return new TestCustomType { Value = (int)reader.Read32() };
-            }
-
-            public int? GetSerializedSize(TestCustomType value)
-            {
-                return 4;
-            }
-        }
-
-        public class TestCustomIntFormatter : IBcsFormatter<int>
-        {
-            public void Serialize(ref BcsWriter writer, int value)
-            {
-                writer.Write(value);
-            }
-
-            public int Deserialize(ref BcsReader reader)
-            {
-                return (int)reader.Read32();
-            }
-
-            public int? GetSerializedSize(int value)
-            {
-                return 4;
-            }
-        }
-
-        public class TestCustomResolver : IFormatterResolver
-        {
-            public IBcsFormatter<T>? GetFormatter<T>()
-            {
-                if (typeof(T) == typeof(TestCustomType))
-                    return (IBcsFormatter<T>)(object)new TestCustomTypeFormatter();
-
-                return null;
-            }
-        }
-
-        public class TestOverrideResolver : IFormatterResolver
-        {
-            public IBcsFormatter<T>? GetFormatter<T>()
-            {
-                if (typeof(T) == typeof(int))
-                    return (IBcsFormatter<T>)(object)new TestCustomIntFormatter();
-
-                return null;
-            }
-        }
-
-        #endregion
     }
 }
