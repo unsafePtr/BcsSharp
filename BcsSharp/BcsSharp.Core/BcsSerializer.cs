@@ -25,7 +25,7 @@ namespace BcsSharp.Core
         /// </summary>
         public static byte[] Serialize<T>(T value, IFormatterResolver? resolver = null)
         {
-            var writer = new BcsWriter(new BcsWriterOptions());
+            var writer = new BcsWriter(BcsWriterOptions.Default);
             Serialize(ref writer, value, resolver);
             return writer.ToBytes();
         }
@@ -51,15 +51,6 @@ namespace BcsSharp.Core
         {
             var writer = new BcsWriter(bufferWriter);
             Serialize(ref writer, value, resolver);
-        }
-
-        /// <summary>
-        /// Deserialize from byte array
-        /// </summary>
-        public static T Deserialize<T>(byte[] data, IFormatterResolver? resolver = null)
-        {
-            var reader = new BcsReader(data);
-            return Deserialize<T>(ref reader, resolver);
         }
 
         /// <summary>

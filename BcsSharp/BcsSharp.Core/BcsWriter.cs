@@ -1,6 +1,8 @@
+using BcsSharp.Core.Helpers;
 using Nethermind.Int256;
 using System.Buffers;
 using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
 
 namespace BcsSharp.Core
 {
@@ -54,6 +56,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write a single byte (u8)
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(byte value)
         {
             var span = _bufferWriter.GetSpan(1);
@@ -64,6 +67,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write 16-bit unsigned integer (u16) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(ushort value)
         {
             var span = _bufferWriter.GetSpan(2);
@@ -74,6 +78,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write 32-bit unsigned integer (u32) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(uint value)
         {
             var span = _bufferWriter.GetSpan(4);
@@ -84,6 +89,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write 64-bit unsigned integer (u64) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(ulong value)
         {
             var span = _bufferWriter.GetSpan(8);
@@ -94,6 +100,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write signed 8-bit integer (i8)
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(sbyte value)
         {
             var span = _bufferWriter.GetSpan(1);
@@ -104,6 +111,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write signed 16-bit integer (i16) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(short value)
         {
             var span = _bufferWriter.GetSpan(2);
@@ -114,6 +122,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write signed 32-bit integer (i32) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(int value)
         {
             var span = _bufferWriter.GetSpan(4);
@@ -124,6 +133,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write signed 64-bit integer (i64) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(long value)
         {
             var span = _bufferWriter.GetSpan(8);
@@ -134,6 +144,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write signed 128-bit integer (i128) in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(Int128 value)
         {
             var span = _bufferWriter.GetSpan(16);
@@ -145,17 +156,18 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write 128-bit unsigned integer in little-endian format
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(UInt128 value)
         {
             var span = _bufferWriter.GetSpan(16);
             BinaryPrimitives.WriteUInt128LittleEndian(span, value);
             _bufferWriter.Advance(16);
-
         }
 
         /// <summary>
         /// Write 256-bit unsigned integer
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(UInt256 value)
         {
             // we must do this instead of direct buffer write because there is internal check for buffer size inside Nethermind library
@@ -170,6 +182,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write ULEB128 from 32-bit uint. Used typically to write down the length of a string or array.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteULEB(uint value)
         {
             Span<byte> span = _bufferWriter.GetSpan(5); // Max 5 bytes for uint
@@ -194,6 +207,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write boolean value
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteBool(bool value)
         {
             Write(Convert.ToByte(value));
@@ -202,6 +216,7 @@ namespace BcsSharp.Core
         /// <summary>
         /// Write string value (length-prefixed UTF-8)
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteString(string? value)
         {
             if (value == null || value == string.Empty)
@@ -216,13 +231,23 @@ namespace BcsSharp.Core
         }
 
         /// <summary>
-        /// Get the written data as byte array
+        /// Get the written data as byte array. Optimized to minimize allocations.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public byte[] ToBytes()
         {
             if (!_ownsBuffer)
-                throw new InvalidOperationException("ToBytes is not available when using external IBufferWriter");
-            return _defaultBuffer!.WrittenSpan.ToArray();
+            {
+                ThrowHelper.ThrowInvalidOperationException("ToBytes is not available when using external IBufferWriter")
+            }
+
+            // Smart buffer detection: avoid unnecessary allocations for small data
+            var writtenSpan = _defaultBuffer!.WrittenSpan;
+            if (writtenSpan.Length == 0)
+                return [];
+
+            // For small data, use the most efficient path
+            return writtenSpan.ToArray();
         }
 
         /// <summary>
@@ -230,10 +255,14 @@ namespace BcsSharp.Core
         /// </summary>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException"></exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlyMemory<byte> ToMemory()
         {
             if (!_ownsBuffer)
-                throw new InvalidOperationException("ToMemory is not available when using external IBufferWriter");
+            {
+                ThrowHelper.ThrowInvalidOperationException("ToMemory is not available when using external IBufferWriter");
+            }
+
             return _defaultBuffer!.WrittenMemory;
         }
 
@@ -243,13 +272,17 @@ namespace BcsSharp.Core
         public void Reset()
         {
             if (!_ownsBuffer)
-                throw new InvalidOperationException("Reset is not available when using external IBufferWriter");
+            {
+                ThrowHelper.ThrowInvalidOperationException("Reset is not available when using external IBufferWriter");
+            }
+
             _defaultBuffer!.Clear();
         }
 
         /// <summary>
         /// Write raw bytes from span
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void WriteBytes(ReadOnlySpan<byte> bytes)
         {
             _bufferWriter.Write(bytes);
