@@ -252,9 +252,7 @@ namespace BcsSharp.Core
         /// </summary>
         internal void WriteBytes(ReadOnlySpan<byte> bytes)
         {
-            var span = _bufferWriter.GetSpan(bytes.Length);
-            bytes.CopyTo(span);
-            _bufferWriter.Advance(bytes.Length);
+            _bufferWriter.Write(bytes);
         }
     }
 }

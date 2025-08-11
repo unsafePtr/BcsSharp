@@ -10,6 +10,11 @@ namespace BcsSharp.Core.Formatters
         private readonly IBcsFormatter<TKey> _keyFormatter;
         private readonly IBcsFormatter<TValue> _valueFormatter;
 
+        private static readonly BcsWriterOptions _internalWriterOptions = new()
+        {
+            InitialBufferSize = 256
+        };
+
         public Type TargetType => typeof(Dictionary<TKey, TValue>);
 
         public MapFormatter(IBcsFormatter<TKey> keyFormatter, IBcsFormatter<TValue> valueFormatter)
@@ -29,18 +34,22 @@ namespace BcsSharp.Core.Formatters
             writer.WriteULEB((uint)value.Count);
 
             // Serialize key-value pairs and sort by lexicographical order of key bytes (BCS requirement)
-            var serializedPairs = new List<(ReadOnlyMemory<byte> keyBytes, ReadOnlyMemory<byte> valueBytes, TKey key, TValue value)>(value.Count);
+            var serializedPairs = new List<(byte[] keyBytes, byte[] valueBytes)>(value.Count);
+            var tempWriter = new BcsWriter(_internalWriterOptions);
 
             foreach (var kvp in value)
             {
-                // Serialize key and value to get their BCS byte representation
-                var keyWriter = new BcsWriter();
-                _keyFormatter.Serialize(ref keyWriter, kvp.Key);
+                // Serialize key
+                tempWriter.Reset();
+                _keyFormatter.Serialize(ref tempWriter, kvp.Key);
+                var keyBytes = tempWriter.ToBytes();
 
-                var valueWriter = new BcsWriter();
-                _valueFormatter.Serialize(ref valueWriter, kvp.Value);
+                // Serialize value
+                tempWriter.Reset();
+                _valueFormatter.Serialize(ref tempWriter, kvp.Value);
+                var valueBytes = tempWriter.ToBytes();
 
-                serializedPairs.Add((keyWriter.ToMemory(), valueWriter.ToMemory(), kvp.Key, kvp.Value));
+                serializedPairs.Add((keyBytes, valueBytes));
             }
 
             // Sort by lexicographical order of serialized key bytes
@@ -49,9 +58,8 @@ namespace BcsSharp.Core.Formatters
             // Write sorted key-value pairs  
             foreach (var pair in serializedPairs)
             {
-                // Write pre-serialized key and value bytes directly
-                writer.WriteBytes(pair.keyBytes.Span);
-                writer.WriteBytes(pair.valueBytes.Span);
+                writer.WriteBytes(pair.keyBytes);
+                writer.WriteBytes(pair.valueBytes);
             }
         }
 
@@ -144,14 +152,6 @@ namespace BcsSharp.Core.Formatters
                     return comparison;
             }
             return a.Length.CompareTo(b.Length);
-        }
-
-        /// <summary>
-        /// Compares two ReadOnlyMemory&lt;byte&gt; lexicographically
-        /// </summary>
-        private static int CompareByteArrays(ReadOnlyMemory<byte> a, ReadOnlyMemory<byte> b)
-        {
-            return a.Span.SequenceCompareTo(b.Span);
         }
     }
 }
