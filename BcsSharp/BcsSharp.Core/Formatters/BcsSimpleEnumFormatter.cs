@@ -85,7 +85,7 @@ namespace BcsSharp.Core.Formatters
         /// </summary>
         private static T[] GetOrCreateCachedEnumValues(Type enumType)
         {
-            return _enumValuesCache.GetOrAdd(enumType, type => (Enum.GetValues(type)! as T[])!);
+            return _enumValuesCache.GetOrAddWithLock(enumType, type => (Enum.GetValues(type)! as T[])!);
         }
     }
 

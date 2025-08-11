@@ -3,7 +3,7 @@ public static class DictionaryExtensions
 {
     private static readonly Lock _lock = new();
 
-    public static TValue GetOrAdd<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TValue> valueFactory)
+    public static TValue GetOrAddWithLock<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TValue> valueFactory)
         where TKey : notnull
     {
         if (dictionary.TryGetValue(key, out TValue? value))
