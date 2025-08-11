@@ -5,7 +5,6 @@ namespace BcsSharp.Core.Formatters
     /// </summary>
     public sealed class ArrayFormatter<T> : IBcsFormatter<T[]>
     {
-        private static readonly Dictionary<Type, object> _instances = new();
         private readonly IBcsFormatter<T> _elementFormatter;
 
         public Type TargetType => typeof(T[]);
@@ -17,13 +16,7 @@ namespace BcsSharp.Core.Formatters
 
         public static ArrayFormatter<T> GetInstance(IBcsFormatter<T> elementFormatter)
         {
-            if (!_instances.TryGetValue(typeof(T), out var instance))
-            {
-                instance = new ArrayFormatter<T>(elementFormatter);
-                _instances[typeof(T)] = instance;
-            }
-
-            return (ArrayFormatter<T>)instance;
+            return FormatterCache.GetOrAddFormatter(typeof(T[]), _ => new ArrayFormatter<T>(elementFormatter));
         }
 
         public void Serialize(ref BcsWriter writer, T[] value)
@@ -83,7 +76,6 @@ namespace BcsSharp.Core.Formatters
 
     public sealed class ListFormatter<T> : IBcsFormatter<List<T>>
     {
-        private static readonly Dictionary<Type, object> _instances = new();
         private readonly IBcsFormatter<T> _elementFormatter;
 
         public Type TargetType => typeof(List<T>);
@@ -95,13 +87,7 @@ namespace BcsSharp.Core.Formatters
 
         public static ListFormatter<T> GetInstance(IBcsFormatter<T> elementFormatter)
         {
-            if (!_instances.TryGetValue(typeof(T), out var instance))
-            {
-                instance = new ListFormatter<T>(elementFormatter);
-                _instances[typeof(T)] = instance;
-            }
-
-            return (ListFormatter<T>)instance;
+            return FormatterCache.GetOrAddFormatter(typeof(List<T>), _ => new ListFormatter<T>(elementFormatter));
         }
 
         public void Serialize(ref BcsWriter writer, List<T> value)

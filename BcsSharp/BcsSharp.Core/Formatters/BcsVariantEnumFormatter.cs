@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using BcsSharp.Core.Attributes;
@@ -22,7 +19,7 @@ namespace BcsSharp.Core.Formatters
         private readonly Dictionary<uint, BcsVariantInfo> _variantsByIndex;
         private readonly Dictionary<Type, BcsVariantInfo> _variantsByType;
 
-        // Static cache for constructor delegates to avoid recompilation
+        // Static cache for constructor delegates to avoid recompilation - local per formatter type
         private static readonly ConcurrentDictionary<Type, Func<object>> _constructorCache = new();
 
         public Type TargetType { get; } = typeof(T);
@@ -178,7 +175,7 @@ namespace BcsSharp.Core.Formatters
             return [.. variants.OrderBy(v => v.Index)];
         }
 
-        private bool IsVariantOfEnum(Type candidateType, Type enumBaseType)
+        private static bool IsVariantOfEnum(Type candidateType, Type enumBaseType)
         {
             // Check if the type implements the enum interface/inherits from enum base
             // Also ensure it's not a generic type definition to avoid issues with generic variants
@@ -211,10 +208,10 @@ namespace BcsSharp.Core.Formatters
                 });
             }
 
-            return properties.OrderBy(p => p.Order).ToList();
+            return [.. properties.OrderBy(p => p.Order)];
         }
 
-        private void SerializeVariantData(ref BcsWriter writer, object instance, BcsVariantInfo variant)
+        private static void SerializeVariantData(ref BcsWriter writer, object instance, BcsVariantInfo variant)
         {
             foreach (var dataProp in variant.DataProperties)
             {
@@ -224,7 +221,7 @@ namespace BcsSharp.Core.Formatters
             }
         }
 
-        private void DeserializeVariantData(ref BcsReader reader, object instance, BcsVariantInfo variant)
+        private static void DeserializeVariantData(ref BcsReader reader, object instance, BcsVariantInfo variant)
         {
             foreach (var dataProp in variant.DataProperties)
             {
@@ -234,7 +231,7 @@ namespace BcsSharp.Core.Formatters
             }
         }
 
-        private int? CalculateVariantDataSize(object instance, BcsVariantInfo variant)
+        private static int? CalculateVariantDataSize(object instance, BcsVariantInfo variant)
         {
             var totalSize = 0;
 
@@ -322,7 +319,7 @@ namespace BcsSharp.Core.Formatters
             return Expression.Lambda<Action<object, object?>>(assignment, objParam, valueParam).Compile();
         }
 
-        private class BcsVariantInfo
+        private sealed class BcsVariantInfo
         {
             public uint Index { get; set; }
             public string Name { get; set; } = "";
@@ -331,7 +328,7 @@ namespace BcsSharp.Core.Formatters
             public List<BcsDataProperty> DataProperties { get; set; } = new();
         }
 
-        private class BcsDataProperty
+        private sealed class BcsDataProperty
         {
             public PropertyInfo Property { get; set; } = null!;
             public int Order { get; set; }

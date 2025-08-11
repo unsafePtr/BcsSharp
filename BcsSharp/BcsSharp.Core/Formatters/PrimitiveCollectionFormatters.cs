@@ -8,19 +8,11 @@ namespace BcsSharp.Core.Formatters
     public sealed class PrimitiveArrayFormatter<T> : IBcsFormatter<T[]>
         where T : unmanaged
     {
-        private static readonly Dictionary<Type, object> _instances = new();
-
         public Type TargetType => typeof(T[]);
 
         public static PrimitiveArrayFormatter<T> GetInstance()
         {
-            if (!_instances.TryGetValue(typeof(T), out var instance))
-            {
-                instance = new PrimitiveArrayFormatter<T>();
-                _instances[typeof(T)] = instance;
-            }
-
-            return (PrimitiveArrayFormatter<T>)instance;
+            return FormatterCache.GetOrAddFormatter(typeof(T[]), _ => new PrimitiveArrayFormatter<T>());
         }
 
         public void Serialize(ref BcsWriter writer, T[] value)
@@ -72,19 +64,11 @@ namespace BcsSharp.Core.Formatters
     /// </summary>
     public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T : unmanaged
     {
-        private static readonly Dictionary<Type, object> _instances = new();
-
         public Type TargetType => typeof(List<T>);
 
         public static PrimitiveListFormatter<T> GetInstance()
         {
-            if (!_instances.TryGetValue(typeof(T), out var instance))
-            {
-                instance = new PrimitiveListFormatter<T>();
-                _instances[typeof(T)] = instance;
-            }
-
-            return (PrimitiveListFormatter<T>)instance;
+            return FormatterCache.GetOrAddFormatter(typeof(List<T>), _ => new PrimitiveListFormatter<T>());
         }
 
         public void Serialize(ref BcsWriter writer, List<T> value)

@@ -55,18 +55,14 @@ namespace BcsSharp.Core.Resolvers
                 // Use specialized primitive formatter for primitive types
                 if (IsPrimitiveType(elementType))
                 {
-                    var primitiveArrayFormatterType = typeof(PrimitiveArrayFormatter<>).MakeGenericType(elementType);
-                    var getInstanceMethod = primitiveArrayFormatterType.GetMethod("GetInstance");
-                    return getInstanceMethod?.Invoke(null, null);
+                    return FormatterCache.GetOrAddFormatter(type, _ => CreatePrimitiveArrayFormatter(elementType));
                 }
                 else
                 {
                     var elementFormatter = GetFormatterForType(elementType);
                     if (elementFormatter != null)
                     {
-                        var arrayFormatterType = typeof(ArrayFormatter<>).MakeGenericType(elementType);
-                        var getInstanceMethod = arrayFormatterType.GetMethod("GetInstance");
-                        return getInstanceMethod?.Invoke(null, new[] { elementFormatter });
+                        return FormatterCache.GetOrAddFormatter(type, _ => CreateArrayFormatter(elementType, elementFormatter));
                     }
                 }
             }
@@ -79,18 +75,14 @@ namespace BcsSharp.Core.Resolvers
                 // Use specialized primitive formatter for primitive types
                 if (IsPrimitiveType(elementType))
                 {
-                    var primitiveListFormatterType = typeof(PrimitiveListFormatter<>).MakeGenericType(elementType);
-                    var getInstanceMethod = primitiveListFormatterType.GetMethod("GetInstance");
-                    return getInstanceMethod?.Invoke(null, null);
+                    return FormatterCache.GetOrAddFormatter(type, _ => CreatePrimitiveListFormatter(elementType));
                 }
                 else
                 {
                     var elementFormatter = GetFormatterForType(elementType);
                     if (elementFormatter != null)
                     {
-                        var listFormatterType = typeof(ListFormatter<>).MakeGenericType(elementType);
-                        var getInstanceMethod = listFormatterType.GetMethod("GetInstance");
-                        return getInstanceMethod?.Invoke(null, new[] { elementFormatter });
+                        return FormatterCache.GetOrAddFormatter(type, _ => CreateListFormatter(elementType, elementFormatter));
                     }
                 }
             }
@@ -111,8 +103,7 @@ namespace BcsSharp.Core.Resolvers
 
                     if (keyFormatter != null && valueFormatter != null)
                     {
-                        var mapFormatterType = typeof(MapFormatter<,>).MakeGenericType(keyType, valueType);
-                        return Activator.CreateInstance(mapFormatterType, keyFormatter, valueFormatter);
+                        return FormatterCache.GetOrAddFormatter(type, _ => CreateMapFormatter(keyType, valueType, keyFormatter, valueFormatter));
                     }
                 }
             }
@@ -130,8 +121,7 @@ namespace BcsSharp.Core.Resolvers
 
                     if (formatter1 != null && formatter2 != null)
                     {
-                        var tupleFormatterType = typeof(TupleFormatter<,>).MakeGenericType(typeArgs[0], typeArgs[1]);
-                        return Activator.CreateInstance(tupleFormatterType, formatter1, formatter2);
+                        return FormatterCache.GetOrAddFormatter(type, _ => CreateTuple2Formatter(typeArgs[0], typeArgs[1], formatter1, formatter2));
                     }
                 }
                 else if (genericTypeDef == typeof(ValueTuple<,,>) && typeArgs.Length == 3)
@@ -142,8 +132,7 @@ namespace BcsSharp.Core.Resolvers
 
                     if (formatter1 != null && formatter2 != null && formatter3 != null)
                     {
-                        var tupleFormatterType = typeof(TupleFormatter<,,>).MakeGenericType(typeArgs[0], typeArgs[1], typeArgs[2]);
-                        return Activator.CreateInstance(tupleFormatterType, formatter1, formatter2, formatter3);
+                        return FormatterCache.GetOrAddFormatter(type, _ => CreateTuple3Formatter(typeArgs[0], typeArgs[1], typeArgs[2], formatter1, formatter2, formatter3));
                     }
                 }
                 else if (genericTypeDef == typeof(ValueTuple<,,,>) && typeArgs.Length == 4)
@@ -155,8 +144,7 @@ namespace BcsSharp.Core.Resolvers
 
                     if (formatter1 != null && formatter2 != null && formatter3 != null && formatter4 != null)
                     {
-                        var tupleFormatterType = typeof(TupleFormatter<,,,>).MakeGenericType(typeArgs[0], typeArgs[1], typeArgs[2], typeArgs[3]);
-                        return Activator.CreateInstance(tupleFormatterType, formatter1, formatter2, formatter3, formatter4);
+                        return FormatterCache.GetOrAddFormatter(type, _ => CreateTuple4Formatter(typeArgs[0], typeArgs[1], typeArgs[2], typeArgs[3], formatter1, formatter2, formatter3, formatter4));
                     }
                 }
             }
@@ -180,6 +168,58 @@ namespace BcsSharp.Core.Resolvers
                    type == typeof(uint) || type == typeof(int) ||
                    type == typeof(ulong) || type == typeof(long) ||
                    type == typeof(UInt128) || type == typeof(Int128);
+        }
+
+        private static object CreatePrimitiveArrayFormatter(Type elementType)
+        {
+            var formatterType = typeof(PrimitiveArrayFormatter<>).MakeGenericType(elementType);
+            var getInstanceMethod = formatterType.GetMethod("GetInstance");
+            return getInstanceMethod!.Invoke(null, null)!;
+        }
+
+        private static object CreateArrayFormatter(Type elementType, object elementFormatter)
+        {
+            var formatterType = typeof(ArrayFormatter<>).MakeGenericType(elementType);
+            var getInstanceMethod = formatterType.GetMethod("GetInstance");
+            return getInstanceMethod!.Invoke(null, new[] { elementFormatter })!;
+        }
+
+        private static object CreatePrimitiveListFormatter(Type elementType)
+        {
+            var formatterType = typeof(PrimitiveListFormatter<>).MakeGenericType(elementType);
+            var getInstanceMethod = formatterType.GetMethod("GetInstance");
+            return getInstanceMethod!.Invoke(null, null)!;
+        }
+
+        private static object CreateListFormatter(Type elementType, object elementFormatter)
+        {
+            var formatterType = typeof(ListFormatter<>).MakeGenericType(elementType);
+            var getInstanceMethod = formatterType.GetMethod("GetInstance");
+            return getInstanceMethod!.Invoke(null, new[] { elementFormatter })!;
+        }
+
+        private static object CreateMapFormatter(Type keyType, Type valueType, object keyFormatter, object valueFormatter)
+        {
+            var mapFormatterType = typeof(MapFormatter<,>).MakeGenericType(keyType, valueType);
+            return Activator.CreateInstance(mapFormatterType, keyFormatter, valueFormatter)!;
+        }
+
+        private static object CreateTuple2Formatter(Type type1, Type type2, object formatter1, object formatter2)
+        {
+            var tupleFormatterType = typeof(TupleFormatter<,>).MakeGenericType(type1, type2);
+            return Activator.CreateInstance(tupleFormatterType, formatter1, formatter2)!;
+        }
+
+        private static object CreateTuple3Formatter(Type type1, Type type2, Type type3, object formatter1, object formatter2, object formatter3)
+        {
+            var tupleFormatterType = typeof(TupleFormatter<,,>).MakeGenericType(type1, type2, type3);
+            return Activator.CreateInstance(tupleFormatterType, formatter1, formatter2, formatter3)!;
+        }
+
+        private static object CreateTuple4Formatter(Type type1, Type type2, Type type3, Type type4, object formatter1, object formatter2, object formatter3, object formatter4)
+        {
+            var tupleFormatterType = typeof(TupleFormatter<,,,>).MakeGenericType(type1, type2, type3, type4);
+            return Activator.CreateInstance(tupleFormatterType, formatter1, formatter2, formatter3, formatter4)!;
         }
     }
 }

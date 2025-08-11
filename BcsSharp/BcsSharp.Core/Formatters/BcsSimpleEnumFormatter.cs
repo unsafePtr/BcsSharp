@@ -20,11 +20,10 @@ namespace BcsSharp.Core.Formatters
         where T : struct, Enum
     {
         private readonly IBcsFormatter<byte> _byteFormatter;
-        private readonly T[] _cachedEnumValues;
-        private readonly int _enumCount;
 
-        // Static cache for enum values to avoid repeated Enum.GetValues calls
-        private static readonly Dictionary<Type, T[]> _enumValuesCache = new();
+        // Static cache per generic type - this is efficient and appropriate for enum values
+        private static readonly T[] _staticEnumValues = (Enum.GetValues(typeof(T)) as T[])!;
+        private static readonly int _enumCount = _staticEnumValues.Length;
 
         public Type TargetType => typeof(T);
 
@@ -32,11 +31,6 @@ namespace BcsSharp.Core.Formatters
         {
             // Always initialize byte formatter since we serialize ordinal positions as bytes
             _byteFormatter = ByteFormatter.Instance;
-
-            // Cache enum values for high-performance access
-            var enumValues = GetOrCreateCachedEnumValues(typeof(T));
-            _cachedEnumValues = enumValues;
-            _enumCount = _cachedEnumValues.Length;
 
             if (_enumCount > 256)
             {
@@ -49,7 +43,7 @@ namespace BcsSharp.Core.Formatters
             // BCS C-style enum serialization: Use ordinal position (index) within enum definition, not assigned values
             // This ensures consistent serialization regardless of actual enum values
             // Use cached enum values for optimal performance
-            var position = Array.IndexOf(_cachedEnumValues, value);
+            var position = Array.IndexOf(_staticEnumValues, value);
 
             if (position == -1)
             {
@@ -71,7 +65,7 @@ namespace BcsSharp.Core.Formatters
             }
 
             // Use cached enum values array for optimal performance (no reflection)
-            return _cachedEnumValues[position];
+            return _staticEnumValues[position];
         }
 
         public int? GetSerializedSize(T value)
@@ -80,13 +74,6 @@ namespace BcsSharp.Core.Formatters
             return 1;
         }
 
-        /// <summary>
-        /// Gets or creates cached enum values for a specific enum type to avoid repeated reflection
-        /// </summary>
-        private static T[] GetOrCreateCachedEnumValues(Type enumType)
-        {
-            return _enumValuesCache.GetOrAddWithLock(enumType, type => (Enum.GetValues(type)! as T[])!);
-        }
     }
 
     /// <summary>
