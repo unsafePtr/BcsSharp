@@ -369,9 +369,9 @@ namespace BcsSharp.Core.Formatters
             {
                 _formatter.Serialize(ref writer, typedValue);
             }
-            else if (value == null && !typeof(T).IsValueType)
+            else if (value == null)
             {
-                _formatter.Serialize(ref writer, default(T)!);
+                _formatter.Serialize(ref writer, default!);
             }
             else
             {
