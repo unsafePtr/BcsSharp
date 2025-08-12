@@ -30,14 +30,64 @@ namespace BcsSharp.Core.Resolvers
         }
 
         /// <summary>
-        /// Default instance with recommended resolver chain for nullable types, OneOf types, enums, objects, and standard types
+        /// Default instance with recommended resolver chain for source-generated, nullable types, OneOf types, enums, objects, and standard types
         /// </summary>
         public static readonly CompositeResolver Default = new CompositeResolver(
-            NullableResolver.Instance,
-            OneOfResolver.Instance,
-            EnumResolver.Instance,
-            ObjectResolver.Instance,
-            StandardResolver.Instance
+            CreateResolverChain()
         );
+
+        private static IFormatterResolver[] CreateResolverChain()
+        {
+            var resolvers = new List<IFormatterResolver>();
+
+            // Try to add source generator resolver first (highest priority)
+            try
+            {
+                // Look for the source generator resolver in any loaded assembly
+                var sourceGenResolverType = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(assembly => assembly.GetTypes())
+                    .FirstOrDefault(type => type.Name == "BcsSourceGeneratorResolver" && 
+                                          type.Namespace == "BcsSharp.Generated" &&
+                                          typeof(IFormatterResolver).IsAssignableFrom(type));
+                
+                if (sourceGenResolverType != null)
+                {
+                    // Try to get Instance field (source-generated resolvers use fields)
+                    var instanceField = sourceGenResolverType.GetField("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    var instance = instanceField?.GetValue(null);
+                    
+                    if (instance is IFormatterResolver sourceGenResolver)
+                    {
+                        resolvers.Add(sourceGenResolver);
+                    }
+                    else
+                    {
+                        // Fallback to property for backwards compatibility
+                        var instanceProperty = sourceGenResolverType.GetProperty("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                        instance = instanceProperty?.GetValue(null);
+                        
+                        if (instance is IFormatterResolver fallbackResolver)
+                        {
+                            resolvers.Add(fallbackResolver);
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Source generator not available, continue with other resolvers
+            }
+
+            // Add standard resolvers
+            resolvers.AddRange([
+                StandardResolver.Instance,
+                NullableResolver.Instance,
+                OneOfResolver.Instance,
+                EnumResolver.Instance,
+                ObjectResolver.Instance
+            ]);
+
+            return resolvers.ToArray();
+        }
     }
 }

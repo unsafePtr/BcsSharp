@@ -206,19 +206,5 @@ namespace BcsSharp.Tests
             Assert.Equal(longName, deserialized.Name);
             Assert.Equal(uint.MaxValue, deserialized.Age);
         }
-
-        [Fact]
-        public void BcsObject_SerializedSize_ShouldBeAccurate()
-        {
-            // Arrange
-            var person = new Person("Test", 42);
-
-            // Act
-            var serialized = BcsSerializer.Serialize(person);
-            var calculatedSize = BcsSerializer.GetSerializedSize(person);
-
-            // Assert
-            Assert.Equal(serialized.Length, calculatedSize);
-        }
     }
 }

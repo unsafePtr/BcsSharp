@@ -435,3 +435,5 @@ fine-code-coverage/
 # Temporary debug files
 TestDebug.cs
 *.exe
+
+nul

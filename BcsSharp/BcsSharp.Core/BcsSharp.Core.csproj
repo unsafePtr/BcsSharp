@@ -11,4 +11,9 @@
     <PackageReference Include="OneOf" Version="3.0.271" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Analyzer Include="..\BcsSharp.SourceGenerator\bin\Debug\net9.0\BcsSharp.SourceGenerator.dll" />
+    <ProjectReference Include="..\BcsSharp.SourceGenerator\BcsSharp.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
 </Project>
