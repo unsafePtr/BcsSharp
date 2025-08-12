@@ -285,12 +285,10 @@ namespace BcsSharp.Core
                 ThrowHelper.ThrowInvalidOperationException("ToBytes is not available when using external IBufferWriter");
             }
 
-            // Smart buffer detection: avoid unnecessary allocations for small data
             var writtenSpan = _defaultBuffer!.WrittenSpan;
             if (writtenSpan.Length == 0)
                 return [];
 
-            // For small data, use the most efficient path
             return writtenSpan.ToArray();
         }
 

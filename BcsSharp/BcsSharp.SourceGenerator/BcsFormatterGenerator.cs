@@ -20,8 +20,18 @@ public sealed class BcsFormatterGenerator : IIncrementalGenerator
             .Where(static m => m is not null)
             .Collect();
 
+        // Find all types marked with [BcsEnum] (variant enums)
+        var bcsEnumTypes = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                "BcsSharp.Core.Attributes.BcsEnumAttribute",
+                predicate: static (node, _) => node is InterfaceDeclarationSyntax,
+                transform: static (ctx, _) => GetBcsEnumInfo(ctx))
+            .Where(static m => m is not null)
+            .Collect();
+
         // Generate formatters and resolver
-        context.RegisterSourceOutput(bcsStructTypes, static (spc, types) => Execute(spc, types!));
+        var allTypes = bcsStructTypes.Combine(bcsEnumTypes);
+        context.RegisterSourceOutput(allTypes, static (spc, types) => Execute(spc, types.Left!, types.Right!));
     }
 
     private static BcsStructInfo? GetBcsStructInfo(GeneratorAttributeSyntaxContext context)
@@ -77,35 +87,253 @@ public sealed class BcsFormatterGenerator : IIncrementalGenerator
         );
     }
 
-    private static void Execute(SourceProductionContext context, ImmutableArray<BcsStructInfo> types)
+    private static BcsEnumInfo? GetBcsEnumInfoFromSyntax(GeneratorSyntaxContext context)
     {
-        if (types.IsDefaultOrEmpty)
+        if (context.Node is not TypeDeclarationSyntax typeDeclaration)
+            return null;
+
+        if (context.SemanticModel.GetDeclaredSymbol(typeDeclaration) is not INamedTypeSymbol typeSymbol)
+            return null;
+
+        // Check if the type has the BcsEnum attribute
+        var hasBcsEnumAttr = typeSymbol.GetAttributes()
+            .Any(a => a.AttributeClass?.ToDisplayString() == "BcsSharp.Core.Attributes.BcsEnumAttribute");
+
+        if (!hasBcsEnumAttr)
+            return null;
+
+        // Discover all variant classes for this enum
+        var variants = DiscoverEnumVariants(typeSymbol);
+        if (variants.Count == 0)
+            return null;
+
+        return new BcsEnumInfo(
+            typeSymbol.ToDisplayString(),
+            typeSymbol.Name,
+            typeSymbol.ContainingNamespace?.ToDisplayString() ?? "",
+            variants,
+            typeSymbol
+        );
+    }
+
+    private static BcsEnumInfo? GetBcsEnumInfo(GeneratorAttributeSyntaxContext context)
+    {
+        if (context.TargetNode is not TypeDeclarationSyntax typeDeclaration)
+            return null;
+
+        if (context.TargetSymbol is not INamedTypeSymbol typeSymbol)
+            return null;
+
+        // Discover all variant classes for this enum
+        var variants = DiscoverEnumVariants(typeSymbol);
+        if (variants.Count == 0)
+            return null;
+
+        return new BcsEnumInfo(
+            typeSymbol.ToDisplayString(),
+            typeSymbol.Name,
+            typeSymbol.ContainingNamespace?.ToDisplayString() ?? "",
+            variants,
+            typeSymbol
+        );
+    }
+
+    private static List<BcsVariantInfo> DiscoverEnumVariants(INamedTypeSymbol enumBaseType)
+    {
+        var variants = new List<BcsVariantInfo>();
+        uint nextIndex = 0;
+
+        // Strategy 1: Look for nested types first (common pattern)
+        var nestedTypes = enumBaseType.GetTypeMembers();
+        foreach (var nestedType in nestedTypes)
+        {
+            var variantAttr = nestedType.GetAttributes()
+                .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "BcsSharp.Core.Attributes.BcsEnumVariantAttribute");
+
+            if (variantAttr == null)
+                continue;
+
+            if (IsVariantOfEnum(nestedType, enumBaseType))
+            {
+                uint index = nextIndex;
+                if (variantAttr.ConstructorArguments.Length > 0 && variantAttr.ConstructorArguments[0].Value is uint explicitIndex)
+                {
+                    index = explicitIndex;
+                }
+
+                var dataProperties = DiscoverVariantDataProperties(nestedType);
+
+                variants.Add(new BcsVariantInfo(
+                    index,
+                    nestedType.Name,
+                    nestedType.ToDisplayString(),
+                    nestedType,
+                    dataProperties
+                ));
+
+                nextIndex = Math.Max(nextIndex, index + 1);
+            }
+        }
+
+        // Strategy 2: Look for types in the same assembly (for standalone variant classes)
+        if (variants.Count == 0)
+        {
+            var assembly = enumBaseType.ContainingAssembly;
+            var allTypes = GetTypesInAssembly(assembly);
+
+            foreach (var type in allTypes)
+            {
+                // Skip if it's the enum base type itself
+                if (SymbolEqualityComparer.Default.Equals(type, enumBaseType))
+                    continue;
+
+                var variantAttr = type.GetAttributes()
+                    .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "BcsSharp.Core.Attributes.BcsEnumVariantAttribute");
+
+                if (variantAttr == null)
+                    continue;
+
+                // Check if type implements/inherits from the enum base type
+                if (IsVariantOfEnum(type, enumBaseType))
+                {
+                    uint index = nextIndex;
+                    if (variantAttr.ConstructorArguments.Length > 0 && variantAttr.ConstructorArguments[0].Value is uint explicitIndex)
+                    {
+                        index = explicitIndex;
+                    }
+
+                    var dataProperties = DiscoverVariantDataProperties(type);
+
+                    variants.Add(new BcsVariantInfo(
+                        index,
+                        type.Name,
+                        type.ToDisplayString(),
+                        type,
+                        dataProperties
+                    ));
+
+                    nextIndex = Math.Max(nextIndex, index + 1);
+                }
+            }
+        }
+
+        return variants.OrderBy(v => v.Index).ToList();
+    }
+
+    private static bool IsVariantOfEnum(INamedTypeSymbol candidateType, INamedTypeSymbol enumBaseType)
+    {
+        // Check if the candidate type implements the enum interface or inherits from enum base
+        if (enumBaseType.TypeKind == TypeKind.Interface)
+        {
+            return candidateType.Interfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, enumBaseType));
+        }
+        else
+        {
+            var baseType = candidateType.BaseType;
+            while (baseType != null)
+            {
+                if (SymbolEqualityComparer.Default.Equals(baseType, enumBaseType))
+                    return true;
+                baseType = baseType.BaseType;
+            }
+        }
+        return false;
+    }
+
+    private static List<BcsVariantDataInfo> DiscoverVariantDataProperties(INamedTypeSymbol variantType)
+    {
+        var dataProperties = new List<BcsVariantDataInfo>();
+
+        foreach (var property in variantType.GetMembers().OfType<IPropertySymbol>())
+        {
+            var dataAttr = property.GetAttributes()
+                .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "BcsSharp.Core.Attributes.BcsEnumDataAttribute");
+
+            if (dataAttr == null)
+                continue;
+
+            int order = dataProperties.Count;
+            if (dataAttr.ConstructorArguments.Length > 0 && dataAttr.ConstructorArguments[0].Value is int explicitOrder)
+            {
+                order = explicitOrder;
+            }
+
+            dataProperties.Add(new BcsVariantDataInfo(
+                property.Name,
+                property.Type.ToDisplayString(),
+                property.Type,
+                order
+            ));
+        }
+
+        return dataProperties.OrderBy(p => p.Order).ToList();
+    }
+
+    private static IEnumerable<INamedTypeSymbol> GetTypesInAssembly(IAssemblySymbol assembly)
+    {
+        return GetTypesInNamespace(assembly.GlobalNamespace);
+    }
+
+    private static IEnumerable<INamedTypeSymbol> GetTypesInNamespace(INamespaceSymbol namespaceSymbol)
+    {
+        foreach (var type in namespaceSymbol.GetTypeMembers())
+        {
+            yield return type;
+        }
+
+        foreach (var nestedNamespace in namespaceSymbol.GetNamespaceMembers())
+        {
+            foreach (var type in GetTypesInNamespace(nestedNamespace))
+            {
+                yield return type;
+            }
+        }
+    }
+
+    private static void Execute(SourceProductionContext context, ImmutableArray<BcsStructInfo> structTypes, ImmutableArray<BcsEnumInfo> enumTypes)
+    {
+        
+        if (structTypes.IsDefaultOrEmpty && enumTypes.IsDefaultOrEmpty)
             return;
 
         var sb = new StringBuilder();
-        var allTypes = new Dictionary<string, BcsStructInfo>();
+        var allStructTypes = new Dictionary<string, BcsStructInfo>();
 
-        // Build dictionary of all known types using fully qualified name
-        foreach (var type in types)
+        // Build dictionary of all known struct types using fully qualified name
+        foreach (var type in structTypes)
         {
             var fullyQualifiedName = type.TypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            allTypes[fullyQualifiedName] = type;
+            allStructTypes[fullyQualifiedName] = type;
         }
 
-        // Generate individual formatters
-        foreach (var type in types)
+        // Generate individual struct formatters
+        foreach (var type in structTypes)
         {
             sb.Clear();
-            GenerateFormatter(sb, type, allTypes);
+            GenerateFormatter(sb, type, allStructTypes);
             // Use full type name to avoid duplicates when types have same name in different namespaces
             var hintName = type.FullTypeName.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(',', '_') + "Formatter.g.cs";
             context.AddSource(hintName, sb.ToString());
         }
 
+        // Generate individual enum variant formatters
+        foreach (var enumType in enumTypes)
+        {
+            sb.Clear();
+            GenerateVariantEnumFormatter(sb, enumType, allStructTypes);
+            var hintName = enumType.FullTypeName.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(',', '_') + "VariantEnumFormatter.g.cs";
+            context.AddSource(hintName, sb.ToString());
+        }
+
         // Generate resolver
         sb.Clear();
-        GenerateResolver(sb, types);
+        GenerateResolver(sb, structTypes, enumTypes);
         context.AddSource("BcsSourceGeneratorResolver.g.cs", sb.ToString());
+
+        // Generate assembly attribute file
+        sb.Clear();
+        GenerateAssemblyAttribute(sb);
+        context.AddSource("BcsGeneratedAssemblyAttribute.g.cs", sb.ToString());
     }
 
     private static void GenerateFormatter(StringBuilder sb, BcsStructInfo type, Dictionary<string, BcsStructInfo> allTypes)
@@ -117,7 +345,6 @@ public sealed class BcsFormatterGenerator : IIncrementalGenerator
 #nullable enable
 
 using BcsSharp.Core;
-using System.Runtime.CompilerServices;
 
 namespace {namespaceName};
 ");
@@ -131,7 +358,6 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
     public static readonly {formatterClassName} Instance = new();
     public Type TargetType => typeof({type.FullTypeName});
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Serialize(ref BcsWriter writer, {type.FullTypeName} value)
     {{
 ");
@@ -148,7 +374,6 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
         sb.AppendLine();
 
         // Deserialize method
-        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
         sb.AppendLine($"    public {type.FullTypeName} Deserialize(ref BcsReader reader)");
         sb.AppendLine("    {");
 
@@ -184,7 +409,6 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
         sb.AppendLine();
 
         // GetSerializedSize method - simplified to return null for now
-        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
         sb.AppendLine($"    public int? GetSerializedSize({type.FullTypeName} value)");
         sb.AppendLine("    {");
         sb.AppendLine("        return null; // Size calculation not implemented yet");
@@ -774,7 +998,6 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
     private static void GeneratePrimitiveArrayHelpers(StringBuilder sb)
     {
         sb.AppendLine("    // Helper methods for primitive arrays");
-        sb.AppendLine("    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
         sb.AppendLine("    private static T[] ReadPrimitiveArray<T>(ref BcsReader reader) where T : unmanaged");
         sb.AppendLine("    {");
         sb.AppendLine("        var length = (int)reader.ReadULEB32();");
@@ -803,7 +1026,6 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
         {
             var readCall = GetNullableElementReadCall(elementType);
 
-            sb.AppendLine($"    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.AppendLine($"    private static {elementType}?[] ReadNullableArray_{elementType}(ref BcsReader reader)");
             sb.AppendLine("    {");
             sb.AppendLine("        var length = (int)reader.ReadULEB32();");
@@ -857,7 +1079,6 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
             sb.AppendLine();
 
             // Generate write method
-            sb.AppendLine($"    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.AppendLine($"    private static void WriteEnumOrdinal_{suffix}(ref BcsWriter writer, {enumTypeName} value)");
             sb.AppendLine("    {");
             sb.AppendLine($"        // BCS C-style enum serialization: Use ordinal position (index) within enum definition");
@@ -872,7 +1093,6 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
             sb.AppendLine();
 
             // Generate read method
-            sb.AppendLine($"    [MethodImpl(MethodImplOptions.AggressiveInlining)]");
             sb.AppendLine($"    private static {enumTypeName} ReadEnumOrdinal_{suffix}(ref BcsReader reader)");
             sb.AppendLine("    {");
             sb.AppendLine($"        // BCS C-style enum deserialization: Read ordinal position and convert to enum value");
@@ -887,44 +1107,354 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
         }
     }
 
-    private static void GenerateResolver(StringBuilder sb, ImmutableArray<BcsStructInfo> types)
+    private static void GenerateResolver(StringBuilder sb, ImmutableArray<BcsStructInfo> structTypes, ImmutableArray<BcsEnumInfo> enumTypes)
     {
         sb.AppendLine("// <auto-generated />");
         sb.AppendLine("#nullable enable");
         sb.AppendLine();
         sb.AppendLine("using BcsSharp.Core;");
-        sb.AppendLine("using System.Collections.Concurrent;");
         sb.AppendLine();
         sb.AppendLine("namespace BcsSharp.Generated;");
         sb.AppendLine();
         sb.AppendLine("/// <summary>");
         sb.AppendLine("/// Source-generated resolver that provides optimized formatters for [BcsStruct] types.");
-        sb.AppendLine("/// This resolver should be used first in CompositeResolver for best performance.");
+        sb.AppendLine("/// An instance of this resolver that only returns formatters specifically generated for types in this assembly.");
         sb.AppendLine("/// </summary>");
-        sb.AppendLine("public sealed class BcsSourceGeneratorResolver : IFormatterResolver");
+        sb.AppendLine("public sealed partial class BcsSourceGeneratorResolver : IFormatterResolver");
         sb.AppendLine("{");
-        sb.AppendLine("    public static readonly BcsSourceGeneratorResolver Instance = new();");
-        sb.AppendLine("    private static readonly ConcurrentDictionary<Type, object?> _formatterCache = new();");
+        sb.AppendLine("    /// <summary>An instance of this resolver that only returns formatters specifically generated for types in this assembly.</summary>");
+        sb.AppendLine("    public static readonly IFormatterResolver Instance = new BcsSourceGeneratorResolver();");
         sb.AppendLine();
-        sb.AppendLine("    private BcsSourceGeneratorResolver() { }");
+        sb.AppendLine("    private BcsSourceGeneratorResolver()");
+        sb.AppendLine("    {");
+        sb.AppendLine("    }");
         sb.AppendLine();
         sb.AppendLine("    public IBcsFormatter<T>? GetFormatter<T>()");
         sb.AppendLine("    {");
-        sb.AppendLine("        return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), CreateFormatter);");
+        sb.AppendLine("        return FormatterCache<T>.Formatter;");
         sb.AppendLine("    }");
         sb.AppendLine();
-        sb.AppendLine("    private static object? CreateFormatter(Type type)");
+        sb.AppendLine("    private static class FormatterCache<T>");
         sb.AppendLine("    {");
+        sb.AppendLine("        internal static readonly IBcsFormatter<T>? Formatter;");
+        sb.AppendLine();
+        sb.AppendLine("        static FormatterCache()");
+        sb.AppendLine("        {");
+        sb.AppendLine("            var f = BcsSourceGeneratorResolverGetFormatterHelper.GetFormatter(typeof(T));");
+        sb.AppendLine("            if (f != null)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                Formatter = (IBcsFormatter<T>)f;");
+        sb.AppendLine("            }");
+        sb.AppendLine("        }");
+        sb.AppendLine("    }");
+        sb.AppendLine();
 
-        foreach (var type in types)
+        // Generate the GetFormatterHelper class
+        GenerateGetFormatterHelper(sb, structTypes, enumTypes);
+
+        sb.AppendLine("}");
+    }
+
+    private static void GenerateGetFormatterHelper(StringBuilder sb, ImmutableArray<BcsStructInfo> structTypes, ImmutableArray<BcsEnumInfo> enumTypes)
+    {
+        sb.AppendLine("    private static class BcsSourceGeneratorResolverGetFormatterHelper");
+        sb.AppendLine("    {");
+        
+        // Generate the dictionary with all known types
+        var allTypes = new List<(string fullTypeName, string formatterInstantiation, string namespaceName)>();
+        
+        foreach (var type in structTypes)
         {
             var namespaceName = string.IsNullOrEmpty(type.Namespace) ? "BcsSharp.Generated" : $"{type.Namespace}.Generated";
             var formatterClassName = type.FullTypeName.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(',', '_') + "Formatter";
-            sb.AppendLine($"        if (type == typeof({type.FullTypeName})) return {namespaceName}.{formatterClassName}.Instance;");
+            allTypes.Add((type.FullTypeName, $"new {namespaceName}.{formatterClassName}()", namespaceName));
         }
 
-        sb.AppendLine("        return null;");
+        foreach (var enumType in enumTypes)
+        {
+            var namespaceName = string.IsNullOrEmpty(enumType.Namespace) ? "BcsSharp.Generated" : $"{enumType.Namespace}.Generated";
+            var formatterClassName = enumType.FullTypeName.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(',', '_') + "VariantEnumFormatter";
+            allTypes.Add((enumType.FullTypeName, $"new {namespaceName}.{formatterClassName}()", namespaceName));
+        }
+
+        if (allTypes.Count > 0)
+        {
+            sb.AppendLine($"        private static readonly global::System.Collections.Generic.Dictionary<global::System.Type, int> closedTypeLookup = new global::System.Collections.Generic.Dictionary<global::System.Type, int>({allTypes.Count})");
+            sb.AppendLine("        {");
+            
+            for (int i = 0; i < allTypes.Count; i++)
+            {
+                var (fullTypeName, _, _) = allTypes[i];
+                var comma = i < allTypes.Count - 1 ? "," : "";
+                sb.AppendLine($"            {{ typeof({fullTypeName}), {i} }}{comma}");
+            }
+            
+            sb.AppendLine("        };");
+            sb.AppendLine();
+            sb.AppendLine("        internal static object? GetFormatter(global::System.Type t)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            if (closedTypeLookup.TryGetValue(t, out int closedKey))");
+            sb.AppendLine("            {");
+            sb.AppendLine("                switch (closedKey)");
+            sb.AppendLine("                {");
+            
+            for (int i = 0; i < allTypes.Count; i++)
+            {
+                var (_, formatterInstantiation, _) = allTypes[i];
+                sb.AppendLine($"                    case {i}: return {formatterInstantiation};");
+            }
+            
+            sb.AppendLine("                    default: return null; // unreachable");
+            sb.AppendLine("                }");
+            sb.AppendLine("            }");
+            sb.AppendLine();
+            sb.AppendLine("            return null;");
+            sb.AppendLine("        }");
+        }
+        else
+        {
+            // Handle case where no types are found
+            sb.AppendLine("        internal static object? GetFormatter(global::System.Type t)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            return null;");
+            sb.AppendLine("        }");
+        }
+        
         sb.AppendLine("    }");
-        sb.AppendLine("}");
+    }
+
+    private static void GenerateAssemblyAttribute(StringBuilder sb)
+    {
+        sb.AppendLine("// <auto-generated />");
+        sb.AppendLine("#nullable enable");
+        sb.AppendLine();
+        sb.AppendLine("using System.Reflection;");
+        sb.AppendLine("using BcsSharp.Core.Attributes;");
+        sb.AppendLine("using BcsSharp.Generated;");
+        sb.AppendLine();
+        sb.AppendLine("[assembly: GeneratedAssemblyBcsResolverAttribute(typeof(BcsSourceGeneratorResolver))]");
+    }
+
+    private static void GenerateVariantEnumFormatter(StringBuilder sb, BcsEnumInfo enumType, Dictionary<string, BcsStructInfo> allStructTypes)
+    {
+        var namespaceName = string.IsNullOrEmpty(enumType.Namespace) ? "BcsSharp.Generated" : $"{enumType.Namespace}.Generated";
+        var formatterClassName = enumType.FullTypeName.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(',', '_') + "VariantEnumFormatter";
+
+        sb.AppendLine($@"
+// <auto-generated />
+#nullable enable
+
+using BcsSharp.Core;
+
+namespace {namespaceName};
+
+public sealed class {formatterClassName} : IBcsFormatter<{enumType.FullTypeName}>
+{{
+    public static readonly {formatterClassName} Instance = new();
+    public Type TargetType => typeof({enumType.FullTypeName});
+
+    public void Serialize(ref BcsWriter writer, {enumType.FullTypeName} value)
+    {{
+        if (value == null)
+            throw new ArgumentNullException(nameof(value));
+
+        var valueType = value.GetType();
+        switch (valueType.Name)
+        {{");
+
+        // Generate serialize cases for each variant
+        foreach (var variant in enumType.Variants)
+        {
+            sb.AppendLine($@"            case ""{variant.Name}"":
+                writer.WriteULEB({variant.Index}u);");
+
+            if (variant.DataProperties.Count > 0)
+            {
+                sb.AppendLine($"                var {variant.Name.ToLower()} = ({variant.FullTypeName})value;");
+                foreach (var dataProp in variant.DataProperties)
+                {
+                    var writeCall = GetVariantDataWriteCall(dataProp, $"{variant.Name.ToLower()}", allStructTypes);
+                    sb.AppendLine($"                {writeCall}");
+                }
+            }
+            sb.AppendLine("                break;");
+        }
+
+        sb.AppendLine($@"            default:
+                throw new InvalidOperationException($""Unknown variant type: {{valueType.Name}}"");
+        }}
+    }}
+
+    public {enumType.FullTypeName} Deserialize(ref BcsReader reader)
+    {{
+        var variantIndex = reader.ReadULEB32();
+        switch (variantIndex)
+        {{");
+
+        // Generate deserialize cases for each variant
+        foreach (var variant in enumType.Variants)
+        {
+            sb.AppendLine($@"            case {variant.Index}u:");
+            
+            if (variant.DataProperties.Count == 0)
+            {
+                // Unit variant - just create instance
+                sb.AppendLine($"                return new {variant.FullTypeName}();");
+            }
+            else
+            {
+                // Variant with data - create instance and populate properties
+                sb.AppendLine($"                var instance{variant.Index} = new {variant.FullTypeName}();");
+                foreach (var dataProp in variant.DataProperties)
+                {
+                    var readCall = GetVariantDataReadCall(dataProp, allStructTypes);
+                    sb.AppendLine($"                instance{variant.Index}.{dataProp.Name} = {readCall};");
+                }
+                sb.AppendLine($"                return instance{variant.Index};");
+            }
+        }
+
+        sb.AppendLine($@"            default:
+                throw new InvalidOperationException($""Unknown variant index: {{variantIndex}}"");
+        }}
+    }}
+
+    public int? GetSerializedSize({enumType.FullTypeName} value)
+    {{
+        return null; // Size calculation not implemented yet
+    }}
+}}");
+    }
+
+    private static string GetVariantDataWriteCall(BcsVariantDataInfo dataProp, string instanceName, Dictionary<string, BcsStructInfo> allStructTypes)
+    {
+        var fullyQualifiedTypeName = GetFullyQualifiedTypeName(dataProp.TypeSymbol);
+
+        // Handle strings - always use WriteString regardless of nullable annotation  
+        if (fullyQualifiedTypeName == "string" || fullyQualifiedTypeName == "global::System.String" ||
+            fullyQualifiedTypeName == "string?" || fullyQualifiedTypeName == "global::System.String?")
+        {
+            return $"writer.WriteString({instanceName}.{dataProp.Name});";
+        }
+
+        return fullyQualifiedTypeName switch
+        {
+            // Primitive types - direct BcsWriter calls
+            "byte" or "global::System.Byte" => $"writer.Write({instanceName}.{dataProp.Name});",
+            "sbyte" or "global::System.SByte" => $"writer.Write({instanceName}.{dataProp.Name});",
+            "ushort" or "global::System.UInt16" => $"writer.Write({instanceName}.{dataProp.Name});",
+            "short" or "global::System.Int16" => $"writer.Write({instanceName}.{dataProp.Name});",
+            "uint" or "global::System.UInt32" => $"writer.Write({instanceName}.{dataProp.Name});",
+            "int" or "global::System.Int32" => $"writer.Write({instanceName}.{dataProp.Name});",
+            "ulong" or "global::System.UInt64" => $"writer.Write({instanceName}.{dataProp.Name});",
+            "long" or "global::System.Int64" => $"writer.Write({instanceName}.{dataProp.Name});",
+            "bool" or "global::System.Boolean" => $"writer.WriteBool({instanceName}.{dataProp.Name});",
+
+            // Check if it's a known BcsStruct type - use dedicated formatter
+            _ when allStructTypes.ContainsKey(fullyQualifiedTypeName) => GetVariantFormatterWriteCall(dataProp, instanceName, allStructTypes[fullyQualifiedTypeName]),
+
+            // Fall back to BcsSerializer for unknown complex types
+            _ => $"BcsSerializer.Serialize(ref writer, {instanceName}.{dataProp.Name});"
+        };
+    }
+
+    private static string GetVariantDataReadCall(BcsVariantDataInfo dataProp, Dictionary<string, BcsStructInfo> allStructTypes)
+    {
+        var fullyQualifiedTypeName = GetFullyQualifiedTypeName(dataProp.TypeSymbol);
+
+        // Handle strings - always use ReadString regardless of nullable annotation
+        if (fullyQualifiedTypeName == "string" || fullyQualifiedTypeName == "global::System.String" ||
+            fullyQualifiedTypeName == "string?" || fullyQualifiedTypeName == "global::System.String?")
+        {
+            return "reader.ReadString()";
+        }
+
+        return fullyQualifiedTypeName switch
+        {
+            // Primitive types - direct BcsReader calls
+            "byte" or "global::System.Byte" => "reader.Read8()",
+            "sbyte" or "global::System.SByte" => "reader.ReadI8()",
+            "ushort" or "global::System.UInt16" => "reader.Read16()",
+            "short" or "global::System.Int16" => "reader.ReadI16()",
+            "uint" or "global::System.UInt32" => "reader.Read32()",
+            "int" or "global::System.Int32" => "reader.ReadI32()",
+            "ulong" or "global::System.UInt64" => "reader.Read64()",
+            "long" or "global::System.Int64" => "reader.ReadI64()",
+            "bool" or "global::System.Boolean" => "reader.ReadBool()",
+
+            // Check if it's a known BcsStruct type - use dedicated formatter
+            _ when allStructTypes.ContainsKey(fullyQualifiedTypeName) => GetVariantFormatterReadCall(dataProp, allStructTypes[fullyQualifiedTypeName]),
+
+            // Fall back to BcsSerializer for unknown complex types
+            _ => $"BcsSerializer.Deserialize<{fullyQualifiedTypeName}>(ref reader)"
+        };
+    }
+
+    private static string GetVariantFormatterWriteCall(BcsVariantDataInfo dataProp, string instanceName, BcsStructInfo targetType)
+    {
+        var formatterClassName = targetType.FullTypeName.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(',', '_') + "Formatter";
+        var namespaceName = string.IsNullOrEmpty(targetType.Namespace) ? "BcsSharp.Generated" : $"{targetType.Namespace}.Generated";
+        return $"{namespaceName}.{formatterClassName}.Instance.Serialize(ref writer, {instanceName}.{dataProp.Name});";
+    }
+
+    private static string GetVariantFormatterReadCall(BcsVariantDataInfo dataProp, BcsStructInfo targetType)
+    {
+        var formatterClassName = targetType.FullTypeName.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(',', '_') + "Formatter";
+        var namespaceName = string.IsNullOrEmpty(targetType.Namespace) ? "BcsSharp.Generated" : $"{targetType.Namespace}.Generated";
+        return $"{namespaceName}.{formatterClassName}.Instance.Deserialize(ref reader)";
+    }
+
+}
+
+// Data structures for BCS enum information
+public class BcsEnumInfo
+{
+    public string FullTypeName { get; }
+    public string Name { get; }
+    public string Namespace { get; }
+    public List<BcsVariantInfo> Variants { get; }
+    public INamedTypeSymbol TypeSymbol { get; }
+
+    public BcsEnumInfo(string fullTypeName, string name, string namespaceName, List<BcsVariantInfo> variants, INamedTypeSymbol typeSymbol)
+    {
+        FullTypeName = fullTypeName;
+        Name = name;
+        Namespace = namespaceName;
+        Variants = variants;
+        TypeSymbol = typeSymbol;
+    }
+}
+
+public class BcsVariantInfo
+{
+    public uint Index { get; }
+    public string Name { get; }
+    public string FullTypeName { get; }
+    public INamedTypeSymbol TypeSymbol { get; }
+    public List<BcsVariantDataInfo> DataProperties { get; }
+
+    public BcsVariantInfo(uint index, string name, string fullTypeName, INamedTypeSymbol typeSymbol, List<BcsVariantDataInfo> dataProperties)
+    {
+        Index = index;
+        Name = name;
+        FullTypeName = fullTypeName;
+        TypeSymbol = typeSymbol;
+        DataProperties = dataProperties;
+    }
+}
+
+public class BcsVariantDataInfo
+{
+    public string Name { get; }
+    public string TypeName { get; }
+    public ITypeSymbol TypeSymbol { get; }
+    public int Order { get; }
+
+    public BcsVariantDataInfo(string name, string typeName, ITypeSymbol typeSymbol, int order)
+    {
+        Name = name;
+        TypeName = typeName;
+        TypeSymbol = typeSymbol;
+        Order = order;
     }
 }
