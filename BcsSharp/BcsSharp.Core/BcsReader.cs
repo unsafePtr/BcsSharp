@@ -320,15 +320,6 @@ namespace BcsSharp.Core
             var destBytes = MemoryMarshal.AsBytes(destination);
             sourceBytes.CopyTo(destBytes);
             _position += byteLength;
-
-            if (!BitConverter.IsLittleEndian && Unsafe.SizeOf<T>() > 1) // for bool, byte, sbyte we don't need to reverse bytes
-            {
-                for (int i = 0; i < destination.Length; i++)
-                {
-                    Span<byte> elementBytes = MemoryMarshal.AsBytes(destination.Slice(i, 1));
-                    elementBytes.Reverse();
-                }
-            }
         }
 
         /// <summary>
