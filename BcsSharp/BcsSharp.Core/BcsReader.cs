@@ -313,7 +313,7 @@ namespace BcsSharp.Core
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ReadPrimitiveArray<T>(Span<T> destination) where T : unmanaged
         {
-            var byteLength = destination.Length * Marshal.SizeOf<T>();
+            var byteLength = destination.Length * Unsafe.SizeOf<T>();
             EnsureEnoughBytes(byteLength);
 
             var sourceBytes = _data.Span.Slice(_position, byteLength);

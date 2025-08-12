@@ -327,7 +327,7 @@ namespace BcsSharp.Core
         /// Write raw bytes from span
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void WriteBytes(ReadOnlySpan<byte> bytes)
+        public void WriteBytes(ReadOnlySpan<byte> bytes)
         {
             _bufferWriter.Write(bytes);
         }
