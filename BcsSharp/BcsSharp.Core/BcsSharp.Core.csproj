@@ -4,6 +4,16 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    
+    <!-- NuGet Package Properties -->
+    <PackageId>BcsSharp</PackageId>
+    <Version>0.0.1</Version>
+    <Authors>Your Name</Authors>
+    <Description>Binary Canonical Serialization (BCS) library for .NET with source generator support</Description>
+    <PackageTags>bcs;serialization;binary;canonical</PackageTags>
+    <RepositoryUrl>https://github.com/yourusername/BcsSharp</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
