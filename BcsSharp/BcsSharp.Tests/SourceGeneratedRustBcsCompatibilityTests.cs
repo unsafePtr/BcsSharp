@@ -213,11 +213,7 @@ namespace BcsSharp.Tests
         // Helper method to serialize with SourceGeneratedResolver prioritized
         private static byte[] SerializeWithSourceGenerator<T>(T value)
         {
-            // Use CompositeResolver constructor to prioritize SourceGeneratedResolver
-            var resolver = new CompositeResolver(
-                BcsSourceGeneratorResolver.Instance
-            );
-            return BcsSerializer.Serialize(value, resolver);
+            return BcsSerializer.Serialize(value, SourceGeneratedFormatterResolver.Instance);
         }
 
         [Fact]

@@ -306,6 +306,8 @@ public sealed class BcsFormatterGenerator : IIncrementalGenerator
             allStructTypes[fullyQualifiedName] = type;
         }
 
+        // Dictionary types are now handled inline, no need for separate formatters
+
         // Generate individual struct formatters
         foreach (var type in structTypes)
         {
@@ -322,6 +324,16 @@ public sealed class BcsFormatterGenerator : IIncrementalGenerator
             sb.Clear();
             GenerateVariantEnumFormatter(sb, enumType, allStructTypes);
             var hintName = enumType.FullTypeName.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(',', '_') + "VariantEnumFormatter.g.cs";
+            context.AddSource(hintName, sb.ToString());
+        }
+
+        // Generate Dictionary formatters for direct Dictionary serialization
+        var dictionaryTypes = DiscoverDictionaryTypes(structTypes, enumTypes);
+        foreach (var (fullTypeName, keyType, valueType) in dictionaryTypes)
+        {
+            sb.Clear();
+            GenerateStandaloneDictionaryFormatter(sb, fullTypeName, keyType, valueType);
+            var hintName = fullTypeName.Replace("global::", "global__").Replace(".", "_").Replace("<", "_").Replace(">", "_").Replace(",", "_").Replace(" ", "") + "DictionaryFormatter.g.cs";
             context.AddSource(hintName, sb.ToString());
         }
 
@@ -435,6 +447,13 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
             GenerateEnumHelpers(sb, enumFields);
         }
 
+        // Add helper methods for Dictionary types if needed
+        var dictionaryFields = type.Fields.Where(f => IsDictionaryType(f.TypeSymbol, out _, out _)).ToList();
+        if (dictionaryFields.Any())
+        {
+            GenerateDictionaryHelpers(sb, dictionaryFields, allTypes);
+        }
+
         sb.AppendLine("}");
     }
 
@@ -446,6 +465,13 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
     private static string GetDirectWriteCall(BcsFieldInfo field, Dictionary<string, BcsStructInfo> allTypes)
     {
         var fullyQualifiedTypeName = GetFullyQualifiedTypeName(field.TypeSymbol);
+
+        // Handle Dictionary types first - inline serialization
+        if (IsDictionaryType(field.TypeSymbol, out var keyType, out var valueType))
+        {
+            var methodName = GetDictionaryHelperMethodName(keyType, valueType, "Write");
+            return $"{methodName}(ref writer, value.{field.Name});";
+        }
 
         // Handle nullable primitive types first
         if (IsNullableType(fullyQualifiedTypeName, out var underlyingType))
@@ -879,6 +905,13 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
     {
         var fullyQualifiedTypeName = GetFullyQualifiedTypeName(field.TypeSymbol);
 
+        // Handle Dictionary types first - inline deserialization
+        if (IsDictionaryType(field.TypeSymbol, out var keyType, out var valueType))
+        {
+            var methodName = GetDictionaryHelperMethodName(keyType, valueType, "Read");
+            return $"{methodName}(ref reader)";
+        }
+
         // Handle nullable primitive types first
         if (IsNullableType(fullyQualifiedTypeName, out var underlyingType))
         {
@@ -1107,6 +1140,278 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
         }
     }
 
+    private static bool IsDictionaryType(ITypeSymbol typeSymbol, out string keyType, out string valueType)
+    {
+        keyType = "";
+        valueType = "";
+
+        if (typeSymbol is INamedTypeSymbol namedType && namedType.IsGenericType)
+        {
+            var typeDefinition = namedType.ConstructedFrom;
+            var fullTypeName = typeDefinition.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+            // Check for Dictionary<TKey, TValue>
+            if (fullTypeName == "global::System.Collections.Generic.Dictionary<TKey, TValue>" && namedType.TypeArguments.Length == 2)
+            {
+                keyType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                valueType = namedType.TypeArguments[1].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string GetDictionaryHelperMethodName(string keyType, string valueType, string operation)
+    {
+        var keyTypeSafe = keyType.Replace("global::", "").Replace(".", "_").Replace("<", "_").Replace(">", "_").Replace(",", "_").Replace(" ", "");
+        var valueTypeSafe = valueType.Replace("global::", "").Replace(".", "_").Replace("<", "_").Replace(">", "_").Replace(",", "_").Replace(" ", "");
+        return $"{operation}Dictionary_{keyTypeSafe}__{valueTypeSafe}";
+    }
+
+    private static void GenerateDictionaryHelpers(StringBuilder sb, List<BcsFieldInfo> dictionaryFields, Dictionary<string, BcsStructInfo> allTypes)
+    {
+        var generatedMethods = new HashSet<string>();
+
+        sb.AppendLine("    // Helper methods for Dictionary serialization/deserialization");
+
+        foreach (var field in dictionaryFields)
+        {
+            if (IsDictionaryType(field.TypeSymbol, out var keyType, out var valueType))
+            {
+                var writeMethodName = GetDictionaryHelperMethodName(keyType, valueType, "Write");
+                var readMethodName = GetDictionaryHelperMethodName(keyType, valueType, "Read");
+
+                // Generate write method
+                if (!generatedMethods.Contains(writeMethodName))
+                {
+                    GenerateDictionaryWriteMethod(sb, writeMethodName, keyType, valueType, allTypes);
+                    generatedMethods.Add(writeMethodName);
+                }
+
+                // Generate read method
+                if (!generatedMethods.Contains(readMethodName))
+                {
+                    GenerateDictionaryReadMethod(sb, readMethodName, keyType, valueType, allTypes);
+                    generatedMethods.Add(readMethodName);
+                }
+            }
+        }
+    }
+
+    private static void GenerateDictionaryWriteMethod(StringBuilder sb, string methodName, string keyType, string valueType, Dictionary<string, BcsStructInfo> allTypes)
+    {
+        var dictTypeName = $"global::System.Collections.Generic.Dictionary<{keyType}, {valueType}>";
+        
+        sb.AppendLine($"    private static void {methodName}(ref BcsWriter writer, {dictTypeName}? dict)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        if (dict == null)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            writer.WriteULEB(0u);");
+        sb.AppendLine("            return;");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        writer.WriteULEB((uint)dict.Count);");
+        sb.AppendLine();
+        sb.AppendLine("        // Serialize key-value pairs and sort by lexicographical order of key bytes (BCS requirement)");
+        sb.AppendLine("        var serializedPairs = new List<(byte[] keyBytes, byte[] valueBytes)>(dict.Count);");
+        sb.AppendLine("        var tempWriter = new BcsWriter(new BcsWriterOptions { InitialBufferSize = 256 });");
+        sb.AppendLine();
+        sb.AppendLine("        foreach (var kvp in dict)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            // Serialize key");
+        sb.AppendLine("            tempWriter.Reset();");
+        sb.AppendLine($"            {GetInlineSerializeCall("tempWriter", "kvp.Key", keyType, allTypes)};");
+        sb.AppendLine("            var keyBytes = tempWriter.ToBytes();");
+        sb.AppendLine();
+        sb.AppendLine("            // Serialize value");
+        sb.AppendLine("            tempWriter.Reset();");
+        sb.AppendLine($"            {GetInlineSerializeCall("tempWriter", "kvp.Value", valueType, allTypes)};");
+        sb.AppendLine("            var valueBytes = tempWriter.ToBytes();");
+        sb.AppendLine();
+        sb.AppendLine("            serializedPairs.Add((keyBytes, valueBytes));");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        // Sort by lexicographical order of serialized key bytes");
+        sb.AppendLine("        serializedPairs.Sort((a, b) => a.keyBytes.AsSpan().SequenceCompareTo(b.keyBytes.AsSpan()));");
+        sb.AppendLine();
+        sb.AppendLine("        // Write sorted key-value pairs");
+        sb.AppendLine("        foreach (var pair in serializedPairs)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            writer.WriteBytes(pair.keyBytes);");
+        sb.AppendLine("            writer.WriteBytes(pair.valueBytes);");
+        sb.AppendLine("        }");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void GenerateDictionaryReadMethod(StringBuilder sb, string methodName, string keyType, string valueType, Dictionary<string, BcsStructInfo> allTypes)
+    {
+        var dictTypeName = $"global::System.Collections.Generic.Dictionary<{keyType}, {valueType}>";
+        
+        sb.AppendLine($"    private static {dictTypeName} {methodName}(ref BcsReader reader)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var count = reader.ReadULEB32();");
+        sb.AppendLine("        if (count == 0)");
+        sb.AppendLine($"            return new {dictTypeName}();");
+        sb.AppendLine();
+        sb.AppendLine($"        var result = new {dictTypeName}((int)count);");
+        sb.AppendLine("        byte[]? previousKeyBytes = null;");
+        sb.AppendLine();
+        sb.AppendLine("        for (uint i = 0; i < count; i++)");
+        sb.AppendLine("        {");
+        sb.AppendLine($"            var key = {GetInlineDeserializeCall("reader", keyType, allTypes)};");
+        sb.AppendLine($"            var value = {GetInlineDeserializeCall("reader", valueType, allTypes)};");
+        sb.AppendLine();
+        sb.AppendLine("            // Verify keys are in sorted order (BCS requirement)");
+        sb.AppendLine("            if (i > 0 && previousKeyBytes != null)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                var keyWriter = new BcsWriter();");
+        sb.AppendLine($"                {GetInlineSerializeCall("keyWriter", "key", keyType, allTypes)};");
+        sb.AppendLine("                var currentKeyBytes = keyWriter.ToBytes();");
+        sb.AppendLine();
+        sb.AppendLine("                if (currentKeyBytes.AsSpan().SequenceCompareTo(previousKeyBytes.AsSpan()) <= 0)");
+        sb.AppendLine("                {");
+        sb.AppendLine("                    throw new InvalidOperationException(\"Map keys must be in strictly increasing lexicographical order by BCS bytes\");");
+        sb.AppendLine("                }");
+        sb.AppendLine();
+        sb.AppendLine("                previousKeyBytes = currentKeyBytes;");
+        sb.AppendLine("            }");
+        sb.AppendLine("            else if (i == 0)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                var keyWriter = new BcsWriter();");
+        sb.AppendLine($"                {GetInlineSerializeCall("keyWriter", "key", keyType, allTypes)};");
+        sb.AppendLine("                previousKeyBytes = keyWriter.ToBytes();");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+        sb.AppendLine("            if (result.ContainsKey(key))");
+        sb.AppendLine("            {");
+        sb.AppendLine("                throw new InvalidOperationException($\"Duplicate key found in map: {key}\");");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+        sb.AppendLine("            result.Add(key, value);");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        return result;");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static string GetInlineSerializeCall(string writerName, string valueName, string typeName, Dictionary<string, BcsStructInfo> allTypes)
+    {
+        // Check if it's a known struct type
+        if (allTypes.ContainsKey(typeName))
+        {
+            var structType = allTypes[typeName];
+            var formatterClassName = structType.FullTypeName.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(',', '_') + "Formatter";
+            var namespaceName = string.IsNullOrEmpty(structType.Namespace) ? "BcsSharp.Generated" : $"{structType.Namespace}.Generated";
+            return $"{namespaceName}.{formatterClassName}.Instance.Serialize(ref {writerName}, {valueName})";
+        }
+
+        // Handle primitive types
+        return typeName switch
+        {
+            "global::System.String" or "string" => $"{writerName}.WriteString({valueName})",
+            "global::System.Byte" or "byte" => $"{writerName}.Write({valueName})",
+            "global::System.SByte" or "sbyte" => $"{writerName}.Write({valueName})",
+            "global::System.UInt16" or "ushort" => $"{writerName}.Write({valueName})",
+            "global::System.Int16" or "short" => $"{writerName}.Write({valueName})",
+            "global::System.UInt32" or "uint" => $"{writerName}.Write({valueName})",
+            "global::System.Int32" or "int" => $"{writerName}.Write({valueName})",
+            "global::System.UInt64" or "ulong" => $"{writerName}.Write({valueName})",
+            "global::System.Int64" or "long" => $"{writerName}.Write({valueName})",
+            "global::System.Boolean" or "bool" => $"{writerName}.WriteBool({valueName})",
+            _ => $"BcsSerializer.Serialize(ref {writerName}, {valueName})"
+        };
+    }
+
+    private static string GetInlineDeserializeCall(string readerName, string typeName, Dictionary<string, BcsStructInfo> allTypes)
+    {
+        // Check if it's a known struct type
+        if (allTypes.ContainsKey(typeName))
+        {
+            var structType = allTypes[typeName];
+            var formatterClassName = structType.FullTypeName.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(',', '_') + "Formatter";
+            var namespaceName = string.IsNullOrEmpty(structType.Namespace) ? "BcsSharp.Generated" : $"{structType.Namespace}.Generated";
+            return $"{namespaceName}.{formatterClassName}.Instance.Deserialize(ref {readerName})";
+        }
+
+        // Handle primitive types
+        return typeName switch
+        {
+            "global::System.String" or "string" => $"{readerName}.ReadString()",
+            "global::System.Byte" or "byte" => $"{readerName}.Read8()",
+            "global::System.SByte" or "sbyte" => $"{readerName}.ReadI8()",
+            "global::System.UInt16" or "ushort" => $"{readerName}.Read16()",
+            "global::System.Int16" or "short" => $"{readerName}.ReadI16()",
+            "global::System.UInt32" or "uint" => $"{readerName}.Read32()",
+            "global::System.Int32" or "int" => $"{readerName}.ReadI32()",
+            "global::System.UInt64" or "ulong" => $"{readerName}.Read64()",
+            "global::System.Int64" or "long" => $"{readerName}.ReadI64()",
+            "global::System.Boolean" or "bool" => $"{readerName}.ReadBool()",
+            _ => $"BcsSerializer.Deserialize<{typeName}>(ref {readerName})"
+        };
+    }
+
+    private static List<(string fullTypeName, string keyType, string valueType)> DiscoverDictionaryTypes(ImmutableArray<BcsStructInfo> structTypes, ImmutableArray<BcsEnumInfo> enumTypes)
+    {
+        var dictionaryTypes = new HashSet<(string fullTypeName, string keyType, string valueType)>();
+
+        // Check all struct fields for Dictionary types
+        foreach (var structType in structTypes)
+        {
+            foreach (var field in structType.Fields)
+            {
+                DiscoverDictionaryTypesFromSymbol(field.TypeSymbol, dictionaryTypes);
+            }
+        }
+
+        // Check all enum variant data properties for Dictionary types
+        foreach (var enumType in enumTypes)
+        {
+            foreach (var variant in enumType.Variants)
+            {
+                foreach (var dataProp in variant.DataProperties)
+                {
+                    DiscoverDictionaryTypesFromSymbol(dataProp.TypeSymbol, dictionaryTypes);
+                }
+            }
+        }
+
+        return dictionaryTypes.ToList();
+    }
+
+    private static void DiscoverDictionaryTypesFromSymbol(ITypeSymbol typeSymbol, HashSet<(string fullTypeName, string keyType, string valueType)> dictionaryTypes)
+    {
+        // Check if this is a Dictionary type
+        if (typeSymbol is INamedTypeSymbol namedType && namedType.IsGenericType)
+        {
+            var typeDefinition = namedType.ConstructedFrom;
+            var fullTypeName = typeDefinition.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+            // Check for Dictionary<TKey, TValue>
+            if (fullTypeName == "global::System.Collections.Generic.Dictionary<TKey, TValue>" && namedType.TypeArguments.Length == 2)
+            {
+                var keyType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                var valueType = namedType.TypeArguments[1].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                var dictFullTypeName = namedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                
+                dictionaryTypes.Add((dictFullTypeName, keyType, valueType));
+            }
+        }
+
+        // Recursively check generic type arguments
+        if (typeSymbol is INamedTypeSymbol namedTypeGeneric && namedTypeGeneric.IsGenericType)
+        {
+            foreach (var typeArg in namedTypeGeneric.TypeArguments)
+            {
+                DiscoverDictionaryTypesFromSymbol(typeArg, dictionaryTypes);
+            }
+        }
+    }
+
+
+
     private static void GenerateResolver(StringBuilder sb, ImmutableArray<BcsStructInfo> structTypes, ImmutableArray<BcsEnumInfo> enumTypes)
     {
         sb.AppendLine("// <auto-generated />");
@@ -1177,6 +1482,14 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
             allTypes.Add((enumType.FullTypeName, $"new {namespaceName}.{formatterClassName}()", namespaceName));
         }
 
+        // Add Dictionary formatters for direct Dictionary serialization
+        var dictionaryTypes = DiscoverDictionaryTypes(structTypes, enumTypes);
+        foreach (var (fullTypeName, keyType, valueType) in dictionaryTypes)
+        {
+            var formatterClassName = fullTypeName.Replace("global::", "global__").Replace(".", "_").Replace("<", "_").Replace(">", "_").Replace(",", "_").Replace(" ", "") + "DictionaryFormatter";
+            allTypes.Add((fullTypeName, $"new BcsSharp.Generated.{formatterClassName}()", "BcsSharp.Generated"));
+        }
+
         if (allTypes.Count > 0)
         {
             sb.AppendLine($"        private static readonly global::System.Collections.Generic.Dictionary<global::System.Type, int> closedTypeLookup = new global::System.Collections.Generic.Dictionary<global::System.Type, int>({allTypes.Count})");
@@ -1221,6 +1534,131 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
         }
         
         sb.AppendLine("    }");
+    }
+
+    private static void GenerateStandaloneDictionaryFormatter(StringBuilder sb, string fullTypeName, string keyType, string valueType)
+    {
+        var formatterClassName = fullTypeName.Replace("global::", "global__").Replace(".", "_").Replace("<", "_").Replace(">", "_").Replace(",", "_").Replace(" ", "") + "DictionaryFormatter";
+        
+        sb.AppendLine($@"
+// <auto-generated />
+#nullable enable
+
+using BcsSharp.Core;
+using System.Runtime.CompilerServices;
+
+namespace BcsSharp.Generated;
+
+public sealed class {formatterClassName} : IBcsFormatter<{fullTypeName}>
+{{
+    public static readonly {formatterClassName} Instance = new();
+    public Type TargetType => typeof({fullTypeName});
+
+    private static readonly BcsWriterOptions _internalWriterOptions = new()
+    {{
+        InitialBufferSize = 256
+    }};
+
+    public void Serialize(ref BcsWriter writer, {fullTypeName} value)
+    {{
+        if (value == null)
+        {{
+            writer.WriteULEB(0u);
+            return;
+        }}
+
+        writer.WriteULEB((uint)value.Count);
+
+        // Serialize key-value pairs and sort by lexicographical order of key bytes (BCS requirement)
+        var serializedPairs = new List<(byte[] keyBytes, byte[] valueBytes)>(value.Count);
+        var tempWriter = new BcsWriter(_internalWriterOptions);
+
+        foreach (var kvp in value)
+        {{
+            // Serialize key
+            tempWriter.Reset();
+            {GetInlineSerializeCall("tempWriter", "kvp.Key", keyType, new Dictionary<string, BcsStructInfo>())};
+            var keyBytes = tempWriter.ToBytes();
+
+            // Serialize value  
+            tempWriter.Reset();
+            {GetInlineSerializeCall("tempWriter", "kvp.Value", valueType, new Dictionary<string, BcsStructInfo>())};
+            var valueBytes = tempWriter.ToBytes();
+
+            serializedPairs.Add((keyBytes, valueBytes));
+        }}
+
+        // Sort by lexicographical order of serialized key bytes
+        serializedPairs.Sort((a, b) => CompareByteArrays(a.keyBytes, b.keyBytes));
+
+        // Write sorted key-value pairs  
+        foreach (var pair in serializedPairs)
+        {{
+            writer.WriteBytes(pair.keyBytes);
+            writer.WriteBytes(pair.valueBytes);
+        }}
+    }}
+
+    public {fullTypeName} Deserialize(ref BcsReader reader)
+    {{
+        var count = reader.ReadULEB32();
+        if (count == 0)
+            return new {fullTypeName}();
+
+        var result = new {fullTypeName}((int)count);
+        byte[]? previousKeyBytes = null;
+
+        for (uint i = 0; i < count; i++)
+        {{
+            var key = {GetInlineDeserializeCall("reader", keyType, new Dictionary<string, BcsStructInfo>())};
+            var value = {GetInlineDeserializeCall("reader", valueType, new Dictionary<string, BcsStructInfo>())};
+
+            // Verify keys are in sorted order (BCS requirement)
+            if (i > 0 && previousKeyBytes != null)
+            {{
+                var keyWriter = new BcsWriter();
+                {GetInlineSerializeCall("keyWriter", "key", keyType, new Dictionary<string, BcsStructInfo>())};
+                var currentKeyBytes = keyWriter.ToBytes();
+
+                if (CompareByteArrays(currentKeyBytes, previousKeyBytes) <= 0)
+                {{
+                    throw new InvalidOperationException(""Map keys must be in strictly increasing lexicographical order by BCS bytes"");
+                }}
+
+                previousKeyBytes = currentKeyBytes;
+            }}
+            else if (i == 0)
+            {{
+                var keyWriter = new BcsWriter();
+                {GetInlineSerializeCall("keyWriter", "key", keyType, new Dictionary<string, BcsStructInfo>())};
+                previousKeyBytes = keyWriter.ToBytes();
+            }}
+
+            if (result.ContainsKey(key))
+            {{
+                throw new InvalidOperationException($""Duplicate key found in map: {{key}}"");
+            }}
+
+            result.Add(key, value);
+        }}
+
+        return result;
+    }}
+
+    public int? GetSerializedSize({fullTypeName} value)
+    {{
+        return null; // Size calculation not implemented yet
+    }}
+
+    /// <summary>
+    /// Compares two byte arrays lexicographically
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int CompareByteArrays(byte[] a, byte[] b)
+    {{
+        return a.AsSpan().SequenceCompareTo(b.AsSpan());
+    }}
+}}");
     }
 
     private static void GenerateAssemblyAttribute(StringBuilder sb)
