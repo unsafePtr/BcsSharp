@@ -1,17 +1,23 @@
-using System.Runtime.InteropServices;
-
 namespace BcsSharp.Core.Formatters
 {
     /// <summary>
-    /// List/Vector formatter for primitive types using vectorized operations
+    /// List/Vector formatter for generic types.
     /// </summary>
-    public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T : unmanaged
+    /// <typeparam name="T"></typeparam>
+    public sealed class ListFormatter<T> : IBcsFormatter<List<T>>
     {
+        private readonly IBcsFormatter<T> _elementFormatter;
+
         public Type TargetType => typeof(List<T>);
 
-        public static PrimitiveListFormatter<T> GetInstance()
+        public ListFormatter(IBcsFormatter<T> elementFormatter)
         {
-            return FormatterCache.GetOrAddFormatter(typeof(List<T>), _ => new PrimitiveListFormatter<T>());
+            _elementFormatter = elementFormatter;
+        }
+
+        public static ListFormatter<T> GetInstance(IBcsFormatter<T> elementFormatter)
+        {
+            return FormatterCache.GetOrAddFormatter(typeof(List<T>), _ => new ListFormatter<T>(elementFormatter));
         }
 
         public void Serialize(ref BcsWriter writer, List<T> value)
@@ -23,9 +29,10 @@ namespace BcsSharp.Core.Formatters
             }
 
             writer.WriteULEB((uint)value.Count);
-            // Convert List to Span for vectorized operations
-            var span = CollectionsMarshal.AsSpan(value);
-            writer.WritePrimitiveArray<T>(span);
+            foreach (var item in value)
+            {
+                _elementFormatter.Serialize(ref writer, item);
+            }
         }
 
         public List<T> Deserialize(ref BcsReader reader)
@@ -34,11 +41,11 @@ namespace BcsSharp.Core.Formatters
             if (length == 0)
                 return [];
 
-            var count = (int)length;
-            var result = new List<T>(count);
-            CollectionsMarshal.SetCount(result, count);
-            var span = CollectionsMarshal.AsSpan(result);
-            reader.ReadPrimitiveArray(span);
+            var result = new List<T>((int)length);
+            for (int i = 0; i < length; i++)
+            {
+                result.Add(_elementFormatter.Deserialize(ref reader));
+            }
             return result;
         }
 
@@ -47,9 +54,13 @@ namespace BcsSharp.Core.Formatters
             if (value == null)
                 return GetULEBSize(0);
 
-            var elementSize = Marshal.SizeOf<T>();
             var size = GetULEBSize((uint)value.Count);
-            size += value.Count * elementSize;
+            foreach (var item in value)
+            {
+                var itemSize = _elementFormatter.GetSerializedSize(item);
+                if (itemSize == null) return null;
+                size += itemSize.Value;
+            }
             return size;
         }
 

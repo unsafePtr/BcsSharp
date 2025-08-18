@@ -1,19 +1,17 @@
+using System.Runtime.InteropServices;
+
 namespace BcsSharp.Core.Formatters
 {
-    public sealed class ListFormatter<T> : IBcsFormatter<List<T>>
+    /// <summary>
+    /// List/Vector formatter for primitive types using vectorized operations
+    /// </summary>
+    public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T : unmanaged
     {
-        private readonly IBcsFormatter<T> _elementFormatter;
-
         public Type TargetType => typeof(List<T>);
 
-        public ListFormatter(IBcsFormatter<T> elementFormatter)
+        public static PrimitiveListFormatter<T> GetInstance()
         {
-            _elementFormatter = elementFormatter;
-        }
-
-        public static ListFormatter<T> GetInstance(IBcsFormatter<T> elementFormatter)
-        {
-            return FormatterCache.GetOrAddFormatter(typeof(List<T>), _ => new ListFormatter<T>(elementFormatter));
+            return FormatterCache.GetOrAddFormatter(typeof(List<T>), _ => new PrimitiveListFormatter<T>());
         }
 
         public void Serialize(ref BcsWriter writer, List<T> value)
@@ -25,10 +23,8 @@ namespace BcsSharp.Core.Formatters
             }
 
             writer.WriteULEB((uint)value.Count);
-            foreach (var item in value)
-            {
-                _elementFormatter.Serialize(ref writer, item);
-            }
+            var span = CollectionsMarshal.AsSpan(value);
+            writer.WritePrimitiveArray<T>(span);
         }
 
         public List<T> Deserialize(ref BcsReader reader)
@@ -37,11 +33,11 @@ namespace BcsSharp.Core.Formatters
             if (length == 0)
                 return [];
 
-            var result = new List<T>((int)length);
-            for (int i = 0; i < length; i++)
-            {
-                result.Add(_elementFormatter.Deserialize(ref reader));
-            }
+            var count = (int)length;
+            var result = new List<T>(count);
+            CollectionsMarshal.SetCount(result, count);
+            var span = CollectionsMarshal.AsSpan(result);
+            reader.ReadPrimitiveArray(span);
             return result;
         }
 
@@ -50,13 +46,9 @@ namespace BcsSharp.Core.Formatters
             if (value == null)
                 return GetULEBSize(0);
 
+            var elementSize = Marshal.SizeOf<T>();
             var size = GetULEBSize((uint)value.Count);
-            foreach (var item in value)
-            {
-                var itemSize = _elementFormatter.GetSerializedSize(item);
-                if (itemSize == null) return null;
-                size += itemSize.Value;
-            }
+            size += value.Count * elementSize;
             return size;
         }
 
