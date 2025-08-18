@@ -3,7 +3,7 @@
 /// <summary>
 /// Generic class for formatting primitive arrays in BCS serialization.
 /// You should implement this class for each primitive type you want to support.
-/// Such can be SuiAddress - `public class SuiAddressFormatter : PrimitiveArrayFormatter<byte>`
+/// Such can be SuiAddress - `public class SuiAddressFormatter : ByteArrayFormatter<SuiAddress>`
 /// </summary>
 /// <typeparam name="T"></typeparam>
 public abstract class ByteArrayFormatter<T> : IBcsFormatter<T>
