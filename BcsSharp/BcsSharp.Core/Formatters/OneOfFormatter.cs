@@ -57,17 +57,5 @@ namespace BcsSharp.Core.Formatters
             }
         }
 
-        public int? GetSerializedSize(OneOf<None, T> value)
-        {
-            return value.Match<int?>(
-                none => 1, // Just the discriminant byte
-                some =>
-                {
-                    var valueSize = _valueFormatter.GetSerializedSize(some);
-                    if (valueSize == null)
-                        return null;
-                    return 1 + valueSize.Value; // Discriminant + value
-                });
-        }
     }
 }

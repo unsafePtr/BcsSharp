@@ -15,10 +15,6 @@ namespace BcsSharp.Core
         /// </summary>
         T Deserialize(ref BcsReader reader);
         
-        /// <summary>
-        /// Get serialized size if deterministic, null if variable
-        /// </summary>
-        int? GetSerializedSize(T value);
     }
     
     /// <summary>

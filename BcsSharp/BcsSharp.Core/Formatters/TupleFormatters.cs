@@ -31,16 +31,6 @@ namespace BcsSharp.Core.Formatters
             return (item1, item2);
         }
         
-        public int? GetSerializedSize((T1, T2) value)
-        {
-            var size1 = _item1Formatter.GetSerializedSize(value.Item1);
-            var size2 = _item2Formatter.GetSerializedSize(value.Item2);
-            
-            if (size1 == null || size2 == null)
-                return null;
-                
-            return size1.Value + size2.Value;
-        }
     }
     
     /// <summary>
@@ -76,17 +66,6 @@ namespace BcsSharp.Core.Formatters
             return (item1, item2, item3);
         }
         
-        public int? GetSerializedSize((T1, T2, T3) value)
-        {
-            var size1 = _item1Formatter.GetSerializedSize(value.Item1);
-            var size2 = _item2Formatter.GetSerializedSize(value.Item2);
-            var size3 = _item3Formatter.GetSerializedSize(value.Item3);
-            
-            if (size1 == null || size2 == null || size3 == null)
-                return null;
-                
-            return size1.Value + size2.Value + size3.Value;
-        }
     }
     
     /// <summary>
@@ -126,17 +105,5 @@ namespace BcsSharp.Core.Formatters
             return (item1, item2, item3, item4);
         }
         
-        public int? GetSerializedSize((T1, T2, T3, T4) value)
-        {
-            var size1 = _item1Formatter.GetSerializedSize(value.Item1);
-            var size2 = _item2Formatter.GetSerializedSize(value.Item2);
-            var size3 = _item3Formatter.GetSerializedSize(value.Item3);
-            var size4 = _item4Formatter.GetSerializedSize(value.Item4);
-            
-            if (size1 == null || size2 == null || size3 == null || size4 == null)
-                return null;
-                
-            return size1.Value + size2.Value + size3.Value + size4.Value;
-        }
     }
 }

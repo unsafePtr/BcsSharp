@@ -429,12 +429,6 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
         sb.AppendLine("    }");
         sb.AppendLine();
 
-        // GetSerializedSize method - simplified to return null for now
-        sb.AppendLine($"    public int? GetSerializedSize({type.FullTypeName} value)");
-        sb.AppendLine("    {");
-        sb.AppendLine("        return null; // Size calculation not implemented yet");
-        sb.AppendLine("    }");
-        sb.AppendLine();
 
         // Add helper methods for primitive arrays if needed
         if (type.Fields.Any(f => GetFullyQualifiedTypeName(f.TypeSymbol).EndsWith("[]") && IsPrimitiveArrayType(GetFullyQualifiedTypeName(f.TypeSymbol))))
@@ -637,7 +631,7 @@ public sealed class {formatterClassName} : IBcsFormatter<{type.FullTypeName}>
     {
         var formatterClassName = targetType.FullTypeName.Replace('.', '_').Replace('<', '_').Replace('>', '_').Replace(',', '_') + "Formatter";
         var namespaceName = string.IsNullOrEmpty(targetType.Namespace) ? "BcsSharp.Generated" : $"{targetType.Namespace}.Generated";
-        return $"{namespaceName}.{formatterClassName}.Instance.GetSerializedSize(value.{field.Name})";
+        return "null";
     }
 
     private static bool IsOneOfNoneType(ITypeSymbol typeSymbol, Dictionary<string, BcsStructInfo> allTypes, out BcsStructInfo? innerTypeInfo)
@@ -1662,10 +1656,6 @@ public sealed class {formatterClassName} : IBcsFormatter<{fullTypeName}>
         return result;
     }}
 
-    public int? GetSerializedSize({fullTypeName} value)
-    {{
-        return null; // Size calculation not implemented yet
-    }}
 
     /// <summary>
     /// Compares two byte arrays lexicographically
@@ -1774,10 +1764,6 @@ public sealed class {formatterClassName} : IBcsFormatter<{enumType.FullTypeName}
         }}
     }}
 
-    public int? GetSerializedSize({enumType.FullTypeName} value)
-    {{
-        return null; // Size calculation not implemented yet
-    }}
 }}");
     }
 
@@ -1841,10 +1827,6 @@ public sealed class {formatterClassName} : IBcsFormatter<{variant.FullTypeName}>
         sb.AppendLine($@"        return instance;
     }}
 
-    public int? GetSerializedSize({variant.FullTypeName} value)
-    {{
-        return null; // Size calculation not implemented yet
-    }}
 }}");
     }
 

@@ -65,11 +65,6 @@ namespace BcsSharp.Core.Formatters
             return _staticEnumValues[position];
         }
 
-        public int? GetSerializedSize(T value)
-        {
-            // BCS C-style enums always serialize as 1 byte (ordinal position)
-            return 1;
-        }
 
     }
 

@@ -111,26 +111,6 @@ namespace BcsSharp.Core.Formatters
             return result;
         }
 
-        public int? GetSerializedSize(Dictionary<TKey, TValue> value)
-        {
-            if (value == null)
-                return GetULEBSize(0);
-
-            var size = GetULEBSize((uint)value.Count);
-
-            foreach (var kvp in value)
-            {
-                var keySize = _keyFormatter.GetSerializedSize(kvp.Key);
-                var valueSize = _valueFormatter.GetSerializedSize(kvp.Value);
-
-                if (keySize == null || valueSize == null)
-                    return null;
-
-                size += keySize.Value + valueSize.Value;
-            }
-
-            return size;
-        }
 
         private static int GetULEBSize(uint value)
         {

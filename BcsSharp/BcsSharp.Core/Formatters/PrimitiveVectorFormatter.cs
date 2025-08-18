@@ -43,16 +43,6 @@ namespace BcsSharp.Core.Formatters
             return result;
         }
 
-        public int? GetSerializedSize(List<T> value)
-        {
-            if (value == null)
-                return GetULEBSize(0);
-
-            var elementSize = Marshal.SizeOf<T>();
-            var size = GetULEBSize((uint)value.Count);
-            size += value.Count * elementSize;
-            return size;
-        }
 
         private static int GetULEBSize(uint value)
         {

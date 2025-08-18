@@ -78,28 +78,6 @@ namespace BcsSharp.Core.Formatters
             return (T)instance;
         }
 
-        public int? GetSerializedSize(T value)
-        {
-            if (value == null)
-                return null;
-
-            var valueType = value.GetType();
-
-            if (!_variantsByType.TryGetValue(valueType, out var variant))
-                return null;
-
-            // Size = ULEB128 index + data size
-            var indexSize = GetULEBSize(variant.Index);
-
-            if (!variant.DataProperties.Any())
-                return indexSize;
-
-            var dataSize = CalculateVariantDataSize(value, variant);
-            if (dataSize == null)
-                return null;
-
-            return indexSize + dataSize.Value;
-        }
 
         private List<BcsVariantInfo> DiscoverVariants(Type enumBaseType)
         {
@@ -386,18 +364,7 @@ namespace BcsSharp.Core.Formatters
 
         public int? GetObjectSize(object? value)
         {
-            if (value is T typedValue)
-            {
-                return _formatter.GetSerializedSize(typedValue);
-            }
-            else if (value == null && !typeof(T).IsValueType)
-            {
-                return _formatter.GetSerializedSize(default(T)!);
-            }
-            else
-            {
-                throw new InvalidOperationException($"Value is not of expected type {typeof(T).Name}");
-            }
+            return null;
         }
     }
 

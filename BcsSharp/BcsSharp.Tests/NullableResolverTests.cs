@@ -46,7 +46,7 @@ namespace BcsSharp.Tests
             // Assert - Same instances should be returned (cached)
             Assert.Same(intFormatter1, intFormatter2);
             Assert.Same(byteFormatter1, byteFormatter2);
-            
+
             // Assert - Should be the cached instances from OptionFormatterCache
             Assert.Same(OptionFormatterCache.Int32OptionFormatter, intFormatter1);
             Assert.Same(OptionFormatterCache.ByteOptionFormatter, byteFormatter1);
@@ -126,22 +126,6 @@ namespace BcsSharp.Tests
         }
 
         [Fact]
-        public void NullableValue_SerializedSize_ShouldBeCorrect()
-        {
-            // Arrange
-            var formatter = _resolver.GetFormatter<int?>();
-            Assert.NotNull(formatter);
-
-            // Act & Assert - Null value should be 1 byte (discriminant only)
-            var nullSize = formatter.GetSerializedSize(null);
-            Assert.Equal(1, nullSize);
-
-            // Act & Assert - Non-null value should be discriminant + value size
-            var valueSize = formatter.GetSerializedSize(42);
-            Assert.Equal(5, valueSize); // 1 (discriminant) + 4 (int32)
-        }
-
-        [Fact]
         public void NullableResolver_ShouldReturnNull_ForUncommonTypes()
         {
             // Arrange - Type without a formatter (DateTime doesn't have a BCS formatter)
@@ -152,7 +136,7 @@ namespace BcsSharp.Tests
         }
 
         [Fact]
-        public void NullableResolver_ThreadSafety_ShouldWork()
+        public async Task NullableResolver_ThreadSafety_ShouldWork()
         {
             // Arrange - Multiple threads requesting same formatter type
             var tasks = new System.Threading.Tasks.Task<IBcsFormatter<int?>?>[10];
@@ -163,15 +147,15 @@ namespace BcsSharp.Tests
                 tasks[i] = System.Threading.Tasks.Task.Run(() => _resolver.GetFormatter<int?>());
             }
 
-            System.Threading.Tasks.Task.WaitAll(tasks);
+            await Task.WhenAll(tasks);
 
             // Assert - All should return the same cached instance
-            var firstFormatter = tasks[0].Result;
+            var firstFormatter = await tasks[0];
             Assert.NotNull(firstFormatter);
 
             for (int i = 1; i < tasks.Length; i++)
             {
-                Assert.Same(firstFormatter, tasks[i].Result);
+                Assert.Same(firstFormatter, await tasks[i]);
             }
         }
     }

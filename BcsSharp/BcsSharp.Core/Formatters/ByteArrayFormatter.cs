@@ -12,10 +12,6 @@ public abstract class ByteArrayFormatter<T> : IBcsFormatter<T>
     public abstract ReadOnlySpan<byte> GetBytes(T value);
     public abstract T GetFromBytes(byte[] bytes);
 
-    public int? GetSerializedSize(T value)
-    {
-        throw new NotImplementedException();
-    }
 
     public void Serialize(ref BcsWriter writer, T value)
     {

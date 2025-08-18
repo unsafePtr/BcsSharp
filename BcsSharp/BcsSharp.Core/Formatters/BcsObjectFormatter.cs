@@ -85,26 +85,6 @@ namespace BcsSharp.Core.Formatters
             }
         }
 
-        public int? GetSerializedSize(T value)
-        {
-            if (value == null)
-                return null;
-
-            var totalSize = 0;
-
-            foreach (var field in _fields)
-            {
-                var fieldValue = field.GetValue(value);
-                var fieldSize = field.Formatter.GetObjectSize(fieldValue);
-
-                if (fieldSize == null)
-                    return null;
-
-                totalSize += fieldSize.Value;
-            }
-
-            return totalSize;
-        }
 
         /// <summary>
         /// Creates a fast constructor delegate using compiled expressions

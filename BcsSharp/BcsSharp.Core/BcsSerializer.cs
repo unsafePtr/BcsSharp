@@ -76,19 +76,6 @@ namespace BcsSharp.Core
             return formatter.Deserialize(ref reader);
         }
 
-        /// <summary>
-        /// Get serialized size for value if deterministic
-        /// </summary>
-        public static int? GetSerializedSize<T>(T value, IFormatterResolver? resolver = null)
-        {
-            resolver ??= _defaultResolver;
-            var formatter = resolver.GetFormatter<T>();
-
-            if (formatter == null)
-                throw new InvalidOperationException($"No formatter found for type {typeof(T)}");
-
-            return formatter.GetSerializedSize(value);
-        }
 
         /// <summary>
         /// Get formatter for type
