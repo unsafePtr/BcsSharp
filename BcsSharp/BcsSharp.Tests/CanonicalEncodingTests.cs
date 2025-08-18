@@ -1,7 +1,8 @@
-using System;
-using System.Text;
 using BcsSharp.Core;
 using Nethermind.Int256;
+using System;
+using System.Collections.Generic;
+using System.Text;
 using Xunit;
 
 namespace BcsSharp.Tests
@@ -71,29 +72,27 @@ namespace BcsSharp.Tests
         public void VectorLengthEncoding_ShouldBeCanonical()
         {
             // Test that vector length prefixes use canonical ULEB128 encoding
-            var testCases = new (int length, byte[] expectedLengthPrefix)[]
+            var testCases = new (int length, List<byte> expectedLengthPrefix)[]
             {
-                (0, new byte[] { 0x00 }),
-                (1, new byte[] { 0x01 }),
-                (127, new byte[] { 0x7F }),
-                (128, new byte[] { 0x80, 0x01 }),
-                (255, new byte[] { 0xFF, 0x01 })
+                (0, new List<byte> { 0x00 }),
+                (1, new List <byte> { 0x01 }),
+                (127, new List<byte> { 0x7F }),
+                (128, new List<byte> { 0x80, 0x01 }),
+                (255, new List<byte> { 0xFF, 0x01 })
             };
 
             foreach (var (length, expectedLengthPrefix) in testCases)
             {
-                var testData = new byte[length];
-
-                // Fill with pattern data
+                var testData = new List<byte>(length);
                 for (int i = 0; i < length; i++)
                 {
-                    testData[i] = (byte)(i % 256);
+                    testData.Add((byte)(i % 256));
                 }
 
                 var serialized = BcsSerializer.Serialize(testData);
 
                 // Check that the length prefix matches expected canonical encoding
-                var lengthPrefixLength = expectedLengthPrefix.Length;
+                var lengthPrefixLength = expectedLengthPrefix.Count;
                 var actualLengthPrefix = new byte[lengthPrefixLength];
                 Array.Copy(serialized, 0, actualLengthPrefix, 0, lengthPrefixLength);
 
@@ -178,13 +177,13 @@ namespace BcsSharp.Tests
             // Test that serialization -> deserialization -> serialization 
             // produces identical results (canonical form is preserved)
 
-            var originalData = new string?[] { "hello", null, "world", "" };
+            var originalData = new List<string?> { "hello", null, "world", "" };
 
             // First serialization
             var firstSerialization = BcsSerializer.Serialize(originalData);
 
             // Deserialize
-            var deserialized = BcsSerializer.Deserialize<string?[]>(firstSerialization);
+            var deserialized = BcsSerializer.Deserialize<List<string?>>(firstSerialization);
 
             // Second serialization
             var secondSerialization = BcsSerializer.Serialize(deserialized);
@@ -274,7 +273,7 @@ namespace BcsSharp.Tests
             // This is crucial for canonical serialization
 
             // Test deterministic encoding with simple data
-            var testData = new string[] { "test", "data" };
+            var testData = new List<string> { "test", "data" };
 
             // Serialize multiple times
             var serialization1 = BcsSerializer.Serialize(testData);

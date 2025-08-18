@@ -114,7 +114,7 @@ namespace BcsSharp.Tests
             [BcsField(2)]
             public byte Level { get; set; }
             [BcsField(3)]
-            public Attribute[] Attributes { get; set; } = Array.Empty<Attribute>();
+            public List<Attribute> Attributes { get; set; } = [];
         }
 
         [BcsStruct]
@@ -161,7 +161,7 @@ namespace BcsSharp.Tests
             [BcsField(2)]
             public (string, GameAsset) NestedTuple { get; set; }
             [BcsField(3)]
-            public (string, uint[]) TupleWithArray { get; set; }
+            public (string, List<uint>) TupleWithArray { get; set; }
             [BcsField(4)]
             public (User, Transaction, bool) ComplexTuple { get; set; }
         }
@@ -305,11 +305,11 @@ namespace BcsSharp.Tests
                 AssetId = "sword_001",
                 AssetType = AssetType.Material, // AssetType::Weapon = 0
                 Level = 15,
-                Attributes = new[]
-                {
+                Attributes = [
+
                     new Attribute { Name = "damage", Value = 85 },
                     new Attribute { Name = "speed", Value = 12 }
-                }
+                ]
             };
 
             // Act - Serialize the asset
@@ -369,11 +369,10 @@ namespace BcsSharp.Tests
                 AssetId = "sword_001",
                 AssetType = AssetType.Material,
                 Level = 15,
-                Attributes = new[]
-                {
+                Attributes = [
                     new Attribute { Name = "damage", Value = 85 },
                     new Attribute { Name = "speed", Value = 12 }
-                }
+                ]
             };
 
             var marketplaceItem = new MarketplaceItem
@@ -428,11 +427,10 @@ namespace BcsSharp.Tests
                 AssetId = "sword_001",
                 AssetType = AssetType.Material,
                 Level = 15,
-                Attributes = new[]
-                {
+                Attributes = [
                     new Attribute { Name = "damage", Value = 85 },
                     new Attribute { Name = "speed", Value = 12 }
-                }
+                ]
             };
 
             var transaction = new Transaction
@@ -450,7 +448,7 @@ namespace BcsSharp.Tests
                 SimplePair = ("hello", 42u),
                 Triple = (123ul, true, "world"),
                 NestedTuple = ("asset_ref", asset),
-                TupleWithArray = ("numbers", new uint[] { 1, 2, 3, 4, 5 }),
+                TupleWithArray = ("numbers", new List<uint> { 1, 2, 3, 4, 5 }),
                 ComplexTuple = (user, transaction, false)
             };
 

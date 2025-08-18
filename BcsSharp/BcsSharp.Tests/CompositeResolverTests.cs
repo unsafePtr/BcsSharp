@@ -50,27 +50,27 @@ namespace BcsSharp.Tests
         }
 
         [Fact]
-        public void CompositeResolver_ArraysAndLists_ShouldWork()
+        public void CompositeResolver_Lists_ShouldWork()
         {
             // Arrange
             var resolver = CompositeResolver.Default;
-            var intArray = new int[] { 1, 2, 3, 4, 5 };
-            var nullableIntArray = new int?[] { 1, null, 3 };
+            var intArray = new List<int> { 1, 2, 3, 4, 5 };
+            var nullableIntArray = new List<int?> { 1, null, 3 };
 
             // Act & Assert - Regular arrays
-            var arrayFormatter = resolver.GetFormatter<int[]>();
+            var arrayFormatter = resolver.GetFormatter<List<int>>();
             Assert.NotNull(arrayFormatter);
 
             var serializedArray = BcsSerializer.Serialize(intArray, resolver);
-            var deserializedArray = BcsSerializer.Deserialize<int[]>(serializedArray, resolver);
+            var deserializedArray = BcsSerializer.Deserialize<List<int>>(serializedArray, resolver);
             Assert.Equal(intArray, deserializedArray);
 
             // Act & Assert - Arrays of nullable types
-            var nullableArrayFormatter = resolver.GetFormatter<int?[]>();
+            var nullableArrayFormatter = resolver.GetFormatter<List<int?>>();
             Assert.NotNull(nullableArrayFormatter);
 
             var serializedNullableArray = BcsSerializer.Serialize(nullableIntArray, resolver);
-            var deserializedNullableArray = BcsSerializer.Deserialize<int?[]>(serializedNullableArray, resolver);
+            var deserializedNullableArray = BcsSerializer.Deserialize<List<int?>>(serializedNullableArray, resolver);
             Assert.Equal(nullableIntArray, deserializedNullableArray);
         }
 

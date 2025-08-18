@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using BcsSharp.Core.Formatters;
+using BcsSharp.Core.Helpers;
 
 namespace BcsSharp.Core.Resolvers
 {
@@ -48,23 +49,9 @@ namespace BcsSharp.Core.Resolvers
             }
 
             // Generic arrays
-            if (type.IsArray && type.GetArrayRank() == 1)
+            if (type.IsArray)
             {
-                var elementType = type.GetElementType()!;
-
-                // Use specialized primitive formatter for primitive types
-                if (IsPrimitiveType(elementType))
-                {
-                    return FormatterCache.GetOrAddFormatter(type, _ => CreatePrimitiveArrayFormatter(elementType));
-                }
-                else
-                {
-                    var elementFormatter = GetFormatterForType(elementType);
-                    if (elementFormatter != null)
-                    {
-                        return FormatterCache.GetOrAddFormatter(type, _ => CreateArrayFormatter(elementType, elementFormatter));
-                    }
-                }
+                ThrowHelper.ThrowInvalidOperationException("It's not allowed to use generic arrays in BCS serialization unless it's a custom type with dedicated formatter. Use List<T> instead");
             }
 
             // Generic Lists
@@ -168,20 +155,6 @@ namespace BcsSharp.Core.Resolvers
                    type == typeof(uint) || type == typeof(int) ||
                    type == typeof(ulong) || type == typeof(long) ||
                    type == typeof(UInt128) || type == typeof(Int128);
-        }
-
-        private static object CreatePrimitiveArrayFormatter(Type elementType)
-        {
-            var formatterType = typeof(PrimitiveArrayFormatter<>).MakeGenericType(elementType);
-            var getInstanceMethod = formatterType.GetMethod("GetInstance");
-            return getInstanceMethod!.Invoke(null, null)!;
-        }
-
-        private static object CreateArrayFormatter(Type elementType, object elementFormatter)
-        {
-            var formatterType = typeof(ArrayFormatter<>).MakeGenericType(elementType);
-            var getInstanceMethod = formatterType.GetMethod("GetInstance");
-            return getInstanceMethod!.Invoke(null, new[] { elementFormatter })!;
         }
 
         private static object CreatePrimitiveListFormatter(Type elementType)

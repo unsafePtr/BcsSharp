@@ -3,64 +3,7 @@ using System.Runtime.InteropServices;
 namespace BcsSharp.Core.Formatters
 {
     /// <summary>
-    /// High-performance array formatter for primitive types using vectorized operations
-    /// </summary>
-    public sealed class PrimitiveArrayFormatter<T> : IBcsFormatter<T[]>
-        where T : unmanaged
-    {
-        public Type TargetType => typeof(T[]);
-
-        public static PrimitiveArrayFormatter<T> GetInstance()
-        {
-            return FormatterCache.GetOrAddFormatter(typeof(T[]), _ => new PrimitiveArrayFormatter<T>());
-        }
-
-        public void Serialize(ref BcsWriter writer, T[] value)
-        {
-            if (value == null)
-            {
-                writer.WriteULEB(0u);
-                return;
-            }
-
-            writer.WriteULEB((uint)value.Length);
-            writer.WritePrimitiveArray<T>(value.AsSpan());
-        }
-
-        public T[] Deserialize(ref BcsReader reader)
-        {
-            var length = reader.ReadULEB32();
-            if (length == 0)
-                return Array.Empty<T>();
-
-            var result = new T[length];
-            reader.ReadPrimitiveArray(result.AsSpan());
-            return result;
-        }
-
-        public int? GetSerializedSize(T[] value)
-        {
-            if (value == null)
-                return GetULEBSize(0);
-
-            var elementSize = Marshal.SizeOf<T>();
-            var size = GetULEBSize((uint)value.Length);
-            size += value.Length * elementSize;
-            return size;
-        }
-
-        private static int GetULEBSize(uint value)
-        {
-            if (value < 0x80) return 1;
-            if (value < 0x4000) return 2;
-            if (value < 0x200000) return 3;
-            if (value < 0x10000000) return 4;
-            return 5;
-        }
-    }
-
-    /// <summary>
-    /// High-performance list formatter for primitive types using vectorized operations
+    /// List/Vector formatter for primitive types using vectorized operations
     /// </summary>
     public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T : unmanaged
     {
@@ -91,7 +34,9 @@ namespace BcsSharp.Core.Formatters
             if (length == 0)
                 return [];
 
-            var result = new List<T>((int)length);
+            var count = (int)length;
+            var result = new List<T>(count);
+            CollectionsMarshal.SetCount(result, count);
             var span = CollectionsMarshal.AsSpan(result);
             reader.ReadPrimitiveArray(span);
             return result;

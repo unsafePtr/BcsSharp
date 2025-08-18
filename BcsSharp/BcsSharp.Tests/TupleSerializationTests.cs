@@ -43,14 +43,14 @@ namespace BcsSharp.Tests
         }
 
         [Fact]
-        public void TupleSerialization_WithArrays_ShouldWork()
+        public void TupleSerialization_WithLists_ShouldWork()
         {
             // Arrange - Tuple with array (string, uint[])
-            var tupleWithArray = ("numbers", new uint[] { 1, 2, 3, 4, 5 });
+            var tupleWithArray = ("numbers", new List<uint> { 1, 2, 3, 4, 5 });
 
             // Act
             var serialized = BcsSerializer.Serialize(tupleWithArray);
-            var deserialized = BcsSerializer.Deserialize<(string, uint[])>(serialized);
+            var deserialized = BcsSerializer.Deserialize<(string, List<uint>)>(serialized);
 
             // Assert
             Assert.Equal(tupleWithArray.Item1, deserialized.Item1);
