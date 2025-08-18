@@ -1,5 +1,11 @@
 ﻿namespace BcsSharp.Core.Formatters;
 
+/// <summary>
+/// Generic class for formatting primitive arrays in BCS serialization.
+/// You should implement this class for each primitive type you want to support.
+/// Such can be SuiAddress - `public class SuiAddressFormatter : PrimitiveArrayFormatter<byte>`
+/// </summary>
+/// <typeparam name="T"></typeparam>
 public abstract class PrimitiveArrayFormatter<T> : IBcsFormatter<T[]>
     where T : unmanaged
 {
