@@ -83,7 +83,7 @@ namespace BcsSharp.Tests
 
             foreach (var (length, expectedLengthPrefix) in testCases)
             {
-                var testData = new List<byte>(length);
+                var testData = new List<byte>();
                 for (int i = 0; i < length; i++)
                 {
                     testData.Add((byte)(i % 256));

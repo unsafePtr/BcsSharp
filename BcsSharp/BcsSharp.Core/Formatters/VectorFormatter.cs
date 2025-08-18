@@ -22,7 +22,7 @@ namespace BcsSharp.Core.Formatters
 
         public void Serialize(ref BcsWriter writer, List<T> value)
         {
-            if (value == null)
+            if (value == null || value.Count == 0)
             {
                 writer.WriteULEB(0u);
                 return;
