@@ -10,7 +10,7 @@ public abstract class ByteArrayFormatter<T> : IBcsFormatter<T>
 {
     public abstract int GetLength();
     public abstract ReadOnlySpan<byte> GetBytes(T value);
-    public abstract Func<byte[], T> GetFromBytesFunc { get; }
+    public abstract T GetFromBytes(byte[] bytes);
 
     public int? GetSerializedSize(T value)
     {
@@ -27,6 +27,6 @@ public abstract class ByteArrayFormatter<T> : IBcsFormatter<T>
         var result = new byte[GetLength()];
         reader.ReadPrimitiveArray(result.AsSpan());
 
-        return GetFromBytesFunc(result);
+        return GetFromBytes(result);
     }
 }
