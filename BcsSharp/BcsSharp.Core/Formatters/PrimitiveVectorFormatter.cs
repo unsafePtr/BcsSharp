@@ -22,7 +22,7 @@ namespace BcsSharp.Core.Formatters
                 return;
             }
 
-            writer.WriteULEB((uint)value.Count);
+            writer.WriteULEB(unchecked((uint)value.Count));
             var span = CollectionsMarshal.AsSpan(value);
             writer.WritePrimitiveArray<T>(span);
         }
@@ -31,9 +31,11 @@ namespace BcsSharp.Core.Formatters
         {
             var length = reader.ReadULEB32();
             if (length == 0)
-                return [];
+            {
+                return new List<T>(0);
+            }
 
-            var count = (int)length;
+            var count = unchecked((int)length);
             var result = new List<T>(count);
             CollectionsMarshal.SetCount(result, count);
             var span = CollectionsMarshal.AsSpan(result);

@@ -302,7 +302,7 @@ namespace BcsSharp.Core
         public string ReadString()
         {
             var length = ReadULEB32();
-            var span = ReadBytesAsSpan((int)length);
+            var span = ReadBytesAsSpan(unchecked((int)length));
             return System.Text.Encoding.UTF8.GetString(span);
         }
 

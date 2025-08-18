@@ -222,7 +222,7 @@ namespace BcsSharp.Core
         {
             if (value == null || value == string.Empty)
             {
-                WriteULEB(0); // Write length 0 using ULEB128
+                WriteULEB(0u); // Write length 0 using ULEB128
                 return;
             }
 
@@ -230,7 +230,7 @@ namespace BcsSharp.Core
 
             // Get UTF-8 byte count without allocating
             var byteCount = System.Text.Encoding.UTF8.GetByteCount(valueSpan);
-            WriteULEB((uint)byteCount);
+            WriteULEB(unchecked((uint)byteCount));
 
             // Write UTF-8 bytes directly to buffer without intermediate allocation
             var span = _bufferWriter.GetSpan(byteCount);

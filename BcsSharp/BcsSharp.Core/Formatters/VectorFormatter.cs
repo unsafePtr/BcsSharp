@@ -28,7 +28,7 @@ namespace BcsSharp.Core.Formatters
                 return;
             }
 
-            writer.WriteULEB((uint)value.Count);
+            writer.WriteULEB(unchecked((uint)value.Count));
             foreach (var item in value)
             {
                 _elementFormatter.Serialize(ref writer, item);
@@ -39,13 +39,16 @@ namespace BcsSharp.Core.Formatters
         {
             var length = reader.ReadULEB32();
             if (length == 0)
-                return [];
+            {
+                return new List<T>(0);
+            }
 
-            var result = new List<T>((int)length);
+            var result = new List<T>(unchecked((int)length));
             for (int i = 0; i < length; i++)
             {
                 result.Add(_elementFormatter.Deserialize(ref reader));
             }
+
             return result;
         }
 

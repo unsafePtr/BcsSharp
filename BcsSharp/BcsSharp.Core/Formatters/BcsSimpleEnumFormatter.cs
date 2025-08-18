@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Concurrent;
 using System.Reflection;
 using BcsSharp.Core.Attributes;
-using BcsSharp.Core.Extensions;
 
 namespace BcsSharp.Core.Formatters
 {
