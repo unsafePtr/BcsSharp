@@ -83,7 +83,7 @@ namespace BcsSharp.Tests
                 try
                 {
                     reader.ReadString();
-                    Assert.True(false, $"Expected exception for {description}");
+                    Assert.Fail($"Expected exception for {description}");
                 }
                 catch (Exception ex)
                 {

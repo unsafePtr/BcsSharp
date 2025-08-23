@@ -209,9 +209,9 @@ namespace BcsSharp.Core
         /// </summary>
         public uint ReadULEB32()
         {
-            // loop unrolled
             uint result = 0;
             ReadOnlySpan<byte> span = _data.Span;
+            int startPosition = _position;
 
             // Byte 1
             byte b = span[_position++];
@@ -223,19 +223,43 @@ namespace BcsSharp.Core
             b = span[_position++];
             result |= (uint)(b & 0x7F) << 7;
             if ((b & 0x80) == 0)
+            {
+                // Value encoded in 2 bytes - check if it could fit in 1 byte
+                if (result < 0x80)  // Values 0-127 should be encoded in 1 byte
+                {
+                    _position = startPosition;
+                    ThrowHelper.ThrowInvalidOperationException("Non-canonical ULEB128 encoding detected");
+                }
                 return result;
+            }
 
             // Byte 3
             b = span[_position++];
             result |= (uint)(b & 0x7F) << 14;
             if ((b & 0x80) == 0)
+            {
+                // Value encoded in 3 bytes - check if it could fit in 2 bytes
+                if (result < 0x4000)  // Values 0-16383 should be encoded in max 2 bytes
+                {
+                    _position = startPosition;
+                    ThrowHelper.ThrowInvalidOperationException("Non-canonical ULEB128 encoding detected");
+                }
                 return result;
+            }
 
             // Byte 4
             b = span[_position++];
             result |= (uint)(b & 0x7F) << 21;
             if ((b & 0x80) == 0)
+            {
+                // Value encoded in 4 bytes - check if it could fit in 3 bytes
+                if (result < 0x200000)  // Values 0-2097151 should be encoded in max 3 bytes
+                {
+                    _position = startPosition;
+                    ThrowHelper.ThrowInvalidOperationException("Non-canonical ULEB128 encoding detected");
+                }
                 return result;
+            }
 
             // Byte 5
             b = span[_position++];
@@ -245,34 +269,14 @@ namespace BcsSharp.Core
                 ThrowHelper.ThrowInvalidOperationException("ULEB128 encoding too long for uint");
             }
 
+            // Value encoded in 5 bytes - check if it could fit in 4 bytes
+            if (result < 0x10000000)  // Values 0-268435455 should be encoded in max 4 bytes
+            {
+                _position = startPosition;
+                ThrowHelper.ThrowInvalidOperationException("Non-canonical ULEB128 encoding detected");
+            }
+
             return result;
-
-            // Original implementation
-            //UInt128 result = 0;
-            //int shift = 0;
-            //int bytesRead = 0;
-            //ReadOnlySpan<byte> span = _data.Span;
-
-            //while (_position + bytesRead < span.Length)
-            //{
-            //    byte b = span[_position + bytesRead];
-            //    result |= (UInt128)(b & 0x7F) << shift;
-            //    shift += 7;
-            //    bytesRead++;
-
-            //    if ((b & 0x80) == 0)
-            //    {
-            //        break;
-            //    }
-            //}
-
-            //if (result > uint.MaxValue) // Check if value exceeds uint because by default when casting UInt128 to uint it will not throw
-            //{
-            //    throw new InvalidOperationException($"ULEB128 value {result} is too large for uint32");
-            //}
-
-            //_position += bytesRead;
-            //return (uint)result;
         }
 
         /// <summary>

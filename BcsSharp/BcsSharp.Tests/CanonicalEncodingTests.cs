@@ -28,18 +28,27 @@ namespace BcsSharp.Tests
                 (new byte[] { 0x80, 0x81, 0x00 }, 128u, "128 with extra zero byte"),
                 
                 // Small value with multiple unnecessary bytes
-                (new byte[] { 0x80, 0x80, 0x80, 0x00 }, 0u, "Zero with multiple continuation bytes")
+                (new byte[] { 0x80, 0x80, 0x80, 0x00 }, 0u, "Zero with multiple continuation bytes"),
+                
+                // More test cases
+                (new byte[] { 0x80, 0x81, 0x80, 0x00 }, 128u, "128 with unnecessary leading zeros"),
+                (new byte[] { 0xFF, 0x80, 0x00 }, 127u, "127 encoded in 3 bytes"),
+                (new byte[] { 0x80, 0x80, 0x80, 0x80, 0x00 }, 0u, "Zero encoded in 5 bytes")
             };
 
             foreach (var (nonCanonical, expectedValue, description) in nonCanonicalCases)
             {
-                var reader = new BcsReader(nonCanonical);
-
-                // For now, our implementation might not detect non-canonical encodings
-                // This test documents the expected behavior and can be enhanced later
-                var actualValue = reader.ReadULEB32();
-
-                Assert.Equal(expectedValue, actualValue);
+                // Non-canonical encodings should throw an exception
+                try
+                {
+                    var reader = new BcsReader(nonCanonical);
+                    var value = reader.ReadULEB32();
+                    Assert.Fail($"Expected InvalidOperationException for {description}, but got value {value}");
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Assert.Contains("non-canonical", ex.Message, StringComparison.OrdinalIgnoreCase);
+                }
             }
         }
 
@@ -65,6 +74,30 @@ namespace BcsSharp.Tests
                 var actualEncoding = writer.ToBytes();
 
                 Assert.Equal(expectedCanonical, actualEncoding);
+            }
+        }
+
+        [Fact]
+        public void ULEB128Canonical_ShouldAcceptCanonicalEncodings()
+        {
+            // Test that canonical encodings are properly accepted
+            var canonicalCases = new (byte[] canonical, uint expectedValue)[]
+            {
+                (new byte[] { 0x00 }, 0u),
+                (new byte[] { 0x7F }, 127u),
+                (new byte[] { 0x80, 0x01 }, 128u),
+                (new byte[] { 0xFF, 0x01 }, 255u),
+                (new byte[] { 0x80, 0x02 }, 256u),
+                (new byte[] { 0xFF, 0x7F }, 16383u),
+                (new byte[] { 0x80, 0x80, 0x01 }, 16384u),
+                (new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0x0F }, uint.MaxValue)
+            };
+
+            foreach (var (canonical, expectedValue) in canonicalCases)
+            {
+                var reader = new BcsReader(canonical);
+                var actualValue = reader.ReadULEB32();
+                Assert.Equal(expectedValue, actualValue);
             }
         }
 
