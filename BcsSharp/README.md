@@ -201,16 +201,17 @@ public uint[] Numbers { get; set; } = [];
 ```
 
 ### ⚠️ Reference Types and Options
-- **Primitive nullables**: Use `T?` (e.g., `uint?`, `bool?`)
-- **Reference type options**: Use `OneOf<None, T>` (e.g., `OneOf<None, Address>`)
+- **Primitive nullables**: Use `T?` (e.g., `uint?`, `bool?`, `string?`)
+- **Reference type options**: Use `OneOf<None, T>` for optional reference types (classes)
 
 ```csharp
 // ✅ Correct
 [BcsField(0)] public uint? Age { get; set; }                    // Nullable primitive
-[BcsField(1)] public OneOf<None, Address> Address { get; set; } // Optional reference type
+[BcsField(1)] public string? Name { get; set; }                 // Nullable string (primitive type)
+[BcsField(2)] public OneOf<None, Address> Address { get; set; } // Optional reference type (class)
 
 // ❌ Wrong  
-[BcsField(0)] public string? Name { get; set; }  // Use OneOf<None, string> instead
+[BcsField(0)] public OneOf<None, string> Name { get; set; }     // Don't use OneOf with strings!
 ```
 
 ### ⚠️ Enum Variants

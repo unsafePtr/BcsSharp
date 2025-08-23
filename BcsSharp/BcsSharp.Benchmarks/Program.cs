@@ -11,6 +11,7 @@ public class Program
     {
         Console.WriteLine("🚀 BcsSharp vs MessagePack Benchmarks");
         Console.WriteLine("=====================================");
+        BenchmarkRunner.Run<SerializationBenchmarks>();
 
         //var config = ManualConfig.Create(DefaultConfig.Instance)
         //    .AddExporter(CsvExporter.Default)
