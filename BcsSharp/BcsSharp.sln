@@ -9,8 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BcsSharp.Tests", "BcsSharp.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BcsSharp.Benchmarks", "BcsSharp.Benchmarks\BcsSharp.Benchmarks.csproj", "{A02DAF0B-4C83-AB29-88A2-0B36018AE20F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BcsSharp.SourceGenerator", "BcsSharp.SourceGenerator\BcsSharp.SourceGenerator.csproj", "{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,18 +55,6 @@ Global
 		{A02DAF0B-4C83-AB29-88A2-0B36018AE20F}.Release|x64.Build.0 = Release|Any CPU
 		{A02DAF0B-4C83-AB29-88A2-0B36018AE20F}.Release|x86.ActiveCfg = Release|Any CPU
 		{A02DAF0B-4C83-AB29-88A2-0B36018AE20F}.Release|x86.Build.0 = Release|Any CPU
-		{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}.Debug|x64.Build.0 = Debug|Any CPU
-		{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}.Debug|x86.Build.0 = Debug|Any CPU
-		{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}.Release|x64.ActiveCfg = Release|Any CPU
-		{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}.Release|x64.Build.0 = Release|Any CPU
-		{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}.Release|x86.ActiveCfg = Release|Any CPU
-		{0E214FF5-AC42-4C87-B5AE-00AB01300EBC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

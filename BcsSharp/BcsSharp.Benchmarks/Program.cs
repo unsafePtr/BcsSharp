@@ -9,8 +9,6 @@ public class Program
 {
     static void Main(string[] args)
     {
-        BenchmarkRunner.Run<SourceGeneratedResolverVsStandard>();
-
         Console.WriteLine("🚀 BcsSharp vs MessagePack Benchmarks");
         Console.WriteLine("=====================================");
 

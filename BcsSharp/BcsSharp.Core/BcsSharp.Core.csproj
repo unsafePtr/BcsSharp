@@ -23,7 +23,6 @@
 
   <ItemGroup>
     <Analyzer Include="..\BcsSharp.SourceGenerator\bin\Debug\net9.0\BcsSharp.SourceGenerator.dll" />
-    <ProjectReference Include="..\BcsSharp.SourceGenerator\BcsSharp.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
