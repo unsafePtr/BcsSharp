@@ -15,6 +15,7 @@ namespace BcsSharp.Core.Resolvers
             EnumResolver.Instance,
             ObjectResolver.Instance
         ];
+
         private static readonly ConcurrentDictionary<Type, object?> _formatterCache = new();
 
         public CompositeResolver(params IFormatterResolver[] resolvers)

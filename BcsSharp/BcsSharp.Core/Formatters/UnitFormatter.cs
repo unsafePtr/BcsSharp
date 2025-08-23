@@ -34,7 +34,5 @@ namespace BcsSharp.Core.Formatters
             // Unit type deserializes from zero bytes
             return Unit.Value;
         }
-
-        public int? GetSerializedSize(Unit value) => 0;
     }
 }

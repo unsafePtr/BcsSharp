@@ -39,22 +39,22 @@ namespace BcsSharp.Tests
         public class Notes
         {
             [BcsField(0)]
-            public byte[] Data { get; set; } = [];
+            public List<byte> Data { get; set; } = [];
 
             [BcsField(1)]
             public byte? OptionalByte { get; set; } = null;
 
             [BcsField(2)]
-            public byte?[] OptionalByteArray { get; set; } = [];
+            public List<byte?> OptionalByteArray { get; set; } = [];
 
             [BcsField(3)]
             public string Description { get; set; } = "";
 
             [BcsField(4)]
-            public UInt128[] LargeNumbers { get; set; } = [];
+            public List<UInt128> LargeNumbers { get; set; } = [];
 
             [BcsField(5)]
-            public UInt128?[] OptionalLargeNumbers { get; set; } = [];
+            public List<UInt128?> OptionalLargeNumbers { get; set; } = [];
 
             [BcsField(6)]
             public (string, int) NameValuePair { get; set; } = ("", 0);
@@ -66,10 +66,10 @@ namespace BcsSharp.Tests
             public string? OptionalText { get; set; } = null;
 
             [BcsField(9)]
-            public bool[] Flags { get; set; } = [];
+            public List<bool> Flags { get; set; } = [];
 
             public Notes() { }
-            public Notes(byte[] data, string description)
+            public Notes(List<byte> data, string description)
             {
                 Data = data;
                 Description = description;
@@ -135,7 +135,7 @@ namespace BcsSharp.Tests
 
             // Verify basic Notes data
             Assert.Equal("Test basic types", deserialized.PersonalNotes.AsT1.Description);
-            Assert.Equal([1, 2, 3, 255, 0], deserialized.PersonalNotes.AsT1.Data);
+            Assert.Equal(new List<byte> { 1, 2, 3, 255, 0 }, deserialized.PersonalNotes.AsT1.Data);
             Assert.Equal((byte?)42, deserialized.PersonalNotes.AsT1.OptionalByte);
             Assert.Equal("priority", deserialized.PersonalNotes.AsT1.NameValuePair.Item1);
             Assert.Equal(10, deserialized.PersonalNotes.AsT1.NameValuePair.Item2);
