@@ -36,7 +36,7 @@ public class VariantFormatterTests
     [Fact]
     public void Should_Serialize_And_Deserialize_Interface_Types()
     {
-        // Test interface serialization still works
+        // Test interface serialization works correctly
         ITestVariant simple = new TestVariantSimple { Value = 42 };
         ITestVariant complex = new TestVariantComplex { Name = "test", Count = 123 };
         ITestVariant empty = new TestVariantEmpty();
@@ -45,6 +45,11 @@ public class VariantFormatterTests
         var serializedSimple = BcsSerializer.Serialize<ITestVariant>(simple);
         var serializedComplex = BcsSerializer.Serialize<ITestVariant>(complex);
         var serializedEmpty = BcsSerializer.Serialize<ITestVariant>(empty);
+
+        // Verify correct format: variant index + data
+        Assert.Equal(new byte[] { 0, 42 }, serializedSimple); // variant 0 + byte 42
+        Assert.Equal(new byte[] { 1, 4, 116, 101, 115, 116, 123, 0, 0, 0 }, serializedComplex); // variant 1 + "test" + 123
+        Assert.Equal(new byte[] { 2 }, serializedEmpty); // variant 2 only
 
         // Deserialize through interface
         var deserializedSimple = BcsSerializer.Deserialize<ITestVariant>(serializedSimple);
@@ -63,72 +68,17 @@ public class VariantFormatterTests
     }
 
     [Fact]
-    public void Should_Serialize_And_Deserialize_Concrete_Variant_Types()
+    public void Concrete_Variant_Types_Should_Not_Be_Serializable_Directly()
     {
-        // Test direct concrete type serialization - this is what we're adding support for
+        // Test that concrete variant types cannot be serialized directly
+        // This matches Rust BCS behavior where enum variants are not separate serializable types
         var simple = new TestVariantSimple { Value = 42 };
         var complex = new TestVariantComplex { Name = "test", Count = 123 };
         var empty = new TestVariantEmpty();
 
-        // Serialize concrete types directly
-        var serializedSimple = BcsSerializer.Serialize(simple);
-        var serializedComplex = BcsSerializer.Serialize(complex);
-        var serializedEmpty = BcsSerializer.Serialize(empty);
-
-        // Deserialize concrete types directly
-        var deserializedSimple = BcsSerializer.Deserialize<TestVariantSimple>(serializedSimple);
-        var deserializedComplex = BcsSerializer.Deserialize<TestVariantComplex>(serializedComplex);
-        var deserializedEmpty = BcsSerializer.Deserialize<TestVariantEmpty>(serializedEmpty);
-
-        // Verify results
-        Assert.Equal(42, deserializedSimple.Value);
-        Assert.Equal("test", deserializedComplex.Name);
-        Assert.Equal(123u, deserializedComplex.Count);
-        Assert.NotNull(deserializedEmpty);
-    }
-
-    [Fact]
-    public void Concrete_And_Interface_Serialization_Should_Produce_Same_Result()
-    {
-        // Test that serializing concrete types vs interface types produces identical output
-        var concreteVariant = new TestVariantSimple { Value = 42 };
-        ITestVariant interfaceVariant = concreteVariant;
-
-        var concreteSerialized = BcsSerializer.Serialize(concreteVariant);
-        var interfaceSerialized = BcsSerializer.Serialize<ITestVariant>(interfaceVariant);
-
-        // Both should produce identical bytes
-        Assert.Equal(concreteSerialized, interfaceSerialized);
-
-        // And both should deserialize to the same result
-        var concreteDeserialized = BcsSerializer.Deserialize<TestVariantSimple>(concreteSerialized);
-        var interfaceDeserialized = BcsSerializer.Deserialize<ITestVariant>(interfaceSerialized);
-
-        Assert.Equal(concreteDeserialized.Value, ((TestVariantSimple)interfaceDeserialized).Value);
-    }
-
-    [Fact]
-    public void Should_Handle_Cross_Deserialization()
-    {
-        // Test that data serialized as concrete type can be deserialized as interface and vice versa
-        var original = new TestVariantComplex { Name = "cross-test", Count = 999 };
-
-        // Serialize as concrete type
-        var concreteSerialized = BcsSerializer.Serialize(original);
-
-        // Deserialize as interface type
-        var asInterface = BcsSerializer.Deserialize<ITestVariant>(concreteSerialized);
-        Assert.IsType<TestVariantComplex>(asInterface);
-        Assert.Equal("cross-test", ((TestVariantComplex)asInterface).Name);
-        Assert.Equal(999u, ((TestVariantComplex)asInterface).Count);
-
-        // Serialize as interface type
-        ITestVariant interfaceRef = original;
-        var interfaceSerialized = BcsSerializer.Serialize<ITestVariant>(interfaceRef);
-
-        // Deserialize as concrete type
-        var asConcrete = BcsSerializer.Deserialize<TestVariantComplex>(interfaceSerialized);
-        Assert.Equal("cross-test", asConcrete.Name);
-        Assert.Equal(999u, asConcrete.Count);
+        // These should fail because concrete variant types don't have formatters
+        Assert.Throws<InvalidOperationException>(() => BcsSerializer.Serialize(simple));
+        Assert.Throws<InvalidOperationException>(() => BcsSerializer.Serialize(complex));
+        Assert.Throws<InvalidOperationException>(() => BcsSerializer.Serialize(empty));
     }
 }
