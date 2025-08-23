@@ -7,6 +7,8 @@ mod types;
 use types::*;
 mod uleb_test;
 use uleb_test::*;
+mod bool_test;
+use bool_test::*;
 
 fn main() -> Result<()> {
     println!("🚀 Sui BCS Serialization Demo");
@@ -185,6 +187,9 @@ fn main() -> Result<()> {
 
     // Test ULEB128 canonicality
     test_uleb128_canonicality()?;
+
+    // Test boolean validation
+    test_bool_validation()?;
 
     Ok(())
 }

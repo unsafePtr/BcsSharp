@@ -286,17 +286,13 @@ namespace BcsSharp.Core
         public bool ReadBool()
         {
             var value = Read8();
-            if (value > 1) // corrupted or invalid boolean value
+            // Rust BCS only accepts 0x00 (false) and 0x01 (true)
+            if (value > 1)
             {
-                ThrowInvalidOperationException($"Invalid boolean value: {value}");
+                ThrowHelper.ThrowInvalidOperationException($"Invalid boolean value: {value}. Expected 0 or 1.");
             }
 
             return value == 1;
-
-            void ThrowInvalidOperationException(string message)
-            {
-                throw new InvalidOperationException(message);
-            }
         }
 
         /// <summary>
@@ -320,9 +316,37 @@ namespace BcsSharp.Core
             var byteLength = destination.Length * Unsafe.SizeOf<T>();
             EnsureEnoughBytes(byteLength);
 
-            var sourceBytes = _data.Span.Slice(_position, byteLength);
+            if (BitConverter.IsLittleEndian)
+            {
+                // System is little-endian; BCS data is little-endian; direct copy is fine
+                var sourceBytes = _data.Span.Slice(_position, byteLength);
+                var destBytes = MemoryMarshal.AsBytes(destination);
+                sourceBytes.CopyTo(destBytes);
+            }
+            else
+            {
+                // System is big-endian; BCS data is little-endian; use slow path
+                ReadForBigEndian(destination, Unsafe.SizeOf<T>(), byteLength);
+                return; // ReadForBigEndian handles position advancement
+            }
+            
+            _position += byteLength;
+        }
+
+        private void ReadForBigEndian<T>(Span<T> destination, int typeSize, int byteLength) where T : unmanaged
+        {
+            var sourceSpan = _data.Span.Slice(_position, byteLength);
             var destBytes = MemoryMarshal.AsBytes(destination);
-            sourceBytes.CopyTo(destBytes);
+            
+            for (int i = 0; i < destination.Length; i++)
+            {
+                // Convert from little-endian (BCS format) to big-endian (host format)
+                for (int j = 0; j < typeSize; j++)
+                {
+                    destBytes[i * typeSize + j] = sourceSpan[i * typeSize + (typeSize - 1 - j)];
+                }
+            }
+            
             _position += byteLength;
         }
 
