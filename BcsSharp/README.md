@@ -174,7 +174,7 @@ writer.WriteString("Alice");
 writer.Write32(30);
 writer.WriteBool(true);
 writer.WriteULEB(1000u); // ULEB128 encoding
-var bytes = writer.ToArray();
+var bytes = writer.ToBytes();
 
 // Reading data
 var reader = new BcsReader(bytes);
