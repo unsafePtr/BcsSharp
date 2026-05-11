@@ -21,7 +21,7 @@ public partial class TestVariantComplex : ITestVariant
 {
     [BcsEnumData]
     public string Name { get; set; } = "";
-    
+
     [BcsEnumData]
     public uint Count { get; set; }
 }

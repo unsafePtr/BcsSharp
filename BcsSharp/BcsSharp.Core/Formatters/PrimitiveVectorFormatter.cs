@@ -1,56 +1,55 @@
 using System.Runtime.InteropServices;
 
-namespace BcsSharp.Core.Formatters
+namespace BcsSharp.Core.Formatters;
+
+/// <summary>
+/// List/Vector formatter for primitive types using vectorized operations
+/// </summary>
+public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T : unmanaged
 {
-    /// <summary>
-    /// List/Vector formatter for primitive types using vectorized operations
-    /// </summary>
-    public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T : unmanaged
+    public Type TargetType => typeof(List<T>);
+
+    public static PrimitiveListFormatter<T> GetInstance()
     {
-        public Type TargetType => typeof(List<T>);
+        return FormatterCache.GetOrAddFormatter(typeof(List<T>), _ => new PrimitiveListFormatter<T>());
+    }
 
-        public static PrimitiveListFormatter<T> GetInstance()
+    public void Serialize(ref BcsWriter writer, List<T> value)
+    {
+        if (value == null || value.Count == 0)
         {
-            return FormatterCache.GetOrAddFormatter(typeof(List<T>), _ => new PrimitiveListFormatter<T>());
+            writer.WriteULEB(0u);
+            return;
         }
 
-        public void Serialize(ref BcsWriter writer, List<T> value)
-        {
-            if (value == null || value.Count == 0)
-            {
-                writer.WriteULEB(0u);
-                return;
-            }
+        writer.WriteULEB(unchecked((uint)value.Count));
+        var span = CollectionsMarshal.AsSpan(value);
+        writer.WritePrimitiveArray<T>(span);
+    }
 
-            writer.WriteULEB(unchecked((uint)value.Count));
-            var span = CollectionsMarshal.AsSpan(value);
-            writer.WritePrimitiveArray<T>(span);
+    public List<T> Deserialize(ref BcsReader reader)
+    {
+        var length = reader.ReadULEB32();
+        if (length == 0)
+        {
+            return new List<T>(0);
         }
 
-        public List<T> Deserialize(ref BcsReader reader)
-        {
-            var length = reader.ReadULEB32();
-            if (length == 0)
-            {
-                return new List<T>(0);
-            }
-
-            var count = unchecked((int)length);
-            var result = new List<T>(count);
-            CollectionsMarshal.SetCount(result, count);
-            var span = CollectionsMarshal.AsSpan(result);
-            reader.ReadPrimitiveArray(span);
-            return result;
-        }
+        var count = unchecked((int)length);
+        var result = new List<T>(count);
+        CollectionsMarshal.SetCount(result, count);
+        var span = CollectionsMarshal.AsSpan(result);
+        reader.ReadPrimitiveArray(span);
+        return result;
+    }
 
 
-        private static int GetULEBSize(uint value)
-        {
-            if (value < 0x80) return 1;
-            if (value < 0x4000) return 2;
-            if (value < 0x200000) return 3;
-            if (value < 0x10000000) return 4;
-            return 5;
-        }
+    private static int GetULEBSize(uint value)
+    {
+        if (value < 0x80) return 1;
+        if (value < 0x4000) return 2;
+        if (value < 0x200000) return 3;
+        if (value < 0x10000000) return 4;
+        return 5;
     }
 }

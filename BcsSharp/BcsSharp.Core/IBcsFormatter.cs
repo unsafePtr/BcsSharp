@@ -1,27 +1,26 @@
-namespace BcsSharp.Core
+namespace BcsSharp.Core;
+
+/// <summary>
+/// Formatter interface for BCS serialization, similar to MessagePack's IMessagePackFormatter
+/// </summary>
+public interface IBcsFormatter<T>
 {
     /// <summary>
-    /// Formatter interface for BCS serialization, similar to MessagePack's IMessagePackFormatter
+    /// Serialize value to BcsWriter
     /// </summary>
-    public interface IBcsFormatter<T>
-    {
-        /// <summary>
-        /// Serialize value to BcsWriter
-        /// </summary>
-        void Serialize(ref BcsWriter writer, T value);
-        
-        /// <summary>
-        /// Deserialize value from BcsReader
-        /// </summary>
-        T Deserialize(ref BcsReader reader);
-        
-    }
-    
+    void Serialize(ref BcsWriter writer, T value);
+
     /// <summary>
-    /// Non-generic base interface for formatter discovery
+    /// Deserialize value from BcsReader
     /// </summary>
-    public interface IBcsFormatter
-    {
-        Type TargetType { get; }
-    }
+    T Deserialize(ref BcsReader reader);
+
+}
+
+/// <summary>
+/// Non-generic base interface for formatter discovery
+/// </summary>
+public interface IBcsFormatter
+{
+    Type TargetType { get; }
 }

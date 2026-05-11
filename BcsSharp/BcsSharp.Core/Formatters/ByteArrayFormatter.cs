@@ -1,4 +1,4 @@
-﻿namespace BcsSharp.Core.Formatters;
+namespace BcsSharp.Core.Formatters;
 
 /// <summary>
 /// Generic class for formatting primitive arrays in BCS serialization.

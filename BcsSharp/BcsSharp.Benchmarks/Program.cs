@@ -1,7 +1,7 @@
-using BenchmarkDotNet.Running;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Exporters.Csv;
+using BenchmarkDotNet.Running;
 
 namespace BcsSharp.Benchmarks;
 

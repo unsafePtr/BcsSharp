@@ -1,4 +1,4 @@
-﻿namespace BcsSharp.Core.Extensions;
+namespace BcsSharp.Core.Extensions;
 
 internal static class DictionaryExtensions
 {

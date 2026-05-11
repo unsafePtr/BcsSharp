@@ -4,51 +4,50 @@ using BcsSharp.Core.Formatters;
 using OneOf;
 using OneOf.Types;
 
-namespace BcsSharp.Core.Resolvers
+namespace BcsSharp.Core.Resolvers;
+
+/// <summary>
+/// Resolver for OneOf&lt;None, T&gt; types that represent Rust Option&lt;T&gt;
+/// We will handle this way Nullable reference types, since Roslyn doesn't add any indication to the emitted IL code if object is nullable or not.
+/// </summary>
+public sealed class OneOfResolver : IFormatterResolver
 {
-    /// <summary>
-    /// Resolver for OneOf&lt;None, T&gt; types that represent Rust Option&lt;T&gt;
-    /// We will handle this way Nullable reference types, since Roslyn doesn't add any indication to the emitted IL code if object is nullable or not.
-    /// </summary>
-    public sealed class OneOfResolver : IFormatterResolver
+    public static readonly OneOfResolver Instance = new();
+    private static readonly ConcurrentDictionary<Type, object?> _formatterCache = new();
+
+    private OneOfResolver() { }
+
+    public IBcsFormatter<T>? GetFormatter<T>()
     {
-        public static readonly OneOfResolver Instance = new();
-        private static readonly ConcurrentDictionary<Type, object?> _formatterCache = new();
+        return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), CreateFormatter);
+    }
 
-        private OneOfResolver() { }
-
-        public IBcsFormatter<T>? GetFormatter<T>()
+    private static object? CreateFormatter(Type type)
+    {
+        // Check if this is OneOf<None, T>
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(OneOf<,>))
         {
-            return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), CreateFormatter);
-        }
+            var genericArgs = type.GetGenericArguments();
 
-        private static object? CreateFormatter(Type type)
-        {
-            // Check if this is OneOf<None, T>
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(OneOf<,>))
+            // Must be OneOf<None, T> where first type is None
+            if (genericArgs.Length == 2 && genericArgs[0] == typeof(None))
             {
-                var genericArgs = type.GetGenericArguments();
+                var valueType = genericArgs[1]; // The T in OneOf<None, T>
 
-                // Must be OneOf<None, T> where first type is None
-                if (genericArgs.Length == 2 && genericArgs[0] == typeof(None))
+                // Get formatter for the value type
+                var valueFormatterMethod = typeof(BcsSerializer).GetMethod(nameof(BcsSerializer.GetFormatter), BindingFlags.Public | BindingFlags.Static);
+                var genericValueFormatterMethod = valueFormatterMethod?.MakeGenericMethod(valueType);
+                var valueFormatter = genericValueFormatterMethod?.Invoke(null, new object?[] { null });
+
+                if (valueFormatter != null)
                 {
-                    var valueType = genericArgs[1]; // The T in OneOf<None, T>
-
-                    // Get formatter for the value type
-                    var valueFormatterMethod = typeof(BcsSerializer).GetMethod(nameof(BcsSerializer.GetFormatter), BindingFlags.Public | BindingFlags.Static);
-                    var genericValueFormatterMethod = valueFormatterMethod?.MakeGenericMethod(valueType);
-                    var valueFormatter = genericValueFormatterMethod?.Invoke(null, new object?[] { null });
-
-                    if (valueFormatter != null)
-                    {
-                        // Create OneOfFormatter<T>
-                        var oneOfFormatterType = typeof(OneOfFormatter<>).MakeGenericType(valueType);
-                        return Activator.CreateInstance(oneOfFormatterType, valueFormatter);
-                    }
+                    // Create OneOfFormatter<T>
+                    var oneOfFormatterType = typeof(OneOfFormatter<>).MakeGenericType(valueType);
+                    return Activator.CreateInstance(oneOfFormatterType, valueFormatter);
                 }
             }
-
-            return null;
         }
+
+        return null;
     }
 }

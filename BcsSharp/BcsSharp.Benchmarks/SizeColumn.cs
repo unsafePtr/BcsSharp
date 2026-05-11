@@ -21,15 +21,15 @@ public class SizeColumn : IColumn
     {
         // Get the method name
         var methodName = benchmarkCase.Descriptor.WorkloadMethod.Name;
-        
+
         // Get cached size for this method
         var size = SizeCache.GetSize(methodName);
-        
+
         if (size.HasValue)
         {
             return FormatSize(size.Value);
         }
-        
+
         return "N/A";
     }
 

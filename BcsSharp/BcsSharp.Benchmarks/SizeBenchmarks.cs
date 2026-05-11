@@ -1,7 +1,7 @@
+using BcsSharp.Core;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
-using BcsSharp.Core;
 using MessagePack;
 
 namespace BcsSharp.Benchmarks;
@@ -34,7 +34,7 @@ public class SizeBenchmarks
         _userList = DataGenerator.GenerateUsers(100);
         _complexData = DataGenerator.GenerateGameData();
         _largeMap = DataGenerator.GenerateStringIntMap(1000);
-        
+
         // Clear any previous size cache
         SizeCache.Clear();
     }
@@ -46,29 +46,29 @@ public class SizeBenchmarks
         Console.WriteLine("\n" + "=".PadRight(60, '='));
         Console.WriteLine("SIZE COMPARISON SUMMARY");
         Console.WriteLine("=".PadRight(60, '='));
-        
+
         PrintSizeComparison("User", _singleUser);
         PrintSizeComparison("User List (100)", _userList);
         PrintSizeComparison("GameData", _complexData);
         PrintSizeComparison("Large Map (1000)", _largeMap);
     }
-    
+
     private void PrintSizeComparison<T>(string name, T obj)
     {
         var bcsBytes = BcsSerializer.Serialize(obj);
         var msgPackBytes = MessagePackSerializer.Serialize(obj);
         var ratio = (double)bcsBytes.Length / msgPackBytes.Length;
         var diff = bcsBytes.Length - msgPackBytes.Length;
-        
+
         Console.WriteLine($"{name}:");
         Console.WriteLine($"  BCS:        {bcsBytes.Length,6} bytes");
         Console.WriteLine($"  MessagePack: {msgPackBytes.Length,6} bytes");
         Console.WriteLine($"  Ratio:       {ratio,6:F2}x ({diff:+#;-#;0} bytes)");
         Console.WriteLine();
     }
-    
+
     // ========== BCS Size Benchmarks ==========
-    
+
     [Benchmark(Description = "BCS User")]
     public byte[] BcsUserSize()
     {
@@ -100,7 +100,7 @@ public class SizeBenchmarks
         SizeCache.SetSize(nameof(BcsLargeMapSize), bytes.Length);
         return bytes;
     }
-    
+
     // ========== MessagePack Size Benchmarks ==========
 
     [Benchmark(Description = "MessagePack User")]
