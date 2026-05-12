@@ -64,9 +64,12 @@ public sealed class NullableResolver : IFormatterResolver
 
     private static object? GetFormatterForUnderlyingType(Type type)
     {
-        // Get formatter for the underlying type from StandardResolver
-        var resolverType = typeof(StandardResolver);
-        var method = resolverType.GetMethod(nameof(GetFormatter))?.MakeGenericMethod(type);
-        return method?.Invoke(StandardResolver.Instance, null);
+        // Go through the full resolver chain so that [BcsStruct] value types, custom
+        // attribute-registered types, etc. all work as Nullable<T> payloads — not just
+        // the primitive/collection set that StandardResolver knows about. Matches the
+        // delegate-to-chain pattern used by GetFormatterForType in StandardResolver.
+        var method = typeof(IFormatterResolver).GetMethod(nameof(IFormatterResolver.GetFormatter))
+            ?.MakeGenericMethod(type);
+        return method?.Invoke(CompositeResolver.Default, null);
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using BcsSharp.Core;
+using BcsSharp.Core.Attributes;
 using BcsSharp.Core.Formatters;
 using BcsSharp.Core.Resolvers;
 using Xunit;
@@ -133,6 +134,47 @@ public class NullableResolverTests
 
         // Act & Assert - Should return null since DateTime doesn't have a formatter in StandardResolver
         Assert.Null(formatter);
+    }
+
+    /// <summary>
+    /// Regression: a value-type marked [BcsStruct] used as Nullable&lt;T&gt; must round-trip.
+    /// The wire format is the standard BCS Option: 0x00 for None, 0x01 + payload for Some.
+    /// Today this hits a latent gap because <see cref="NullableResolver"/> only delegates
+    /// inner-type lookup to <see cref="StandardResolver"/>, which doesn't know about
+    /// <c>[BcsStruct]</c> types.
+    /// </summary>
+    [Fact]
+    public void NullableBcsStructValueType_Some_RoundTrips()
+    {
+        Point? value = new Point { X = 7, Y = 13 };
+
+        var bytes = BcsSerializer.Serialize(value);
+        var back = BcsSerializer.Deserialize<Point?>(bytes);
+
+        // Tag 0x01 (Some) + u32(7) LE + u32(13) LE = 9 bytes total.
+        Assert.Equal(new byte[] { 0x01, 0x07, 0x00, 0x00, 0x00, 0x0D, 0x00, 0x00, 0x00 }, bytes);
+        Assert.True(back.HasValue);
+        Assert.Equal(7u, back!.Value.X);
+        Assert.Equal(13u, back.Value.Y);
+    }
+
+    [Fact]
+    public void NullableBcsStructValueType_None_RoundTrips()
+    {
+        Point? value = null;
+
+        var bytes = BcsSerializer.Serialize(value);
+        var back = BcsSerializer.Deserialize<Point?>(bytes);
+
+        Assert.Equal(new byte[] { 0x00 }, bytes);
+        Assert.False(back.HasValue);
+    }
+
+    [BcsStruct]
+    public struct Point
+    {
+        [BcsField(0)] public uint X { get; set; }
+        [BcsField(1)] public uint Y { get; set; }
     }
 
     [Fact]
