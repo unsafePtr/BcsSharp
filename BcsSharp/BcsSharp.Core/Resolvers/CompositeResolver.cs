@@ -14,7 +14,8 @@ public sealed class CompositeResolver : IFormatterResolver
         // who compose their own chain without StandardResolver.
         StandardResolver.Instance,
         UnionResolver.Instance,
-        EnumResolver.Instance,
+        VariantEnumResolver.Instance,
+        SimpleEnumResolver.Instance,
         ObjectResolver.Instance
     ];
 
