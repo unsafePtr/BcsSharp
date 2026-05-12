@@ -65,6 +65,34 @@ public class BcsObjectFormatterAllocTests
         Assert.True(structDeser <= classDeser + 8, $"Struct deserialize {structDeser:F1} > class deserialize {classDeser:F1} + 8");
     }
 
+    [Fact]
+    public void IBufferWriterOverload_RoundTripAlloc()
+    {
+        var s = new PointStruct { X = 1, Y = 2 };
+        var c = new PointClass { X = 1, Y = 2 };
+
+        var bw = new System.Buffers.ArrayBufferWriter<byte>(64);
+
+        // Warm both formatters & populate caches.
+        BcsSerializer.Serialize<PointStruct>(bw, s); bw.ResetWrittenCount();
+        BcsSerializer.Serialize<PointClass>(bw, c); bw.ResetWrittenCount();
+
+        var structSerBufferWriter = MeasureBytesPerOp(() =>
+        {
+            BcsSerializer.Serialize<PointStruct>(bw, s);
+            bw.ResetWrittenCount();
+        });
+
+        var classSerBufferWriter = MeasureBytesPerOp(() =>
+        {
+            BcsSerializer.Serialize<PointClass>(bw, c);
+            bw.ResetWrittenCount();
+        });
+
+        Console.WriteLine($"PointStruct Serialize (IBufferWriter): {structSerBufferWriter,7:F1} B/op");
+        Console.WriteLine($"PointClass  Serialize (IBufferWriter): {classSerBufferWriter,7:F1} B/op");
+    }
+
     [BcsStruct]
     public struct PointStruct
     {
