@@ -46,13 +46,15 @@ public sealed class CompositeResolver : IFormatterResolver
 
     private static IFormatterResolver[] CreateResolverChain()
     {
-        var resolvers = new List<IFormatterResolver>();
+        var resolvers = new List<IFormatterResolver>
+        {
+            // [BcsFormatter(typeof(...))] on the target type — declarative cross-assembly hook.
+            AttributeFormatterResolver.Instance,
 
-        // Source generator was dropped (commit 75458b2) but the resolver hook is kept and
-        // wired in first so reintroducing a generator later is a no-op for callers. Until
-        // an assembly is annotated with [GeneratedAssemblyBcsResolver], this resolver
-        // returns null for unknown types and falls through to the standard chain.
-        resolvers.Add(SourceGeneratedFormatterResolver.Instance);
+            // Source generator was dropped (commit 75458b2) but the resolver hook is kept
+            // so reintroducing a generator later is a no-op for callers.
+            SourceGeneratedFormatterResolver.Instance,
+        };
 
         resolvers.AddRange(DefaultResolvers);
 
