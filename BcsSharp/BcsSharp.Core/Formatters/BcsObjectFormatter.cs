@@ -7,16 +7,17 @@ namespace BcsSharp.Core.Formatters;
 
 /// <summary>
 /// High-performance formatter for BCS-serializable objects (structs/classes) marked with [BcsStruct].
-/// Uses compiled expression trees instead of reflection for optimal performance.
-/// Serializes fields/properties in the order specified by [BcsField(order)] attributes.
-/// 
+/// Dispatch to per-field typed <see cref="IBcsFormatter{T}"/>s goes through a virtual call on
+/// <see cref="BcsObjectFieldSerializer{TInstance}"/>, avoiding the <c>object?</c> boxing path of
+/// <see cref="IBcsObjectFormatter"/>. Field accessors are compiled expression trees.
+///
 /// BCS Format: Fields are serialized consecutively in order without any headers or separators.
 /// Example: struct Person { name: String, age: u32 } -> [name_data...] + [age_data...]
 /// </summary>
 /// <typeparam name="T">The object type to serialize.</typeparam>
 public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
 {
-    private readonly List<CompiledFieldInfo<T>> _fields;
+    private readonly BcsObjectFieldSerializer<T>[] _fields;
     private readonly Func<T> _constructor;
     private readonly bool _isValueType;
 
@@ -35,7 +36,7 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
         _fields = DiscoverAndCompileFields(TargetType);
         _constructor = CreateConstructorDelegate();
 
-        if (_fields.Count == 0)
+        if (_fields.Length == 0)
         {
             ThrowHelper.ThrowInvalidOperationException($"Type {TargetType.Name} has no serializable fields marked with [BcsField]");
         }
@@ -51,76 +52,42 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
             throw new ArgumentNullException(nameof(value));
         }
 
-        // Use compiled expression-based accessors for optimal performance
         foreach (var field in _fields)
         {
-            var fieldValue = field.GetValue(value);
-            field.Formatter.SerializeObject(ref writer, fieldValue);
+            field.Serialize(ref writer, value);
         }
     }
 
     public T Deserialize(ref BcsReader reader)
     {
-        // Use compiled constructor delegate for fast object creation
-        if (_isValueType)
+        var instance = _constructor();
+        foreach (var field in _fields)
         {
-            // For value types, we need to use boxing to properly set field values
-            // This is an inherent limitation of value types in .NET
-            object boxedInstance = _constructor()!;
-
-            foreach (var field in _fields)
-            {
-                var fieldValue = field.Formatter.DeserializeObject(ref reader);
-                field.SetValueBoxed(boxedInstance!, fieldValue);
-            }
-
-            return (T)boxedInstance!;
+            field.Deserialize(ref reader, ref instance);
         }
-        else
-        {
-            // For reference types, use the compiled constructor and typed setters
-            var instance = _constructor();
-
-            foreach (var field in _fields)
-            {
-                var fieldValue = field.Formatter.DeserializeObject(ref reader);
-                field.SetValue(instance, fieldValue);
-            }
-
-            return instance;
-        }
+        return instance;
     }
 
-
-    /// <summary>
-    /// Creates a fast constructor delegate using compiled expressions
-    /// </summary>
     private static Func<T> CreateConstructorDelegate()
     {
-        // Use cached constructor delegate if available
         if (typeof(T).IsValueType)
         {
-            // For value types, use default(T) in a compiled expression
             var newExpression = Expression.Default(typeof(T));
             return Expression.Lambda<Func<T>>(newExpression).Compile();
         }
         else
         {
-            // For reference types, use the parameterless constructor
-            var constructor = typeof(T).GetConstructor(Type.EmptyTypes) ?? throw new InvalidOperationException($"Type {typeof(T).Name} must have a parameterless constructor for BCS deserialization");
+            var constructor = typeof(T).GetConstructor(Type.EmptyTypes)
+                ?? throw new InvalidOperationException($"Type {typeof(T).Name} must have a parameterless constructor for BCS deserialization");
             var newExpression = Expression.New(constructor);
             return Expression.Lambda<Func<T>>(newExpression).Compile();
         }
     }
 
-    /// <summary>
-    /// Discovers fields/properties and compiles high-performance accessors using expression trees
-    /// </summary>
-    private static List<CompiledFieldInfo<T>> DiscoverAndCompileFields(Type objectType)
+    private static BcsObjectFieldSerializer<T>[] DiscoverAndCompileFields(Type objectType)
     {
-        var fields = new List<CompiledFieldInfo<T>>();
+        var serializers = new List<BcsObjectFieldSerializer<T>>();
 
-        // Get all fields and properties
         List<MemberInfo> members =
         [
             .. objectType.GetFields(BindingFlags.Public | BindingFlags.Instance),
@@ -131,120 +98,120 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
         {
             var fieldAttr = member.GetCustomAttribute<BcsFieldAttribute>();
             if (fieldAttr == null)
+            {
                 continue;
+            }
 
             Type memberType;
-            Func<T, object?> typedGetter;
-            Action<T, object?> typedSetter;
-            Action<object, object?> boxedSetter;
-
             if (member is FieldInfo field)
             {
                 memberType = field.FieldType;
-                typedGetter = CompileFieldGetter<T>(field);
-                typedSetter = CompileFieldSetter<T>(field);
-                boxedSetter = (obj, value) => field.SetValue(obj, value); // Fallback for value types
             }
             else if (member is PropertyInfo property)
             {
                 memberType = property.PropertyType;
-
                 if (!property.CanRead)
+                {
                     throw new InvalidOperationException($"Property {member.Name} in {objectType.Name} must be readable");
+                }
                 if (!property.CanWrite)
+                {
                     throw new InvalidOperationException($"Property {member.Name} in {objectType.Name} must be writable");
-
-                typedGetter = CompilePropertyGetter<T>(property);
-                typedSetter = CompilePropertySetter<T>(property);
-                boxedSetter = property.SetValue; // Fallback for value types
+                }
             }
             else
             {
-                continue; // Should never happen
+                continue;
             }
 
-            var formatter = BcsSerializerExtensions.GetFormatter(memberType) ?? throw new InvalidOperationException($"No BCS formatter found for field {member.Name} of type {memberType.Name}");
-            var fieldName = member.Name;
-            var order = fieldAttr.Order;
-
-            fields.Add(new CompiledFieldInfo<T>
-            {
-                Name = fieldName,
-                MemberName = member.Name,
-                Order = order,
-                MemberType = memberType,
-                Formatter = formatter,
-                GetValue = typedGetter,
-                SetValue = typedSetter,
-                SetValueBoxed = boxedSetter
-            });
+            var serializer = CreateTypedFieldSerializer(member, memberType);
+            serializer.Order = fieldAttr.Order;
+            serializers.Add(serializer);
         }
 
-        return [.. fields.OrderBy(f => f.Order)];
+        serializers.Sort((a, b) => a.Order.CompareTo(b.Order));
+        return [.. serializers];
     }
 
-    /// <summary>
-    /// Compiles a high-performance field getter using expression trees
-    /// </summary>
-    private static Func<TObj, object?> CompileFieldGetter<TObj>(FieldInfo field)
+    private static BcsObjectFieldSerializer<T> CreateTypedFieldSerializer(MemberInfo member, Type memberType)
     {
-        var param = Expression.Parameter(typeof(TObj), "obj");
-        var fieldAccess = Expression.Field(param, field);
-        var boxed = Expression.Convert(fieldAccess, typeof(object));
-        return Expression.Lambda<Func<TObj, object?>>(boxed, param).Compile();
+        var memberName = member.Name;
+
+        // Compile typed getter: Func<T, TField>
+        var getterParam = Expression.Parameter(typeof(T), "instance");
+        var getterAccess = Expression.PropertyOrField(getterParam, memberName);
+        var getterDelegateType = typeof(Func<,>).MakeGenericType(typeof(T), memberType);
+        var getter = Expression.Lambda(getterDelegateType, getterAccess, getterParam).Compile();
+
+        // Compile typed ref-setter: RefSetter<T, TField>
+        var setterInstanceParam = Expression.Parameter(typeof(T).MakeByRefType(), "instance");
+        var setterValueParam = Expression.Parameter(memberType, "value");
+        var setterAccess = Expression.PropertyOrField(setterInstanceParam, memberName);
+        var setterAssign = Expression.Assign(setterAccess, setterValueParam);
+        var setterDelegateType = typeof(RefSetter<,>).MakeGenericType(typeof(T), memberType);
+        var setter = Expression.Lambda(setterDelegateType, setterAssign, setterInstanceParam, setterValueParam).Compile();
+
+        // Resolve the typed IBcsFormatter<TField> directly (skip the boxed adapter).
+        var typedFormatter = GetTypedFormatter(memberType)
+            ?? throw new InvalidOperationException($"No BCS formatter found for field {memberName} of type {memberType.Name}");
+
+        var serializerType = typeof(TypedBcsObjectFieldSerializer<,>).MakeGenericType(typeof(T), memberType);
+        return (BcsObjectFieldSerializer<T>)Activator.CreateInstance(serializerType, getter, setter, typedFormatter)!;
     }
 
-    /// <summary>
-    /// Compiles a high-performance field setter using expression trees
-    /// </summary>
-    private static Action<TObj, object?> CompileFieldSetter<TObj>(FieldInfo field)
+    private static object? GetTypedFormatter(Type type)
     {
-        var objParam = Expression.Parameter(typeof(TObj), "obj");
-        var valueParam = Expression.Parameter(typeof(object), "value");
-        var fieldAccess = Expression.Field(objParam, field);
-        var convertedValue = Expression.Convert(valueParam, field.FieldType);
-        var assignment = Expression.Assign(fieldAccess, convertedValue);
-        return Expression.Lambda<Action<TObj, object?>>(assignment, objParam, valueParam).Compile();
+        var method = typeof(BcsSerializer).GetMethod(nameof(BcsSerializer.GetFormatter), BindingFlags.Public | BindingFlags.Static);
+        var generic = method?.MakeGenericMethod(type);
+        return generic?.Invoke(null, new object?[] { null });
+    }
+}
+
+/// <summary>
+/// Non-generic-in-TField field serializer. <see cref="BcsObjectFormatter{T}"/> holds an array of
+/// these so it can dispatch per-field via a single virtual call — no <c>object?</c> boxing of
+/// field values across the formatter boundary.
+/// </summary>
+/// <typeparam name="TInstance">The object type whose field is being serialized.</typeparam>
+internal abstract class BcsObjectFieldSerializer<TInstance>
+{
+    public int Order { get; set; }
+    public abstract void Serialize(ref BcsWriter writer, TInstance instance);
+    public abstract void Deserialize(ref BcsReader reader, ref TInstance instance);
+}
+
+/// <summary>
+/// Compiled ref-T setter: writes <typeparamref name="TField"/> directly into the field
+/// storage of <typeparamref name="TInstance"/> without boxing. For struct instances the
+/// caller passes <c>ref instance</c>, so the assignment lands in the original storage.
+/// </summary>
+internal delegate void RefSetter<TInstance, TField>(ref TInstance instance, TField value);
+
+internal sealed class TypedBcsObjectFieldSerializer<TInstance, TField> : BcsObjectFieldSerializer<TInstance>
+{
+    private readonly Func<TInstance, TField> _getter;
+    private readonly RefSetter<TInstance, TField> _setter;
+    private readonly IBcsFormatter<TField> _formatter;
+
+    public TypedBcsObjectFieldSerializer(
+        Func<TInstance, TField> getter,
+        RefSetter<TInstance, TField> setter,
+        IBcsFormatter<TField> formatter)
+    {
+        _getter = getter ?? throw new ArgumentNullException(nameof(getter));
+        _setter = setter ?? throw new ArgumentNullException(nameof(setter));
+        _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
     }
 
-    /// <summary>
-    /// Compiles a high-performance property getter using expression trees
-    /// </summary>
-    private static Func<TObj, object?> CompilePropertyGetter<TObj>(PropertyInfo property)
+    public override void Serialize(ref BcsWriter writer, TInstance instance)
     {
-        var param = Expression.Parameter(typeof(TObj), "obj");
-        var propertyAccess = Expression.Property(param, property);
-        var boxed = Expression.Convert(propertyAccess, typeof(object));
-        return Expression.Lambda<Func<TObj, object?>>(boxed, param).Compile();
+        var fieldValue = _getter(instance);
+        _formatter.Serialize(ref writer, fieldValue);
     }
 
-    /// <summary>
-    /// Compiles a high-performance property setter using expression trees
-    /// </summary>
-    private static Action<TObj, object?> CompilePropertySetter<TObj>(PropertyInfo property)
+    public override void Deserialize(ref BcsReader reader, ref TInstance instance)
     {
-        var objParam = Expression.Parameter(typeof(TObj), "obj");
-        var valueParam = Expression.Parameter(typeof(object), "value");
-        var propertyAccess = Expression.Property(objParam, property);
-        var convertedValue = Expression.Convert(valueParam, property.PropertyType);
-        var assignment = Expression.Assign(propertyAccess, convertedValue);
-        return Expression.Lambda<Action<TObj, object?>>(assignment, objParam, valueParam).Compile();
-    }
-
-    /// <summary>
-    /// High-performance compiled field information with expression-based accessors
-    /// </summary>
-    private sealed class CompiledFieldInfo<TObj>
-    {
-        public string Name { get; set; } = string.Empty;
-        public string MemberName { get; set; } = string.Empty;
-        public int Order { get; set; }
-        public Type MemberType { get; set; } = null!;
-        public IBcsObjectFormatter Formatter { get; set; } = null!;
-
-        // Compiled expression-based accessors for maximum performance
-        public Func<TObj, object?> GetValue { get; set; } = null!;
-        public Action<TObj, object?> SetValue { get; set; } = null!;
-        public Action<object, object?> SetValueBoxed { get; set; } = null!; // For value type boxing scenarios
+        var fieldValue = _formatter.Deserialize(ref reader);
+        _setter(ref instance, fieldValue);
     }
 }

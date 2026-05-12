@@ -54,15 +54,16 @@ public class BcsObjectFormatterAllocTests
         Console.WriteLine($"PointStruct Deserialize: {structDeser,7:F1} B/op");
         Console.WriteLine($"PointClass  Deserialize: {classDeser,7:F1} B/op");
 
-        // After (a) guarding ArgumentNullException.ThrowIfNull behind !_isValueType and
-        // (b) removing the GetOrAdd closure-capturing lambda from CompositeResolver,
-        // struct and class allocate the same per op:
-        //   Serialize   ~80 B/op = 24 B output byte[] + 48 B (2 uint field boxes) + ~8 B
-        //   Deserialize ~72 B/op = 24 B instance box + 48 B (2 uint field boxes)
-        // Remaining boxing is intrinsic to IBcsObjectFormatter's object? API; eliminating
-        // it requires typed per-field delegates or a source generator.
-        Assert.True(structSer <= classSer + 8, $"Struct serialize {structSer:F1} > class serialize {classSer:F1} + 8");
-        Assert.True(structDeser <= classDeser + 8, $"Struct deserialize {structDeser:F1} > class deserialize {classDeser:F1} + 8");
+        // After (a) guarding ArgumentNullException.ThrowIfNull behind !_isValueType,
+        // (b) dropping the closure-capturing GetOrAdd from CompositeResolver, and (c)
+        // replacing IBcsObjectFormatter's object? per-field boundary with a typed
+        // virtual call (BcsObjectFieldSerializer<TInstance>):
+        //   Serialize   = 32 B/op = 24 B output byte[] + ~8 B (one-off)
+        //   Deserialize = 0 B/op for value-type T; ~24 B (the instance) for class T
+        // The IBufferWriter overload removes the byte[] and hits literal zero alloc.
+        Assert.True(structSer <= 40, $"Struct serialize {structSer:F1} > 40 B/op expected ceiling");
+        Assert.Equal(0.0, structDeser);   // value-type round-trip is alloc-free
+        Assert.True(classDeser <= 32, $"Class deserialize {classDeser:F1} > 32 B/op (~ instance header)");
     }
 
     [Fact]
@@ -91,6 +92,11 @@ public class BcsObjectFormatterAllocTests
 
         Console.WriteLine($"PointStruct Serialize (IBufferWriter): {structSerBufferWriter,7:F1} B/op");
         Console.WriteLine($"PointClass  Serialize (IBufferWriter): {classSerBufferWriter,7:F1} B/op");
+
+        // The IBufferWriter overload writes into caller-owned storage and the typed
+        // per-field dispatch eliminates all boxing — Serialize is literally zero alloc.
+        Assert.Equal(0.0, structSerBufferWriter);
+        Assert.Equal(0.0, classSerBufferWriter);
     }
 
     [BcsStruct]
