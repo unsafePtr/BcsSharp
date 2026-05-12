@@ -54,7 +54,13 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
             serializedPairs.Add((keyBytes, valueBytes));
         }
 
-        // Sort by lexicographical order of serialized key bytes
+        // BCS canonical encoding sorts map entries by the lexicographic order of the
+        // *serialized* key bytes, not by the key's IComparable/Ord. Matches Rust's
+        // bcs::ser::MapSerializer, which collects pairs and re-sorts by serialized
+        // key bytes regardless of the source container's iteration order. Verified
+        // byte-for-byte against rust-sui-bcs-test golden bytes for both
+        // Dictionary<string, _> (UTF-8 byte order) and Dictionary<uint, _>
+        // (little-endian byte order, which can differ from numeric order for large u32).
         serializedPairs.Sort((a, b) => CompareByteArrays(a.keyBytes, b.keyBytes));
 
         // Write sorted key-value pairs  
