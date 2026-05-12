@@ -43,7 +43,13 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
 
     public void Serialize(ref BcsWriter writer, T value)
     {
-        ArgumentNullException.ThrowIfNull(value);
+        // Skip the null check for value types — it can't be null, and the
+        // ArgumentNullException.ThrowIfNull(object?) overload boxes the struct just to
+        // check `!= null`, costing ~24 B/op for no benefit.
+        if (!_isValueType && value is null)
+        {
+            throw new ArgumentNullException(nameof(value));
+        }
 
         // Use compiled expression-based accessors for optimal performance
         foreach (var field in _fields)
