@@ -77,4 +77,11 @@ public static class BcsSerializer
         resolver ??= _defaultResolver;
         return resolver.GetFormatter<T>();
     }
+
+    /// <summary>
+    /// Clears <see cref="CompositeResolver"/>'s shared lookup cache. Call after any
+    /// <see cref="CustomFormatterResolver.Register{T}"/> done after the first serialize
+    /// (e.g. in tests), so cached null misses don't shadow the new registration.
+    /// </summary>
+    public static void ClearFormatterCache() => CompositeResolver.ClearCache();
 }

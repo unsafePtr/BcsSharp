@@ -48,6 +48,9 @@ public sealed class CompositeResolver : IFormatterResolver
     {
         var resolvers = new List<IFormatterResolver>
         {
+            // Manual registrations win over everything else so users can override built-ins.
+            CustomFormatterResolver.Instance,
+
             // [BcsFormatter(typeof(...))] on the target type — declarative cross-assembly hook.
             AttributeFormatterResolver.Instance,
 
@@ -60,4 +63,11 @@ public sealed class CompositeResolver : IFormatterResolver
 
         return resolvers.ToArray();
     }
+
+    /// <summary>
+    /// Clears the shared formatter lookup cache. Call this after late
+    /// <see cref="CustomFormatterResolver.Register{T}"/> calls so cached misses don't
+    /// shadow the new registration. Intended for tests and one-shot startup wiring.
+    /// </summary>
+    public static void ClearCache() => _formatterCache.Clear();
 }
