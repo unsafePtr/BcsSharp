@@ -21,13 +21,26 @@ public static class BcsSerializer
     }
 
     /// <summary>
-    /// Serialize value to byte array
+    /// Serialize value to byte array.
     /// </summary>
+    /// <remarks>
+    /// Writes into a thread-static 64 KB scratch buffer (allocated once per thread) and
+    /// falls over to <see cref="ArrayPool{T}.Shared"/> only when the payload exceeds it
+    /// or another serialization on the same thread is already holding the scratch.
+    /// </remarks>
     public static byte[] Serialize<T>(T value, IFormatterResolver? resolver = null)
     {
-        var writer = new BcsWriter(BcsWriterOptions.Default);
-        Serialize(ref writer, value, resolver);
-        return writer.ToBytes();
+        var bufferWriter = ScratchBufferWriter.Rent();
+        try
+        {
+            var writer = new BcsWriter(bufferWriter);
+            Serialize(ref writer, value, resolver);
+            return bufferWriter.WrittenSpan.ToArray();
+        }
+        finally
+        {
+            bufferWriter.Return();
+        }
     }
 
     /// <summary>
