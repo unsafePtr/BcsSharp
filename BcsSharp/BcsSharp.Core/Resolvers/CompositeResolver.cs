@@ -9,8 +9,10 @@ public sealed class CompositeResolver : IFormatterResolver
 {
     private readonly IFormatterResolver[] _resolvers;
     private static readonly IFormatterResolver[] DefaultResolvers = [
+        // StandardResolver intercepts Nullable<T> first and reflects into NullableResolver,
+        // so NullableResolver doesn't need its own chain slot. It remains public for users
+        // who compose their own chain without StandardResolver.
         StandardResolver.Instance,
-        NullableResolver.Instance,
         UnionResolver.Instance,
         EnumResolver.Instance,
         ObjectResolver.Instance
