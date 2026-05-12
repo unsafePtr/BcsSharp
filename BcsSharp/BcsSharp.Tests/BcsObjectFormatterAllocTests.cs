@@ -54,12 +54,13 @@ public class BcsObjectFormatterAllocTests
         Console.WriteLine($"PointStruct Deserialize: {structDeser,7:F1} B/op");
         Console.WriteLine($"PointClass  Deserialize: {classDeser,7:F1} B/op");
 
-        // After guarding ArgumentNullException.ThrowIfNull behind !_isValueType, struct
-        // and class paths allocate the same amount per op (currently 144 B/op Serialize,
-        // 136 B/op Deserialize on net11 P3). The remaining alloc is the output byte[]
-        // plus per-field IBcsObjectFormatter boxing (object? at the call boundary),
-        // which is equal on both paths. The JIT erases the speculative struct-instance
-        // box on the deserialize path.
+        // After (a) guarding ArgumentNullException.ThrowIfNull behind !_isValueType and
+        // (b) removing the GetOrAdd closure-capturing lambda from CompositeResolver,
+        // struct and class allocate the same per op:
+        //   Serialize   ~80 B/op = 24 B output byte[] + 48 B (2 uint field boxes) + ~8 B
+        //   Deserialize ~72 B/op = 24 B instance box + 48 B (2 uint field boxes)
+        // Remaining boxing is intrinsic to IBcsObjectFormatter's object? API; eliminating
+        // it requires typed per-field delegates or a source generator.
         Assert.True(structSer <= classSer + 8, $"Struct serialize {structSer:F1} > class serialize {classSer:F1} + 8");
         Assert.True(structDeser <= classDeser + 8, $"Struct deserialize {structDeser:F1} > class deserialize {classDeser:F1} + 8");
     }
