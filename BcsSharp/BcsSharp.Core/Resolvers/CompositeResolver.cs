@@ -48,11 +48,12 @@ public sealed class CompositeResolver : IFormatterResolver
     {
         var resolvers = new List<IFormatterResolver>();
 
-        // Add source-generated formatter resolver first (highest priority)
-        // This will automatically find assembly-specific generated resolvers
+        // Source generator was dropped (commit 75458b2) but the resolver hook is kept and
+        // wired in first so reintroducing a generator later is a no-op for callers. Until
+        // an assembly is annotated with [GeneratedAssemblyBcsResolver], this resolver
+        // returns null for unknown types and falls through to the standard chain.
         resolvers.Add(SourceGeneratedFormatterResolver.Instance);
 
-        // Add standard resolvers
         resolvers.AddRange(DefaultResolvers);
 
         return resolvers.ToArray();
