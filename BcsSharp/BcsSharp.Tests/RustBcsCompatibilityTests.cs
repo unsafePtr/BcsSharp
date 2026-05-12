@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using BcsSharp.Core;
 using BcsSharp.Core.Attributes;
 using BcsSharp.Core.Unions;
@@ -31,47 +32,39 @@ public class RustBcsCompatibilityTests
         Legendary = 4
     }
 
-    [BcsEnum]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S101:Types should be named in PascalCase", Justification = "<Pending>")]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-    public interface Rarity
-    {
-        // Marker interface for BCS enum variants
-    }
+    // C# 15 union mirroring Rust's `enum Rarity` — variant index is declaration order
+    // (Common=0, Uncommon=1, Rare=2, Epic=3, Legendary=4), exactly what `bcs` produces.
+    public sealed record class Common;
 
-    [BcsEnumVariant(0)]
-    public class Common : Rarity
+    [BcsStruct]
+    public sealed record class Uncommon
     {
-
-    }
-
-    [BcsEnumVariant(1)]
-    public class Uncommon : Rarity
-    {
-        [BcsEnumData]
+        [BcsField(0)]
         public uint Value { get; set; }
     }
 
-    [BcsEnumVariant(2)]
-    public class Rare : Rarity
+    [BcsStruct]
+    public sealed record class Rare
     {
-        [BcsEnumData]
-        public uint[] Values { get; set; } = Array.Empty<uint>();
+        [BcsField(0)]
+        public List<uint> Values { get; set; } = [];
     }
 
-    [BcsEnumVariant(3)]
-    public class Epic : Rarity
+    [BcsStruct]
+    public sealed record class Epic
     {
-        [BcsEnumData]
+        [BcsField(0)]
         public string Name { get; set; } = string.Empty;
     }
 
-    [BcsEnumVariant(4)]
-    public class Legendary : Rarity
+    [BcsStruct]
+    public sealed record class Legendary
     {
-        [BcsEnumData]
+        [BcsField(0)]
         public (string, ulong, LegendaryAsset) Data { get; set; }
     }
+
+    public union Rarity(Common, Uncommon, Rare, Epic, Legendary);
 
     public enum TransactionType : byte
     {
@@ -97,9 +90,12 @@ public class RustBcsCompatibilityTests
         public string Zip { get; set; } = string.Empty;
     }
 
-    public class LegendaryAsset
+    [BcsStruct]
+    public sealed class LegendaryAsset
     {
+        [BcsField(0)]
         public string AssetId { get; set; } = string.Empty;
+        [BcsField(1)]
         public byte Level { get; set; }
     }
 
@@ -691,5 +687,99 @@ public class RustBcsCompatibilityTests
             Console.WriteLine($"C#:   {Convert.ToHexString(csharp.Skip(10).Take(20).ToArray())}");
             Console.WriteLine($"Rust: {Convert.ToHexString(rust.Skip(10).Take(20).ToArray())}");
         }
+    }
+
+    // --- Rarity union: byte-for-byte Rust BCS compatibility tests ---------------------
+    //
+    // Each variant's expected bytes are hand-computed from the BCS spec
+    // (ULEB variant index + variant payload). Rust's `bcs` crate produces the same
+    // bytes for `Rarity::<variant>`, so these vectors double as cross-implementation
+    // proofs that our C# 15 `union` formatter matches Rust's tagged-enum encoding.
+
+    [Fact]
+    public void Rarity_Common_Matches_RustBcsWire()
+    {
+        Rarity rarity = new Common();
+        var bytes = BcsSerializer.Serialize(rarity);
+
+        // variant 0, no payload.
+        Assert.Equal(new byte[] { 0x00 }, bytes);
+
+        var back = BcsSerializer.Deserialize<Rarity>(bytes);
+        Assert.IsType<Common>(((IUnion)back).Value);
+    }
+
+    [Fact]
+    public void Rarity_Uncommon_Matches_RustBcsWire()
+    {
+        Rarity rarity = new Uncommon { Value = 42 };
+        var bytes = BcsSerializer.Serialize(rarity);
+
+        // variant 1, u32(42) little-endian.
+        Assert.Equal(new byte[] { 0x01, 0x2A, 0x00, 0x00, 0x00 }, bytes);
+
+        var back = BcsSerializer.Deserialize<Rarity>(bytes);
+        var payload = Assert.IsType<Uncommon>(((IUnion)back).Value);
+        Assert.Equal(42u, payload.Value);
+    }
+
+    [Fact]
+    public void Rarity_Rare_Matches_RustBcsWire()
+    {
+        Rarity rarity = new Rare { Values = [15] };
+        var bytes = BcsSerializer.Serialize(rarity);
+
+        // variant 2, ULEB len=1, u32(15) little-endian.
+        Assert.Equal(new byte[] { 0x02, 0x01, 0x0F, 0x00, 0x00, 0x00 }, bytes);
+
+        var back = BcsSerializer.Deserialize<Rarity>(bytes);
+        var payload = Assert.IsType<Rare>(((IUnion)back).Value);
+        Assert.Equal(new List<uint> { 15 }, payload.Values);
+    }
+
+    [Fact]
+    public void Rarity_Epic_Matches_RustBcsWire()
+    {
+        Rarity rarity = new Epic { Name = "Sword" };
+        var bytes = BcsSerializer.Serialize(rarity);
+
+        // variant 3, ULEB len=5, utf8 "Sword".
+        Assert.Equal(new byte[] { 0x03, 0x05, (byte)'S', (byte)'w', (byte)'o', (byte)'r', (byte)'d' }, bytes);
+
+        var back = BcsSerializer.Deserialize<Rarity>(bytes);
+        var payload = Assert.IsType<Epic>(((IUnion)back).Value);
+        Assert.Equal("Sword", payload.Name);
+    }
+
+    [Fact]
+    public void Rarity_Legendary_Matches_RustBcsWire()
+    {
+        var asset = new LegendaryAsset { AssetId = "sword_001", Level = 15 };
+        Rarity rarity = new Legendary { Data = ("Hero", 1000UL, asset) };
+
+        var bytes = BcsSerializer.Serialize(rarity);
+
+        // variant 4, tuple (String "Hero", u64 1000, LegendaryAsset).
+        // - 04                            variant index
+        // - 04 48 65 72 6f                ULEB(4) + "Hero"
+        // - e8 03 00 00 00 00 00 00       u64(1000) LE
+        // - 09 73 77 6f 72 64 5f 30 30 31 ULEB(9) + "sword_001"
+        // - 0f                            byte(15)
+        var expected = new byte[]
+        {
+            0x04,
+            0x04, 0x48, 0x65, 0x72, 0x6F,
+            0xE8, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x09, 0x73, 0x77, 0x6F, 0x72, 0x64, 0x5F, 0x30, 0x30, 0x31,
+            0x0F,
+        };
+        Assert.Equal(expected, bytes);
+
+        var back = BcsSerializer.Deserialize<Rarity>(bytes);
+        var payload = Assert.IsType<Legendary>(((IUnion)back).Value);
+        Assert.Equal("Hero", payload.Data.Item1);
+        Assert.Equal(1000UL, payload.Data.Item2);
+        Assert.Equal("sword_001", payload.Data.Item3.AssetId);
+        Assert.Equal((byte)15, payload.Data.Item3.Level);
     }
 }
