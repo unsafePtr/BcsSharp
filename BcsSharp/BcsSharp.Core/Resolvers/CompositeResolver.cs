@@ -12,7 +12,6 @@ public sealed class CompositeResolver : IFormatterResolver
         StandardResolver.Instance,
         NullableResolver.Instance,
         UnionResolver.Instance,
-        OneOfResolver.Instance,
         EnumResolver.Instance,
         ObjectResolver.Instance
     ];

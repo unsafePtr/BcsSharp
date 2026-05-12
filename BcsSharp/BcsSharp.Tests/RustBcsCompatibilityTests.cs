@@ -1,8 +1,7 @@
 using BcsSharp.Core;
 using BcsSharp.Core.Attributes;
+using BcsSharp.Core.Unions;
 using Nethermind.Int256;
-using OneOf;
-using OneOf.Types;
 
 namespace BcsSharp.Tests;
 
@@ -193,7 +192,7 @@ public class RustBcsCompatibilityTests
         [BcsField(4)]
         public bool IsVerified { get; set; }
         [BcsField(5)]
-        public OneOf<None, Address> Address { get; set; }
+        public Option<Address> Address { get; set; } = None.Instance;
     }
 
     [BcsStruct]

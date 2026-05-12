@@ -1,7 +1,6 @@
 using BcsSharp.Core;
 using BcsSharp.Core.Attributes;
-using OneOf;
-using OneOf.Types;
+using BcsSharp.Core.Unions;
 using Xunit;
 
 namespace BcsSharp.Tests;
@@ -88,7 +87,7 @@ public class WorkingNestedObjectExample
     public class Person
     {
         [BcsField(0)]
-        public OneOf<None, Address> HomeAddress { get; set; } = new Address();
+        public Option<Address> HomeAddress { get; set; } = new Address();
 
         [BcsField(1)]
         public string Name { get; set; } = "";
@@ -97,7 +96,7 @@ public class WorkingNestedObjectExample
         public uint Age { get; set; }
 
         [BcsField(3)]
-        public OneOf<None, Notes> PersonalNotes { get; set; } = new Notes();
+        public Option<Notes> PersonalNotes { get; set; } = new Notes();
 
         public Person() { }
         public Person(string name, uint age, Address address, Notes notes)
@@ -129,18 +128,27 @@ public class WorkingNestedObjectExample
         // Assert - Verify basic data first
         Assert.Equal("John Doe", deserialized.Name);
         Assert.Equal(35u, deserialized.Age);
-        Assert.Equal("123 Main St", deserialized.HomeAddress.AsT1.Street);
-        Assert.Equal("Springfield", deserialized.HomeAddress.AsT1.City);
-        Assert.Equal(12345u, deserialized.HomeAddress.AsT1.ZipCode);
+        Assert.Equal("123 Main St", deserialized.HomeAddress.Value.AsAddress().Street);
+        Assert.Equal("Springfield", deserialized.HomeAddress.Value.AsAddress().City);
+        Assert.Equal(12345u, deserialized.HomeAddress.Value.AsAddress().ZipCode);
 
         // Verify basic Notes data
-        Assert.Equal("Test basic types", deserialized.PersonalNotes.AsT1.Description);
-        Assert.Equal(new List<byte> { 1, 2, 3, 255, 0 }, deserialized.PersonalNotes.AsT1.Data);
-        Assert.Equal((byte?)42, deserialized.PersonalNotes.AsT1.OptionalByte);
-        Assert.Equal("priority", deserialized.PersonalNotes.AsT1.NameValuePair.Item1);
-        Assert.Equal(10, deserialized.PersonalNotes.AsT1.NameValuePair.Item2);
-        Assert.Equal((byte)255, deserialized.PersonalNotes.AsT1.ComplexTuple.Item1);
-        Assert.Equal("test", deserialized.PersonalNotes.AsT1.ComplexTuple.Item2);
-        Assert.True(deserialized.PersonalNotes.AsT1.ComplexTuple.Item3);
+        Assert.Equal("Test basic types", deserialized.PersonalNotes.Value.AsNotes().Description);
+        Assert.Equal(new List<byte> { 1, 2, 3, 255, 0 }, deserialized.PersonalNotes.Value.AsNotes().Data);
+        Assert.Equal((byte?)42, deserialized.PersonalNotes.Value.AsNotes().OptionalByte);
+        Assert.Equal("priority", deserialized.PersonalNotes.Value.AsNotes().NameValuePair.Item1);
+        Assert.Equal(10, deserialized.PersonalNotes.Value.AsNotes().NameValuePair.Item2);
+        Assert.Equal((byte)255, deserialized.PersonalNotes.Value.AsNotes().ComplexTuple.Item1);
+        Assert.Equal("test", deserialized.PersonalNotes.Value.AsNotes().ComplexTuple.Item2);
+        Assert.True(deserialized.PersonalNotes.Value.AsNotes().ComplexTuple.Item3);
     }
+}
+
+// Top-level extensions so test asserts read like `opt.Value.AsX()` without scattering casts.
+internal static class WorkingNestedObjectOptionExtensions
+{
+    public static WorkingNestedObjectExample.Address AsAddress(this object? value)
+        => (WorkingNestedObjectExample.Address)value!;
+    public static WorkingNestedObjectExample.Notes AsNotes(this object? value)
+        => (WorkingNestedObjectExample.Notes)value!;
 }
