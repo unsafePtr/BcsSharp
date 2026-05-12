@@ -11,6 +11,7 @@ public sealed class CompositeResolver : IFormatterResolver
     private static readonly IFormatterResolver[] DefaultResolvers = [
         StandardResolver.Instance,
         NullableResolver.Instance,
+        UnionResolver.Instance,
         OneOfResolver.Instance,
         EnumResolver.Instance,
         ObjectResolver.Instance
