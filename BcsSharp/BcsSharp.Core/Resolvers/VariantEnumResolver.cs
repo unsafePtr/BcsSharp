@@ -11,10 +11,18 @@ namespace BcsSharp.Core.Resolvers;
 /// variant classes with <see cref="BcsEnumVariantAttribute"/> / <see cref="BcsEnumDataAttribute"/>).
 /// </summary>
 /// <remarks>
-/// Prefer the C# 15 <c>union</c> keyword (handled by <see cref="UnionResolver"/>) for new
-/// code. This resolver remains useful when the variant set needs a shared interface for
-/// runtime polymorphism beyond just BCS serialization — the union path has no shared
-/// supertype across cases.
+/// <para>
+/// <b>Prefer the C# 15 <c>union</c> keyword</b> for new code — handled by
+/// <see cref="UnionResolver"/>, produces identical BCS wire bytes, requires no attributes,
+/// gets compile-time exhaustiveness on switch expressions, and supports zero-allocation
+/// cases when the payload is a reference type.
+/// </para>
+/// <para>
+/// This resolver is kept for one specific scenario: when the variant set must expose a
+/// <i>shared interface</i> for runtime polymorphism unrelated to BCS (virtual dispatch on
+/// case methods, IoC mocking, visitor pattern). C# 15 unions have no shared supertype
+/// across cases, so that pattern requires the older marker-interface shape.
+/// </para>
 /// </remarks>
 public sealed class VariantEnumResolver : IFormatterResolver
 {
