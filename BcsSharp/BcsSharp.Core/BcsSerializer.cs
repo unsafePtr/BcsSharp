@@ -21,13 +21,11 @@ public static class BcsSerializer
     }
 
     /// <summary>
-    /// Serialize value to byte array.
+    /// Serialize value to byte array. Internally rents a buffer from
+    /// <see cref="ArrayPool{T}.Shared"/> (per-thread cache as the first tier) and pools
+    /// the writer wrapper instance via a thread-static slot, so the only heap allocation
+    /// per call is the returned <c>byte[]</c>.
     /// </summary>
-    /// <remarks>
-    /// Writes into a thread-static 64 KB scratch buffer (allocated once per thread) and
-    /// falls over to <see cref="ArrayPool{T}.Shared"/> only when the payload exceeds it
-    /// or another serialization on the same thread is already holding the scratch.
-    /// </remarks>
     public static byte[] Serialize<T>(T value, IFormatterResolver? resolver = null)
     {
         var bufferWriter = ScratchBufferWriter.Rent();
