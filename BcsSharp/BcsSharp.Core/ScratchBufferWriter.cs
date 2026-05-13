@@ -74,6 +74,13 @@ internal sealed class ScratchBufferWriter : IBufferWriter<byte>
 
     public ReadOnlySpan<byte> WrittenSpan => _buffer.AsSpan(0, _written);
 
+    /// <summary>
+    /// Heap-friendly view over the written region. Exposed so callers that need to hold
+    /// the buffer reference across a non-ref-struct boundary (e.g. an <c>IComparer&lt;T&gt;</c>
+    /// for <c>Span&lt;T&gt;.Sort</c>) can do so without copying.
+    /// </summary>
+    internal ReadOnlyMemory<byte> WrittenMemory => _buffer.AsMemory(0, _written);
+
     public int WrittenCount => _written;
 
     public void Advance(int count)

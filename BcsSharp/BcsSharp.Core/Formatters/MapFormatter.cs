@@ -1,21 +1,22 @@
+using System.Buffers;
 using System.Runtime.CompilerServices;
 
 namespace BcsSharp.Core.Formatters;
 
 /// <summary>
-/// Formatter for Dictionary/Map types in BCS format
-/// Keys are sorted by lexicographical order of their BCS serialized bytes for deterministic output
+/// Formatter for Dictionary/Map types in BCS format. Keys are sorted by lexicographical
+/// order of their BCS-serialized bytes for deterministic output — matches Rust's
+/// <c>bcs::ser::MapSerializer</c>, which re-sorts pairs by serialized key bytes regardless
+/// of the source container's iteration order.
 /// </summary>
 public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, TValue>>
     where TKey : notnull
 {
+    /// <summary>Threshold below which pair-offset metadata is stack-allocated.</summary>
+    private const int StackThreshold = 32;
+
     private readonly IBcsFormatter<TKey> _keyFormatter;
     private readonly IBcsFormatter<TValue> _valueFormatter;
-
-    private static readonly BcsWriterOptions _internalWriterOptions = new()
-    {
-        InitialBufferSize = 256
-    };
 
     public Type TargetType => typeof(Dictionary<TKey, TValue>);
 
@@ -33,41 +34,70 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
             return;
         }
 
-        writer.WriteULEB((uint)value.Count);
-
-        // Serialize key-value pairs and sort by lexicographical order of key bytes (BCS requirement)
-        var serializedPairs = new List<(byte[] keyBytes, byte[] valueBytes)>(value.Count);
-        var tempWriter = new BcsWriter(_internalWriterOptions);
-
-        foreach (var kvp in value)
+        var count = value.Count;
+        writer.WriteULEB((uint)count);
+        if (count == 0)
         {
-            // Serialize key
-            tempWriter.Reset();
-            _keyFormatter.Serialize(ref tempWriter, kvp.Key);
-            var keyBytes = tempWriter.ToBytes();
-
-            // Serialize value
-            tempWriter.Reset();
-            _valueFormatter.Serialize(ref tempWriter, kvp.Value);
-            var valueBytes = tempWriter.ToBytes();
-
-            serializedPairs.Add((keyBytes, valueBytes));
+            return;
         }
 
-        // BCS canonical encoding sorts map entries by the lexicographic order of the
-        // *serialized* key bytes, not by the key's IComparable/Ord. Matches Rust's
-        // bcs::ser::MapSerializer, which collects pairs and re-sorts by serialized
-        // key bytes regardless of the source container's iteration order. Verified
-        // byte-for-byte against rust-sui-bcs-test golden bytes for both
-        // Dictionary<string, _> (UTF-8 byte order) and Dictionary<uint, _>
-        // (little-endian byte order, which can differ from numeric order for large u32).
-        serializedPairs.Sort((a, b) => CompareByteArrays(a.keyBytes, b.keyBytes));
+        // Reuse the per-thread scratch buffer. If the outer Serialize is already holding
+        // it (the byte[]-returning overload does), ScratchBufferWriter's re-entrancy
+        // fallback rents from ArrayPool<byte>.Shared for the duration of this map.
+        var scratch = ScratchBufferWriter.Rent();
+        PairOffsets[]? rentedPairs = null;
 
-        // Write sorted key-value pairs  
-        foreach (var pair in serializedPairs)
+        try
         {
-            writer.WriteBytes(pair.keyBytes);
-            writer.WriteBytes(pair.valueBytes);
+            // Stack-allocate the pair index for small maps; rent from pool for large ones.
+            // `scoped` tells the compiler this span doesn't escape the method, so the
+            // conditional stackalloc is legal.
+            scoped Span<PairOffsets> pairs;
+            if (count <= StackThreshold)
+            {
+                pairs = stackalloc PairOffsets[count];
+            }
+            else
+            {
+                rentedPairs = ArrayPool<PairOffsets>.Shared.Rent(count);
+                pairs = rentedPairs.AsSpan(0, count);
+            }
+
+            // Serialize every (key, value) into the shared scratch, tracking offsets.
+            var scratchWriter = new BcsWriter(scratch);
+            int i = 0;
+            foreach (var kvp in value)
+            {
+                var keyStart = scratch.WrittenCount;
+                _keyFormatter.Serialize(ref scratchWriter, kvp.Key);
+                var keyEnd = scratch.WrittenCount;
+
+                _valueFormatter.Serialize(ref scratchWriter, kvp.Value);
+                var valEnd = scratch.WrittenCount;
+
+                pairs[i++] = new PairOffsets(keyStart, keyEnd - keyStart, keyEnd, valEnd - keyEnd);
+            }
+
+            // Sort by serialized key bytes. The comparer is a struct that holds a
+            // ReadOnlyMemory<byte> view of the scratch — passed by value through the
+            // generic constraint, no boxing.
+            pairs.Sort(new ByteRangeComparer(scratch.WrittenMemory));
+
+            // Emit in sorted order into the real writer.
+            var buffer = scratch.WrittenSpan;
+            foreach (var pair in pairs)
+            {
+                writer.WriteBytes(buffer.Slice(pair.KeyOffset, pair.KeyLen));
+                writer.WriteBytes(buffer.Slice(pair.ValOffset, pair.ValLen));
+            }
+        }
+        finally
+        {
+            scratch.Return();
+            if (rentedPairs is not null)
+            {
+                ArrayPool<PairOffsets>.Shared.Return(rentedPairs);
+            }
         }
     }
 
@@ -75,64 +105,72 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
     {
         var count = reader.ReadULEB32();
         if (count == 0)
+        {
             return new Dictionary<TKey, TValue>();
+        }
 
         var result = new Dictionary<TKey, TValue>((int)count);
-        byte[]? previousKeyBytes = null;
+
+        // Sort-order verification: track the previous key's byte range in the input
+        // buffer and compare each new key's range against it. No re-serialization,
+        // no per-iteration allocation.
+        int prevKeyStart = -1;
+        int prevKeyEnd = -1;
 
         for (uint i = 0; i < count; i++)
         {
+            var keyStart = reader.Position;
             var key = _keyFormatter.Deserialize(ref reader);
+            var keyEnd = reader.Position;
+
             var value = _valueFormatter.Deserialize(ref reader);
 
-            // Verify keys are in sorted order (BCS requirement)
-            if (i > 0 && previousKeyBytes != null)
+            if (prevKeyStart >= 0)
             {
-                var keyWriter = new BcsWriter();
-                _keyFormatter.Serialize(ref keyWriter, key);
-                var currentKeyBytes = keyWriter.ToBytes();
-
-                if (CompareByteArrays(currentKeyBytes, previousKeyBytes) <= 0)
+                var source = reader.Source;
+                var prevKey = source.Slice(prevKeyStart, prevKeyEnd - prevKeyStart);
+                var currKey = source.Slice(keyStart, keyEnd - keyStart);
+                if (currKey.SequenceCompareTo(prevKey) <= 0)
                 {
                     throw new InvalidOperationException("Map keys must be in strictly increasing lexicographical order by BCS bytes");
                 }
-
-                previousKeyBytes = currentKeyBytes;
             }
-            else if (i == 0)
-            {
-                var keyWriter = new BcsWriter();
-                _keyFormatter.Serialize(ref keyWriter, key);
-                previousKeyBytes = keyWriter.ToBytes();
-            }
+            prevKeyStart = keyStart;
+            prevKeyEnd = keyEnd;
 
-            if (result.ContainsKey(key))
+            if (!result.TryAdd(key, value))
             {
                 throw new InvalidOperationException($"Duplicate key found in map: {key}");
             }
-
-            result.Add(key, value);
         }
 
         return result;
     }
 
-
-    private static int GetULEBSize(uint value)
+    /// <summary>Byte offsets and lengths into a shared serialization scratch buffer.</summary>
+    private readonly struct PairOffsets(int keyOffset, int keyLen, int valOffset, int valLen)
     {
-        if (value < 0x80) return 1;
-        if (value < 0x4000) return 2;
-        if (value < 0x200000) return 3;
-        if (value < 0x10000000) return 4;
-        return 5;
+        public readonly int KeyOffset = keyOffset;
+        public readonly int KeyLen = keyLen;
+        public readonly int ValOffset = valOffset;
+        public readonly int ValLen = valLen;
     }
 
     /// <summary>
-    /// Compares two byte arrays lexicographically
+    /// Struct comparer used by <see cref="Span{T}.Sort{TComparer}"/>. Holds the buffer
+    /// as <see cref="ReadOnlyMemory{T}"/> (heap-friendly, can be a struct field) and
+    /// compares slices via <c>SequenceCompareTo</c>.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int CompareByteArrays(byte[] a, byte[] b)
+    private readonly struct ByteRangeComparer(ReadOnlyMemory<byte> buffer) : IComparer<PairOffsets>
     {
-        return a.AsSpan().SequenceCompareTo(b.AsSpan());
+        private readonly ReadOnlyMemory<byte> _buffer = buffer;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Compare(PairOffsets x, PairOffsets y)
+        {
+            var span = _buffer.Span;
+            return span.Slice(x.KeyOffset, x.KeyLen)
+                .SequenceCompareTo(span.Slice(y.KeyOffset, y.KeyLen));
+        }
     }
 }

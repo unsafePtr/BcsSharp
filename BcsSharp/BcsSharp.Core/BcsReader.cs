@@ -358,6 +358,13 @@ public ref struct BcsReader
     public int Position => _position;
 
     /// <summary>
+    /// Zero-copy view of the entire underlying buffer. Useful for formatters that need
+    /// to compare already-decoded byte ranges (e.g. <see cref="BcsSharp.Core.Formatters.MapFormatter{TKey,TValue}"/>'s
+    /// sort-order check) without re-serializing.
+    /// </summary>
+    public ReadOnlySpan<byte> Source => _data.Span;
+
+    /// <summary>
     /// Reset position to beginning
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

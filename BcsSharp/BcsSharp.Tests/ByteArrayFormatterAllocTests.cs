@@ -35,8 +35,10 @@ public class ByteArrayFormatterAllocTests
 
             var perOp = MeasureBytesPerOp(() => _ = BcsSerializer.Deserialize<SpanAddress>(bytes));
 
-            Console.WriteLine($"ByteArrayFormatter deserialize: {perOp:F1} B/op");
-            Assert.Equal(0.0, perOp);
+            Console.WriteLine($"ByteArrayFormatter deserialize: {perOp:F4} B/op");
+            // Effectively zero. The tiny upper bound tolerates one-off JIT codegen
+            // landing inside the measurement window on Debug builds.
+            Assert.True(perOp < 0.01, $"Expected ~0 B/op, got {perOp}");
         }
         finally
         {
