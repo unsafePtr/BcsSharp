@@ -56,7 +56,7 @@ public class AttributeFormatterTests
             buf[0] = value.FirstByte;
             return buf;
         }
-        public override SuiAddress GetFromBytes(byte[] bytes) => new(bytes[0]);
+        public override SuiAddress GetFromBytes(ReadOnlySpan<byte> bytes) => new(bytes[0]);
     }
 
     [BcsStruct]

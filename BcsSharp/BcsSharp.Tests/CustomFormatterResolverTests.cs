@@ -70,7 +70,7 @@ public class CustomFormatterResolverTests
             buf[0] = value.FirstByte;
             return buf;
         }
-        public override UnattributedAddress GetFromBytes(byte[] bytes) => new(bytes[0]);
+        public override UnattributedAddress GetFromBytes(ReadOnlySpan<byte> bytes) => new(bytes[0]);
     }
 
     private sealed class FakeIntFormatter : IBcsFormatter<int>
