@@ -10,7 +10,20 @@ public abstract class ByteArrayFormatter<T> : IBcsFormatter<T>
 {
     public abstract int GetLength();
     public abstract ReadOnlySpan<byte> GetBytes(T value);
+
+    /// <summary>
+    /// Reconstruct a <typeparamref name="T"/> from its byte representation.
+    /// Override this for backward compatibility / when the caller needs an owned array.
+    /// </summary>
     public abstract T GetFromBytes(byte[] bytes);
+
+    /// <summary>
+    /// Zero-allocation deserialization hook. Override this when <typeparamref name="T"/> can
+    /// be constructed directly from a span (e.g. copying into a fixed-size struct field).
+    /// The default forwards to <see cref="GetFromBytes(byte[])"/> via one <c>ToArray()</c>
+    /// copy, preserving the behavior of subclasses that only implement the byte[] overload.
+    /// </summary>
+    public virtual T GetFromBytes(ReadOnlySpan<byte> bytes) => GetFromBytes(bytes.ToArray());
 
 
     public void Serialize(ref BcsWriter writer, T value)
@@ -20,9 +33,10 @@ public abstract class ByteArrayFormatter<T> : IBcsFormatter<T>
 
     public T Deserialize(ref BcsReader reader)
     {
-        var result = new byte[GetLength()];
-        reader.ReadPrimitiveArray(result.AsSpan());
-
-        return GetFromBytes(result);
+        // Read the bytes as a span over the input buffer (no copy). Subclasses that override
+        // GetFromBytes(ReadOnlySpan<byte>) deserialize allocation-free; subclasses that only
+        // override GetFromBytes(byte[]) get the same one-allocation cost they had before.
+        var span = reader.ReadBytesAsSpan(GetLength());
+        return GetFromBytes(span);
     }
 }

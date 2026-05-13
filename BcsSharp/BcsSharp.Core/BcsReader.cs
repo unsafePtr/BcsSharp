@@ -175,7 +175,9 @@ public ref struct BcsReader
     }
 
     /// <summary>
-    /// Read specified number of bytes
+    /// Read specified number of bytes into a newly-allocated array. Prefer
+    /// <see cref="ReadBytesAsSpan"/> on hot paths where the caller doesn't need
+    /// ownership — that overload returns a zero-copy span over the input buffer.
     /// </summary>
     public byte[] ReadBytes(int length)
     {

@@ -77,6 +77,6 @@ public class CustomFormatterResolverTests
     {
         private static readonly byte[] Sentinel = { 0xFF };
         public void Serialize(ref BcsWriter writer, int value) => writer.WriteBytes(Sentinel);
-        public int Deserialize(ref BcsReader reader) => reader.ReadBytes(1)[0];
+        public int Deserialize(ref BcsReader reader) => reader.ReadBytesAsSpan(1)[0];
     }
 }
