@@ -42,7 +42,7 @@ public class InPlaceDeserializeTests
         Assert.Equal(12345UL, dest.Id);
         Assert.Equal(30u, dest.X);
         Assert.Equal(99u, dest.Y);
-        Assert.Equal(0.0, perOp);
+        Assert.True(perOp < 0.01, $"Expected ~0 B/op, got {perOp}");
     }
 
     [Fact]

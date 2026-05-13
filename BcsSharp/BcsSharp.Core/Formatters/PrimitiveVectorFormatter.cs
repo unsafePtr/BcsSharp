@@ -64,12 +64,4 @@ public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T :
     }
 
 
-    private static int GetULEBSize(uint value)
-    {
-        if (value < 0x80) return 1;
-        if (value < 0x4000) return 2;
-        if (value < 0x200000) return 3;
-        if (value < 0x10000000) return 4;
-        return 5;
-    }
 }

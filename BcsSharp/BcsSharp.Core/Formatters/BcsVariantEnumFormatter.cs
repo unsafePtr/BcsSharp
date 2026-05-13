@@ -201,35 +201,6 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>, IBcsFormatter
         }
     }
 
-    private static int? CalculateVariantDataSize(object instance, BcsVariantInfo variant)
-    {
-        var totalSize = 0;
-
-        foreach (var dataProp in variant.DataProperties)
-        {
-            // Use compiled expression-based getter for optimal performance
-            var value = dataProp.GetValue(instance);
-            var size = dataProp.Formatter.GetObjectSize(value);
-
-            if (size == null)
-                return null;
-
-            totalSize += size.Value;
-        }
-
-        return totalSize;
-    }
-
-
-    private static int GetULEBSize(uint value)
-    {
-        if (value < 0x80) return 1;
-        if (value < 0x4000) return 2;
-        if (value < 0x200000) return 3;
-        if (value < 0x10000000) return 4;
-        return 5;
-    }
-
     /// <summary>
     /// Creates or retrieves a cached constructor delegate for fast object instantiation
     /// </summary>
@@ -315,7 +286,6 @@ public interface IBcsObjectFormatter
 {
     void SerializeObject(ref BcsWriter writer, object? value);
     object? DeserializeObject(ref BcsReader reader);
-    int? GetObjectSize(object? value);
 }
 
 /// <summary>
@@ -349,11 +319,6 @@ public class BcsObjectFormatterAdapter<T> : IBcsObjectFormatter
     public object? DeserializeObject(ref BcsReader reader)
     {
         return _formatter.Deserialize(ref reader);
-    }
-
-    public int? GetObjectSize(object? value)
-    {
-        return null;
     }
 }
 
