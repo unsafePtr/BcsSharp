@@ -43,6 +43,26 @@ public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T :
         return result;
     }
 
+    public void Deserialize(ref BcsReader reader, ref List<T> value)
+    {
+        var count = unchecked((int)reader.ReadULEB32());
+
+        if (value is null)
+        {
+            value = new List<T>(count);
+        }
+        else if (value.Capacity < count)
+        {
+            value.Capacity = count;
+        }
+
+        CollectionsMarshal.SetCount(value, count);
+        if (count > 0)
+        {
+            reader.ReadPrimitiveArray(CollectionsMarshal.AsSpan(value));
+        }
+    }
+
 
     private static int GetULEBSize(uint value)
     {

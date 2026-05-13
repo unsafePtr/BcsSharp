@@ -68,6 +68,19 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
         return instance;
     }
 
+    public void Deserialize(ref BcsReader reader, ref T value)
+    {
+        if (!_isValueType && value is null)
+        {
+            value = _constructor();
+        }
+
+        foreach (var field in _fields)
+        {
+            field.Deserialize(ref reader, ref value);
+        }
+    }
+
     private static Func<T> CreateConstructorDelegate()
     {
         if (typeof(T).IsValueType)
@@ -211,7 +224,10 @@ internal sealed class TypedBcsObjectFieldSerializer<TInstance, TField> : BcsObje
 
     public override void Deserialize(ref BcsReader reader, ref TInstance instance)
     {
-        var fieldValue = _formatter.Deserialize(ref reader);
-        _setter(ref instance, fieldValue);
+        // Pass the current field value through so overriding formatters (BcsObject, List,
+        // Dictionary) can reuse it; default-DIM formatters still allocate fresh.
+        var existing = _getter(instance);
+        _formatter.Deserialize(ref reader, ref existing);
+        _setter(ref instance, existing);
     }
 }

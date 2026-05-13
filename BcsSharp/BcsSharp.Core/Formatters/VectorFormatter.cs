@@ -52,6 +52,29 @@ public sealed class ListFormatter<T> : IBcsFormatter<List<T>>
         return result;
     }
 
+    public void Deserialize(ref BcsReader reader, ref List<T> value)
+    {
+        var length = unchecked((int)reader.ReadULEB32());
+
+        if (value is null)
+        {
+            value = new List<T>(length);
+        }
+        else
+        {
+            value.Clear();
+            if (value.Capacity < length)
+            {
+                value.Capacity = length;
+            }
+        }
+
+        for (int i = 0; i < length; i++)
+        {
+            value.Add(_elementFormatter.Deserialize(ref reader));
+        }
+    }
+
 
     private static int GetULEBSize(uint value)
     {

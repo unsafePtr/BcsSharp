@@ -91,6 +91,31 @@ public static class BcsSerializer
         return formatter.Deserialize(ref reader);
     }
 
+    /// <summary>
+    /// In-place deserialize. Mutates <paramref name="value"/> rather than allocating:
+    /// class targets reuse the existing instance (allocates only if null), collections
+    /// are cleared and refilled, value-type targets are written directly into the
+    /// caller's storage. Useful for pooled-message loops.
+    /// </summary>
+    public static void Deserialize<T>(ReadOnlySpan<byte> data, ref T value, IFormatterResolver? resolver = null)
+    {
+        var reader = new BcsReader(data);
+        Deserialize(ref reader, ref value, resolver);
+    }
+
+    public static void Deserialize<T>(ReadOnlyMemory<byte> data, ref T value, IFormatterResolver? resolver = null)
+    {
+        var reader = new BcsReader(data);
+        Deserialize(ref reader, ref value, resolver);
+    }
+
+    public static void Deserialize<T>(ref BcsReader reader, ref T value, IFormatterResolver? resolver = null)
+    {
+        resolver ??= _defaultResolver;
+        var formatter = resolver.GetFormatter<T>() ?? throw new InvalidOperationException($"No formatter found for type {typeof(T)}");
+        formatter.Deserialize(ref reader, ref value);
+    }
+
 
     /// <summary>
     /// Get formatter for type

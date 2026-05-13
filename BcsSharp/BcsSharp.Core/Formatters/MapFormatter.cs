@@ -103,17 +103,30 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
 
     public Dictionary<TKey, TValue> Deserialize(ref BcsReader reader)
     {
+        Dictionary<TKey, TValue>? result = null;
+        Deserialize(ref reader, ref result!);
+        return result!;
+    }
+
+    public void Deserialize(ref BcsReader reader, ref Dictionary<TKey, TValue> value)
+    {
         var count = reader.ReadULEB32();
-        if (count == 0)
+
+        if (value is null)
         {
-            return new Dictionary<TKey, TValue>();
+            value = new Dictionary<TKey, TValue>((int)count);
+        }
+        else
+        {
+            value.Clear();
+            value.EnsureCapacity((int)count);
         }
 
-        var result = new Dictionary<TKey, TValue>((int)count);
+        if (count == 0)
+        {
+            return;
+        }
 
-        // Sort-order verification: track the previous key's byte range in the input
-        // buffer and compare each new key's range against it. No re-serialization,
-        // no per-iteration allocation.
         int prevKeyStart = -1;
         int prevKeyEnd = -1;
 
@@ -123,7 +136,7 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
             var key = _keyFormatter.Deserialize(ref reader);
             var keyEnd = reader.Position;
 
-            var value = _valueFormatter.Deserialize(ref reader);
+            var val = _valueFormatter.Deserialize(ref reader);
 
             if (prevKeyStart >= 0)
             {
@@ -138,13 +151,11 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
             prevKeyStart = keyStart;
             prevKeyEnd = keyEnd;
 
-            if (!result.TryAdd(key, value))
+            if (!value.TryAdd(key, val))
             {
                 throw new InvalidOperationException($"Duplicate key found in map: {key}");
             }
         }
-
-        return result;
     }
 
     /// <summary>Byte offsets and lengths into a shared serialization scratch buffer.</summary>
