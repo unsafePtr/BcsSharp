@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -24,6 +25,7 @@ namespace BcsSharp.Core.Formatters;
 public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
 {
     private readonly UnionCase[] _cases;
+    private readonly FrozenDictionary<Type, int> _caseIndexByType;
     private readonly Func<TUnion, object?> _valueGetter;
 
     public UnionFormatter()
@@ -47,6 +49,7 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
         }
 
         _cases = new UnionCase[ctors.Length];
+        var indexBuilder = new Dictionary<Type, int>(ctors.Length);
         for (int i = 0; i < ctors.Length; i++)
         {
             var caseType = ctors[i].GetParameters()[0].ParameterType;
@@ -65,7 +68,18 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
                           "or annotate it with [BcsFormatter(typeof(...))]."),
                 UnitConstructor = isUnit ? CompileParameterlessCtor(caseType) : null,
             };
+
+            if (!indexBuilder.TryAdd(caseType, i))
+            {
+                throw new InvalidOperationException(
+                    $"Union {unionType.FullName} declares case type {caseType.FullName} more than once.");
+            }
         }
+
+        // Built once at formatter construction, looked up on every Serialize. Read-heavy
+        // write-never is exactly the FrozenDictionary scenario; lookup is allocation-free
+        // and typically faster than a regular Dictionary at this size.
+        _caseIndexByType = indexBuilder.ToFrozenDictionary();
 
         _valueGetter = CompileValueGetter();
     }
@@ -78,21 +92,21 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
 
         var runtimeType = payload.GetType();
 
-        for (int i = 0; i < _cases.Length; i++)
+        // Exact-type match. Inherited types do not silently coerce to a declared case —
+        // that would write the wrong variant index. Callers must use exactly one of the
+        // declared case types.
+        if (!_caseIndexByType.TryGetValue(runtimeType, out var idx))
         {
-            if (_cases[i].Type.IsAssignableFrom(runtimeType))
-            {
-                writer.WriteULEB((uint)i);
-                if (!_cases[i].IsUnit)
-                {
-                    _cases[i].Formatter!.SerializeObject(ref writer, payload);
-                }
-                return;
-            }
+            throw new InvalidOperationException(
+                $"Runtime type {runtimeType.FullName} does not match any declared case of union {typeof(TUnion).FullName}.");
         }
 
-        throw new InvalidOperationException(
-            $"Runtime type {runtimeType.FullName} does not match any declared case of union {typeof(TUnion).FullName}.");
+        writer.WriteULEB((uint)idx);
+        ref readonly var caseInfo = ref _cases[idx];
+        if (!caseInfo.IsUnit)
+        {
+            caseInfo.Formatter!.SerializeObject(ref writer, payload);
+        }
     }
 
     public TUnion Deserialize(ref BcsReader reader)

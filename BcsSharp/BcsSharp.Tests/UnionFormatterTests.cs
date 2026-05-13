@@ -101,6 +101,30 @@ public class UnionFormatterTests
     }
 
     [Fact]
+    public void Serialize_DerivedTypeNotInCases_ThrowsInsteadOfWritingWrongVariant()
+    {
+        // Regression for finding D from the earlier bug audit: linear-scan + IsAssignableFrom
+        // would silently match a derived runtime type against a base case and write the
+        // wrong variant index. Exact-type match via FrozenDictionary throws instead, which
+        // is the correct semantic — BCS has no encoding for "this is a subtype of X".
+        InheritanceUnion u = new DerivedCase { Value = 5 };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => BcsSerializer.Serialize(u));
+        Assert.Contains("does not match any declared case", ex.Message);
+    }
+
+    [BcsStruct]
+    public class BaseCase
+    {
+        [BcsField(0)] public uint Value { get; set; }
+    }
+
+    [BcsStruct]
+    public sealed class DerivedCase : BaseCase { }
+
+    public union InheritanceUnion(BaseCase);
+
+    [Fact]
     public void Option_None_Singleton_IsZeroAlloc()
     {
         Option<Address> sink = default;
