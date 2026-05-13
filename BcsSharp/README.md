@@ -1,328 +1,266 @@
-# BcsSharp - Binary Canonical Serialization for C#
+# BcsSharp — Binary Canonical Serialization for C#
 
-A high-performance C# implementation of Binary Canonical Serialization (BCS), fully compatible with Rust BCS and the Sui blockchain ecosystem.
+High-performance C# implementation of [Binary Canonical Serialization (BCS)](https://github.com/diem/bcs), byte-for-byte compatible with Rust's `bcs` crate and the Sui blockchain ecosystem.
 
-## Features
+## Highlights
 
-✅ **Full BCS Compliance**: 100% compatible with Rust BCS implementation  
-✅ **Complete Type Support**: All BCS types including primitives, vectors, options, enums, and structs  
-✅ **High Performance**: Zero-allocation readers/writers with ref struct optimization  
-✅ **Type Safety**: Compile-time type checking with C# attributes  
-✅ **Rust Compatible**: Byte-for-byte identical serialization with Rust BCS  
+- **Wire-compatible with Rust BCS.** Verified against `rust-sui-bcs-test` golden vectors for User, GameAsset, Transaction, MarketplaceItem, MapExamples, TupleExamples, large maps, and Rarity variants at positions 0/127/128/129.
+- **Zero-allocation Serialize via `IBufferWriter<byte>` overload.** Caller-owned output buffer + typed per-field dispatch eliminates every box on the hot path.
+- **Zero-allocation Deserialize for value-type targets.** Struct fields are written via compiled `ref T` setters, no instance boxing.
+- **C# 15 `union` types** as the first-class way to model Rust tagged enums and `Option<T>` for reference types.
+- **136 tests** including cross-implementation byte-level checks against the Rust reference crate.
 
-## Supported Types
+## Requirements
 
-### Primitive Types
-- **Integers**: `byte`, `ushort`, `uint`, `ulong`, `UInt128`, `UInt256`
-- **Signed**: `sbyte`, `short`, `int`, `long`, `Int128`
-- **Other**: `bool`, `string` (UTF-8)
+| | |
+|---|---|
+| Target framework | `net11.0` |
+| SDK to build | **.NET 11 SDK** or later (C# 15 compiler required for `union` keyword) |
+| Language version | `<LangVersion>preview</LangVersion>` |
 
-### Complex Types  
-- **Vectors**: `List<T>` (variable-length arrays)
-- **Options**: `T?` (nullable types), `OneOf<None, T>` (explicit options)
-- **Structs**: Classes with `[BcsStruct]` and `[BcsField]`
-- **Enums**: Tagged unions with `[BcsEnum]` and `[BcsEnumVariant]`
+The compiled binary runs on any .NET 10+ runtime, but the build requires .NET 11 SDK because we use the C# 15 `union` keyword. We polyfill `System.Runtime.CompilerServices.UnionAttribute` and `IUnion` until the BCL ships them.
 
-## Quick Start
+## Type mapping
 
-### Installation
+| Rust BCS | C# |
+|---|---|
+| `u8`/`u16`/`u32`/`u64`/`u128`/`u256` | `byte`, `ushort`, `uint`, `ulong`, `UInt128`, `UInt256` |
+| `i8`/`i16`/`i32`/`i64`/`i128` | `sbyte`, `short`, `int`, `long`, `Int128` |
+| `bool`, `String` | `bool`, `string` |
+| `Vec<T>` | `List<T>` (not `T[]`) |
+| `BTreeMap<K, V>` | `Dictionary<K, V>` (sorted by serialized key bytes) |
+| `Option<T>` for value-type `T` | `T?` (e.g. `uint?`, `bool?`) |
+| `Option<T>` for reference-type `T` | `Option<T>` from `BcsSharp.Core.Unions` |
+| `enum Foo { A, B, C }` (unit variants) | `enum Foo { A, B, C }` (CLR enum) |
+| `enum Foo { A(u32), B(String), Common, ... }` | `union Foo(A, B, Common, ...)` (C# 15 `union`) |
+| `(T1, T2, T3)` | `(T1, T2, T3)` (`ValueTuple` up to arity 4) |
+| `struct Foo { a: T1, b: T2 }` | `[BcsStruct] class Foo { [BcsField(0)] public T1 A; [BcsField(1)] public T2 B; }` |
 
-```bash
-# Add to your project
-dotnet add package BcsSharp
-```
-
-### Basic Serialization
+## Quick start
 
 ```csharp
 using BcsSharp.Core;
-
-// Serialize primitive types
-var data = BcsSerializer.Serialize(42u);
-var value = BcsSerializer.Deserialize<uint>(data);
-
-// Serialize strings
-var textData = BcsSerializer.Serialize("Hello BCS!");
-var text = BcsSerializer.Deserialize<string>(textData);
-
-// Serialize collections
-var numbers = new List<uint> { 1, 2, 3, 4, 5 };
-var listData = BcsSerializer.Serialize(numbers);
-var deserializedList = BcsSerializer.Deserialize<List<uint>>(listData);
-```
-
-### Working with Structs
-
-```csharp
 using BcsSharp.Core.Attributes;
+using BcsSharp.Core.Unions;
+using System.Buffers;
 
 [BcsStruct]
 public class User
 {
-    [BcsField(0)]
-    public string Name { get; set; } = "";
-    
-    [BcsField(1)]
-    public uint Age { get; set; }
-    
-    [BcsField(2)]
-    public bool IsActive { get; set; }
-}
-
-// Serialize struct
-var user = new User { Name = "Alice", Age = 30, IsActive = true };
-var userData = BcsSerializer.Serialize(user);
-var deserializedUser = BcsSerializer.Deserialize<User>(userData);
-```
-
-### Working with Options
-
-```csharp
-using OneOf;
-using OneOf.Types;
-
-[BcsStruct]
-public class Person
-{
-    [BcsField(0)]
-    public string Name { get; set; } = "";
-    
-    // Nullable primitive
-    [BcsField(1)] 
-    public uint? Age { get; set; }
-    
-    // Optional reference type (use OneOf<None, T>)
-    [BcsField(2)]
-    public OneOf<None, Address> HomeAddress { get; set; } = new None();
+    [BcsField(0)] public ulong Id { get; set; }
+    [BcsField(1)] public string Name { get; set; } = "";
+    [BcsField(2)] public Option<Address> Address { get; set; } = None.Instance;
 }
 
 [BcsStruct]
 public class Address
 {
-    [BcsField(0)]
-    public string Street { get; set; } = "";
-    
-    [BcsField(1)] 
-    public string City { get; set; } = "";
+    [BcsField(0)] public string City { get; set; } = "";
 }
 
-// Usage
-var person = new Person
+var user = new User { Id = 12345, Name = "Alice", Address = new Address { City = "Plovdiv" } };
+
+// Allocating overload — returns a new byte[]
+byte[] bytes = BcsSerializer.Serialize(user);
+User back = BcsSerializer.Deserialize<User>(bytes);
+
+// Zero-allocation overload — writes into caller-owned buffer
+var bw = new ArrayBufferWriter<byte>(64);
+BcsSerializer.Serialize(bw, user);
+ReadOnlySpan<byte> output = bw.WrittenSpan;
+```
+
+## Options
+
+```csharp
+// Value-type optional → Nullable<T> (zero alloc, value-type semantics)
+[BcsField(0)] public uint? Age { get; set; }
+[BcsField(1)] public bool? IsActive { get; set; }
+
+// Reference-type optional → Option<T> union (zero alloc when T is class)
+[BcsField(2)] public Option<Address> HomeAddress { get; set; } = None.Instance;
+
+// Direct assignment uses C# 15's implicit conversion
+Option<Address> opt = new Address { City = "Sofia" };   // Some
+Option<Address> none = None.Instance;                   // None (singleton)
+
+// Pattern matching
+string city = opt switch
 {
-    Name = "Bob",
-    Age = 25, // Some value
-    HomeAddress = new Address { Street = "123 Main St", City = "Springfield" }
+    None _ => "(unknown)",
+    Address a => a.City,
+    _ => throw new InvalidOperationException(),
 };
-
-var data = BcsSerializer.Serialize(person);
-var restored = BcsSerializer.Deserialize<Person>(data);
 ```
 
-### Working with Enums (Tagged Unions)
+Wire format: `0x00` = None, `0x01 + payload` = Some. Identical to Rust's `Option<T>`.
+
+## Tagged unions (Rust enums with payloads)
 
 ```csharp
-// Define the enum interface
-[BcsEnum]
-public interface IShape { }
+[BcsStruct] public sealed record class Uncommon { [BcsField(0)] public uint Value { get; set; } }
+[BcsStruct] public sealed record class Rare    { [BcsField(0)] public List<uint> Values { get; set; } = []; }
+[BcsStruct] public sealed record class Epic    { [BcsField(0)] public string Name { get; set; } = ""; }
+public sealed record class Common;   // unit variant — no fields
 
-// Define variants
-[BcsEnumVariant(0)]
-public partial class Circle : IShape
-{
-    [BcsEnumData]
-    public uint Radius { get; set; }
-}
+public union Rarity(Common, Uncommon, Rare, Epic);
 
-[BcsEnumVariant(1)]
-public partial class Rectangle : IShape
-{
-    [BcsEnumData] 
-    public uint Width { get; set; }
-    
-    [BcsEnumData]
-    public uint Height { get; set; }
-}
-
-[BcsEnumVariant(2)]
-public partial class Point : IShape
-{
-    // No data - unit variant
-}
-
-// Serialize enum variants
-IShape circle = new Circle { Radius = 10 };
-IShape rectangle = new Rectangle { Width = 20, Height = 30 };
-IShape point = new Point();
-
-var circleData = BcsSerializer.Serialize<IShape>(circle);
-var rectangleData = BcsSerializer.Serialize<IShape>(rectangle);
-var pointData = BcsSerializer.Serialize<IShape>(point);
-
-// Deserialize
-var deserializedCircle = BcsSerializer.Deserialize<IShape>(circleData);
-var deserializedRectangle = BcsSerializer.Deserialize<IShape>(rectangleData);
+// Serialize / deserialize
+Rarity r = new Epic { Name = "Sword" };
+byte[] bytes = BcsSerializer.Serialize(r);
+// → [0x03, 0x05, 'S', 'w', 'o', 'r', 'd']  (variant 3 + ULEB-prefixed UTF-8)
 ```
 
-### Low-level Reader/Writer API
+The variant index is the **declaration order** of constructors (Common=0, Uncommon=1, …). Re-ordering cases is a wire-breaking change — pin the order.
 
-For high-performance scenarios, use the low-level API:
+**Legacy `[BcsEnum]` path** (still supported, useful when you need a shared interface for runtime polymorphism beyond just BCS):
 
 ```csharp
-// Writing data
-var writer = new BcsWriter();
-writer.WriteString("Alice");
-writer.Write32(30);
+[BcsEnum] public interface IRarity {}
+[BcsEnumVariant(0)] public sealed class CommonLegacy : IRarity {}
+[BcsEnumVariant(1)] public sealed class UncommonLegacy : IRarity { [BcsEnumData] public uint Value { get; set; } }
+```
+
+Same wire output as `union`. Prefer `union` for new code.
+
+## CLR enums (Rust's unit-only enums)
+
+```csharp
+public enum AssetType { Weapon = 100, Armor, Consumable, Material, Currency }
+```
+
+Wire format: ULEB128 of the **declaration index**, not the assigned discriminant value. `AssetType.Material` (4th declared) serializes as `0x03`, not `0x40 0x42 0x0F 0x00` (= 1,000,000 LE).
+
+## Custom formatters
+
+### Per-type via attribute
+
+```csharp
+[BcsFormatter(typeof(SuiAddressFormatter))]
+public readonly struct SuiAddress(byte firstByte) { /* ... */ }
+
+public sealed class SuiAddressFormatter : ByteArrayFormatter<SuiAddress>
+{
+    public static readonly SuiAddressFormatter Instance = new();
+    public override int GetLength() => 32;
+    public override ReadOnlySpan<byte> GetBytes(SuiAddress v) => v.Bytes;
+    public override SuiAddress GetFromBytes(ReadOnlySpan<byte> bytes) => new(bytes);
+}
+```
+
+`ByteArrayFormatter<T>` is the recommended base for fixed-length byte-array-backed types. **All three abstracts are span-based — Deserialize is zero-alloc by construction.**
+
+### Manual registration (no source access to the target type)
+
+```csharp
+CustomFormatterResolver.Instance.Register<ThirdPartyType>(new ThirdPartyFormatter());
+BcsSerializer.ClearFormatterCache();   // only needed if registering late
+```
+
+`CustomFormatterResolver` sits first in the resolver chain — it overrides any built-in formatter for the same type.
+
+### Resolver chain (highest priority first)
+
+1. `CustomFormatterResolver` — manual `Register<T>(...)`
+2. `AttributeFormatterResolver` — `[BcsFormatter]` attribute
+3. `SourceGeneratedFormatterResolver` — currently a no-op stub (kept for future source generator)
+4. `StandardResolver` — primitives, `List<T>`, `Dictionary<K,V>`, `ValueTuple<,>/<,,>/<,,,>`, `Nullable<T>`
+5. `UnionResolver` — C# 15 `union` types
+6. `VariantEnumResolver` — `[BcsEnum]` tagged unions
+7. `SimpleEnumResolver` — CLR enums
+8. `ObjectResolver` — `[BcsStruct]` classes/structs
+
+## Allocation profile
+
+Measured per-op on net11 P3 for a `[BcsStruct]` with two `uint` fields:
+
+| Path | Bytes per op |
+|---|---|
+| `Serialize<T>(T) → byte[]` | 32 B (just the output array) |
+| `Serialize<T>(IBufferWriter<byte>, T)` | **0 B** |
+| `Deserialize<T>(bytes)` value-type T | **0 B** |
+| `Deserialize<T>(bytes)` class T | 24 B (the class instance itself; intrinsic) |
+
+For maximum throughput, use the `IBufferWriter<byte>` overload and pool the buffer writer.
+
+The serializer also uses a thread-static 64 KB scratch buffer (lazy-init, reused across calls) so the `byte[]`-returning overload only allocates the final output. Re-entrant Serialize from inside a custom formatter falls back to `ArrayPool<byte>.Shared`.
+
+## Low-level reader / writer API
+
+```csharp
+// Write
+var bw = new ArrayBufferWriter<byte>();
+var writer = new BcsWriter(bw);
+writer.Write(42u);                  // u32 LE
+writer.WriteString("Alice");        // ULEB length + UTF-8
 writer.WriteBool(true);
-writer.WriteULEB(1000u); // ULEB128 encoding
-var bytes = writer.ToBytes();
+writer.WriteULEB(1000u);
 
-// Reading data
-var reader = new BcsReader(bytes);
-var name = reader.ReadString();        // "Alice"
-var age = reader.Read32();            // 30
-var isActive = reader.ReadBool();     // true
-var count = reader.ReadULEB32();      // 1000
+// Read
+var reader = new BcsReader(bw.WrittenMemory);
+var n = reader.Read32();            // 42
+var name = reader.ReadString();     // "Alice"
+var ok = reader.ReadBool();         // true
+var u = reader.ReadULEB32();        // 1000
+
+// Zero-copy bytes view
+ReadOnlySpan<byte> raw = reader.ReadBytesAsSpan(8);
 ```
 
-## Important Rules
+`BcsWriter` is a `ref struct` over an `IBufferWriter<byte>`. `BcsReader` is a `ref struct` over `ReadOnlyMemory<byte>`.
 
-### ⚠️ Arrays vs Lists
-- **Use `List<T>` for vectors** (variable-length)
-- **Avoid `T[]` arrays** (fixed-length, requires custom serializers)
+## Important rules
 
-```csharp
-// ✅ Correct - use List<T>
-[BcsField(0)]
-public List<uint> Numbers { get; set; } = [];
+- **Use `List<T>` for vectors.** Plain `T[]` arrays are explicitly rejected — use `List<T>` to mirror Rust's `Vec<T>`.
+- **`[BcsField]` order is the wire order.** Numbering must be sequential `0, 1, 2, …`. Skipping or reordering is a wire break.
+- **Map keys are sorted by serialized bytes**, not by `IComparable`. Matches BCS spec and Rust's `bcs::ser::MapSerializer` (which re-sorts after `BTreeMap` iteration). For numeric keys, byte order and numeric order coincide for values 0–127 but diverge above that.
+- **Variant index = declaration order** for both `union` and `[BcsEnum]` paths. Re-ordering breaks the wire.
 
-// ❌ Wrong - arrays need custom serializers  
-[BcsField(0)]
-public uint[] Numbers { get; set; } = [];
+## Building & testing
+
+```powershell
+$env:MSBUILDUSESERVER = '1'
+dotnet restore
+dotnet build -p:WarningLevel=0 -v:q --no-restore
+
+# Test (xUnit v3 + Microsoft.Testing.Platform)
+dotnet run --project BcsSharp/BcsSharp.Tests/BcsSharp.Tests.csproj --no-build
+
+# Filter
+dotnet run --project BcsSharp/BcsSharp.Tests/BcsSharp.Tests.csproj -- -class BcsSharp.Tests.RustBcsCompatibilityTests
 ```
 
-### ⚠️ Reference Types and Options
-- **Primitive nullables**: Use `T?` (e.g., `uint?`, `bool?`, `string?`)
-- **Reference type options**: Use `OneOf<None, T>` for optional reference types (classes)
+## Project layout
 
-```csharp
-// ✅ Correct
-[BcsField(0)] public uint? Age { get; set; }                    // Nullable primitive
-[BcsField(1)] public string? Name { get; set; }                 // Nullable string (primitive type)
-[BcsField(2)] public OneOf<None, Address> Address { get; set; } // Optional reference type (class)
+```
+BcsSharp/
+├── BcsSharp.Core/         # The library
+│   ├── Attributes/        # [BcsStruct], [BcsField], [BcsEnum*], [BcsFormatter]
+│   ├── Formatters/        # IBcsFormatter<T> implementations + UnionFormatter, ByteArrayFormatter
+│   ├── Resolvers/         # Composite chain entries
+│   ├── Unions/            # Option<T>, None
+│   ├── Polyfills/         # System.Runtime.CompilerServices.UnionAttribute / IUnion
+│   ├── BcsSerializer.cs   # Public entry points
+│   ├── BcsReader.cs       # ref struct
+│   ├── BcsWriter.cs       # ref struct
+│   └── ScratchBufferWriter.cs
+└── BcsSharp.Tests/        # 136 tests, xUnit v3 MTP
 
-// ❌ Wrong  
-[BcsField(0)] public OneOf<None, string> Name { get; set; }     // Don't use OneOf with strings!
+rust-sui-bcs-test/         # Reference Rust implementation + golden .bcs vectors
 ```
 
-### ⚠️ Enum Variants
-- **Enum variants cannot be serialized directly** - only through their interface
-- This matches Rust BCS behavior exactly
+## Rust compatibility
 
-```csharp
-// ✅ Correct - serialize through interface
-IShape shape = new Circle { Radius = 10 };
-var data = BcsSerializer.Serialize<IShape>(shape);
+Verified byte-for-byte against `rust-sui-bcs-test/*.bcs` for:
 
-// ❌ Wrong - concrete variants can't be serialized directly
-var circle = new Circle { Radius = 10 };
-var data = BcsSerializer.Serialize(circle); // Throws InvalidOperationException
-```
-
-## Field Ordering
-
-BCS requires deterministic field ordering:
-
-```csharp
-[BcsStruct]
-public class Example
-{
-    [BcsField(0)]  // First field
-    public string Name { get; set; } = "";
-    
-    [BcsField(1)]  // Second field  
-    public uint Value { get; set; }
-    
-    // BcsField numbers must be sequential: 0, 1, 2, 3...
-}
-```
-
-## Performance Tips
-
-1. **Use ref structs**: `BcsReader` and `BcsWriter` are ref structs for zero allocations
-2. **Reuse writers**: Create once, clear between uses
-3. **Use spans**: `ReadBytesAsSpan()` avoids allocations
-4. **Primitive arrays**: Use `ReadPrimitiveArray<T>()` for bulk reads
-
-## Rust Compatibility
-
-This implementation is **byte-for-byte compatible** with Rust BCS:
-
-- ✅ Little-endian encoding
-- ✅ ULEB128 canonical encoding  
-- ✅ Boolean validation (0x00/0x01 only)
-- ✅ UTF-8 string handling
-- ✅ Vector length prefixes
-- ✅ Option encoding (0x00 = None, 0x01 + data = Some)
-- ✅ Enum variant indices
-
-## Error Handling
-
-The library provides clear error messages:
-
-```csharp
-// Invalid boolean values
-BcsSerializer.Deserialize<bool>(new byte[] { 2 }); 
-// → InvalidOperationException: "Invalid boolean value: 2. Expected 0 or 1."
-
-// Non-canonical ULEB128
-var reader = new BcsReader(new byte[] { 0x80, 0x00 }); 
-reader.ReadULEB32();
-// → InvalidOperationException: "Non-canonical ULEB128 encoding detected"
-
-// Missing formatter
-BcsSerializer.Serialize(new UnknownType());
-// → InvalidOperationException: "No formatter found for type UnknownType"
-```
-
-## Building and Testing
-
-```bash
-# Build the solution
-dotnet build
-
-# Run all tests (95 tests)
-dotnet test
-
-# Run specific test categories
-dotnet test --filter "RustBcsCompatibility"  # Rust compatibility tests
-dotnet test --filter "CanonicalEncoding"     # BCS specification tests
-```
-
-## Project Structure
-
-- **BcsSharp.Core**: Main library with all BCS functionality
-- **BcsSharp.Tests**: Comprehensive test suite (95 tests)
-- **rust-sui-bcs-test**: Rust reference implementation for compatibility testing
-
-## Technical Implementation
-
-### Architecture
-- **Formatters**: Type-specific serialization logic (`IBcsFormatter<T>`)
-- **Resolvers**: Automatic formatter discovery (`CompositeResolver.Default`)
-- **Attributes**: `[BcsStruct]`, `[BcsField]`, `[BcsEnum]`, `[BcsEnumVariant]`
-- **Zero-copy**: Ref structs and span-based operations
-
-### Memory Management
-- **Zero allocations** for primitive serialization
-- **Minimal allocations** for complex types
-- **Span-based** byte operations
-- **Cached formatters** for performance
-
-## Requirements
-
-- **.NET 9.0** or later
-- **C# 12.0** language features
-- **OneOf** package (for explicit options)
+- `User` (Option<String>, Option<Address>, UInt256, bool)
+- `GameAsset` (CLR enum, Vec<Attribute>)
+- `Transaction`, `MarketplaceItem` (nested structs)
+- `MapExamples` (BTreeMap with string and uint keys)
+- `LargeStringMap` (15-element map, verifies BCS sort order)
+- `TupleExamples` (tuples of mixed primitives and nested structs)
+- `Rarity` union variants (Common, Uncommon, Rare, Epic, Legendary)
+- `LargeEnum` at variant indices 0, 127, 128, 129 (ULEB128 boundary)
 
 ## License
 

@@ -10,7 +10,7 @@
     <PackageId>BcsSharp</PackageId>
     <Version>0.0.1</Version>
     <Authors>Your Name</Authors>
-    <Description>Binary Canonical Serialization (BCS) library for .NET with source generator support</Description>
+    <Description>Binary Canonical Serialization (BCS) library for .NET, wire-compatible with Rust BCS. Zero-allocation hot path, C# 15 union support, suited for Sui/Move and other BCS-based protocols.</Description>
     <PackageTags>bcs;serialization;binary;canonical</PackageTags>
     <RepositoryUrl>https://github.com/yourusername/BcsSharp</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
