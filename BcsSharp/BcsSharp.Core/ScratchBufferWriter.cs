@@ -20,9 +20,12 @@ internal sealed class ScratchBufferWriter : IBufferWriter<byte>
 {
     private const int ScratchSize = 65536;
 
-    [ThreadStatic] private static byte[]? t_scratch;
-    [ThreadStatic] private static bool t_scratchInUse;
-    [ThreadStatic] private static ScratchBufferWriter? t_pooledInstance;
+    [ThreadStatic]
+    private static byte[]? t_scratch;
+    [ThreadStatic]
+    private static bool t_scratchInUse;
+    [ThreadStatic]
+    private static ScratchBufferWriter? t_pooledInstance;
 
     private byte[] _buffer = null!;
     private bool _usingScratch;
