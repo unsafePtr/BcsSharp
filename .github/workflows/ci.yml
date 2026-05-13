@@ -1,0 +1,86 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+# Cancel in-flight runs for the same ref when a new push lands (keeps PR queues sane).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Match the local-dev guidance — same MSBuild server reuse on CI for faster reruns.
+  MSBUILDUSESERVER: '1'
+  # Quiet down telemetry / first-run noise.
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # global.json pins 11.0.100-preview.3.26207.106 with allowPrerelease: true.
+      # setup-dotnet@v4 reads the exact build and fetches it from Microsoft's CDN.
+      # If that exact preview ever 404s (preview rotations sometimes get pulled),
+      # swap to the manual dotnet-install fallback at the bottom of this file.
+      - name: Setup .NET (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Show .NET info
+        run: dotnet --info
+
+      # NuGet package cache. Keyed on the lockfile-equivalent (csproj refs + global.json).
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -p:WarningLevel=0 -v:q --no-restore
+
+      # xUnit v3 + Microsoft.Testing.Platform — `dotnet run` is the canonical runner.
+      # `dotnet test` also works but rebuilds; --no-build keeps CI fast.
+      - name: Test
+        run: dotnet run --project BcsSharp/BcsSharp.Tests/BcsSharp.Tests.csproj --no-build --no-restore -c Debug
+
+# --- Manual dotnet-install fallback ----------------------------------------
+# If actions/setup-dotnet ever fails to find the pinned preview SDK on the CDN,
+# replace the "Setup .NET" step above with this two-step block:
+#
+#   - name: Install .NET 11 preview SDK (Linux/macOS)
+#     if: runner.os != 'Windows'
+#     run: |
+#       curl -sSL https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh -o dotnet-install.sh
+#       chmod +x dotnet-install.sh
+#       ./dotnet-install.sh --version 11.0.100-preview.3.26207.106 --install-dir $HOME/.dotnet
+#       echo "$HOME/.dotnet" >> $GITHUB_PATH
+#       echo "DOTNET_ROOT=$HOME/.dotnet" >> $GITHUB_ENV
+#
+#   - name: Install .NET 11 preview SDK (Windows)
+#     if: runner.os == 'Windows'
+#     shell: pwsh
+#     run: |
+#       Invoke-WebRequest https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.ps1 -OutFile dotnet-install.ps1
+#       ./dotnet-install.ps1 -Version 11.0.100-preview.3.26207.106 -InstallDir "$env:USERPROFILE\.dotnet"
+#       Add-Content $env:GITHUB_PATH "$env:USERPROFILE\.dotnet"
+#       Add-Content $env:GITHUB_ENV "DOTNET_ROOT=$env:USERPROFILE\.dotnet"
