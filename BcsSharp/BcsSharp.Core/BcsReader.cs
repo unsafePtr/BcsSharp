@@ -11,7 +11,7 @@ namespace BcsSharp.Core;
 /// </summary>
 public ref struct BcsReader
 {
-    private readonly ReadOnlyMemory<byte> _data;
+    private readonly ReadOnlySpan<byte> _data;
     private int _position;
 
     public BcsReader(byte[] data)
@@ -21,6 +21,12 @@ public ref struct BcsReader
     }
 
     public BcsReader(ReadOnlyMemory<byte> data)
+    {
+        _data = data.Span;
+        _position = 0;
+    }
+
+    public BcsReader(ReadOnlySpan<byte> data)
     {
         _data = data;
         _position = 0;
@@ -44,7 +50,7 @@ public ref struct BcsReader
     {
         EnsureEnoughBytes(1);
 
-        return _data.Span[_position++];
+        return _data[_position++];
     }
 
     /// <summary>
@@ -55,7 +61,7 @@ public ref struct BcsReader
     {
         EnsureEnoughBytes(2);
 
-        var result = BinaryPrimitives.ReadUInt16LittleEndian(_data.Span.Slice(_position, 2));
+        var result = BinaryPrimitives.ReadUInt16LittleEndian(_data.Slice(_position, 2));
         _position += 2;
         return result;
     }
@@ -67,7 +73,7 @@ public ref struct BcsReader
     public uint Read32()
     {
         EnsureEnoughBytes(4);
-        var result = BinaryPrimitives.ReadUInt32LittleEndian(_data.Span.Slice(_position, 4));
+        var result = BinaryPrimitives.ReadUInt32LittleEndian(_data.Slice(_position, 4));
         _position += 4;
         return result;
     }
@@ -79,7 +85,7 @@ public ref struct BcsReader
     public ulong Read64()
     {
         EnsureEnoughBytes(8);
-        var result = BinaryPrimitives.ReadUInt64LittleEndian(_data.Span.Slice(_position, 8));
+        var result = BinaryPrimitives.ReadUInt64LittleEndian(_data.Slice(_position, 8));
         _position += 8;
         return result;
     }
@@ -92,7 +98,7 @@ public ref struct BcsReader
     {
         EnsureEnoughBytes(1);
 
-        return (sbyte)_data.Span[_position++];
+        return (sbyte)_data[_position++];
     }
 
     /// <summary>
@@ -103,7 +109,7 @@ public ref struct BcsReader
     {
         EnsureEnoughBytes(2);
 
-        var result = BinaryPrimitives.ReadInt16LittleEndian(_data.Span.Slice(_position, 2));
+        var result = BinaryPrimitives.ReadInt16LittleEndian(_data.Slice(_position, 2));
         _position += 2;
         return result;
     }
@@ -115,7 +121,7 @@ public ref struct BcsReader
     public int ReadI32()
     {
         EnsureEnoughBytes(4);
-        var result = BinaryPrimitives.ReadInt32LittleEndian(_data.Span.Slice(_position, 4));
+        var result = BinaryPrimitives.ReadInt32LittleEndian(_data.Slice(_position, 4));
         _position += 4;
         return result;
     }
@@ -127,7 +133,7 @@ public ref struct BcsReader
     public long ReadI64()
     {
         EnsureEnoughBytes(8);
-        var result = BinaryPrimitives.ReadInt64LittleEndian(_data.Span.Slice(_position, 8));
+        var result = BinaryPrimitives.ReadInt64LittleEndian(_data.Slice(_position, 8));
         _position += 8;
         return result;
     }
@@ -139,7 +145,7 @@ public ref struct BcsReader
     public Int128 ReadI128()
     {
         EnsureEnoughBytes(16);
-        var span = _data.Span.Slice(_position, 16);
+        var span = _data.Slice(_position, 16);
         _position += 16;
 
         // Convert from little-endian bytes to Int128
@@ -153,7 +159,7 @@ public ref struct BcsReader
     public UInt128 Read128()
     {
         EnsureEnoughBytes(16);
-        var span = _data.Span.Slice(_position, 16);
+        var span = _data.Slice(_position, 16);
         _position += 16;
 
         // Convert from little-endian bytes to UInt128
@@ -167,7 +173,7 @@ public ref struct BcsReader
     public UInt256 Read256()
     {
         EnsureEnoughBytes(32);
-        var span = _data.Span.Slice(_position, 32);
+        var span = _data.Slice(_position, 32);
         _position += 32;
 
         // Create UInt256 from little-endian bytes - false means little-endian
@@ -186,7 +192,7 @@ public ref struct BcsReader
 
         EnsureEnoughBytes(length);
 
-        var result = _data.Span.Slice(_position, length).ToArray();
+        var result = _data.Slice(_position, length).ToArray();
         _position += length;
         return result;
     }
@@ -201,7 +207,7 @@ public ref struct BcsReader
 
         EnsureEnoughBytes(length);
 
-        var result = _data.Span.Slice(_position, length);
+        var result = _data.Slice(_position, length);
         _position += length;
         return result;
     }
@@ -212,7 +218,7 @@ public ref struct BcsReader
     public uint ReadULEB32()
     {
         uint result = 0;
-        ReadOnlySpan<byte> span = _data.Span;
+        ReadOnlySpan<byte> span = _data;
         int startPosition = _position;
 
         // Byte 1
@@ -321,7 +327,7 @@ public ref struct BcsReader
         if (BitConverter.IsLittleEndian)
         {
             // System is little-endian; BCS data is little-endian; direct copy is fine
-            var sourceBytes = _data.Span.Slice(_position, byteLength);
+            var sourceBytes = _data.Slice(_position, byteLength);
             var destBytes = MemoryMarshal.AsBytes(destination);
             sourceBytes.CopyTo(destBytes);
         }
@@ -337,7 +343,7 @@ public ref struct BcsReader
 
     private void ReadForBigEndian<T>(Span<T> destination, int typeSize, int byteLength) where T : unmanaged
     {
-        var sourceSpan = _data.Span.Slice(_position, byteLength);
+        var sourceSpan = _data.Slice(_position, byteLength);
         var destBytes = MemoryMarshal.AsBytes(destination);
 
         for (int i = 0; i < destination.Length; i++)
@@ -362,7 +368,7 @@ public ref struct BcsReader
     /// to compare already-decoded byte ranges (e.g. <see cref="BcsSharp.Core.Formatters.MapFormatter{TKey,TValue}"/>'s
     /// sort-order check) without re-serializing.
     /// </summary>
-    public ReadOnlySpan<byte> Source => _data.Span;
+    public ReadOnlySpan<byte> Source => _data;
 
     /// <summary>
     /// Reset position to beginning

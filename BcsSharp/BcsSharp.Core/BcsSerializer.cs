@@ -72,6 +72,16 @@ public static class BcsSerializer
     }
 
     /// <summary>
+    /// Deserialize from ReadOnlySpan&lt;byte&gt;. Zero-copy entry point for callers holding
+    /// a stack-allocated buffer, a slice of a larger array, or any other span source.
+    /// </summary>
+    public static T Deserialize<T>(ReadOnlySpan<byte> data, IFormatterResolver? resolver = null)
+    {
+        var reader = new BcsReader(data);
+        return Deserialize<T>(ref reader, resolver);
+    }
+
+    /// <summary>
     /// Deserialize from BcsReader
     /// </summary>
     public static T Deserialize<T>(ref BcsReader reader, IFormatterResolver? resolver = null)
