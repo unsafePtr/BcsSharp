@@ -69,9 +69,10 @@ public class CanonicalEncodingTests
 
         foreach (var (value, expectedCanonical) in testValues)
         {
-            var writer = new BcsWriter(new BcsWriterOptions());
+            var bw = new System.Buffers.ArrayBufferWriter<byte>(8);
+            var writer = new BcsWriter(bw);
             writer.WriteULEB(value);
-            var actualEncoding = writer.ToBytes();
+            var actualEncoding = bw.WrittenSpan.ToArray();
 
             Assert.Equal(expectedCanonical, actualEncoding);
         }

@@ -167,14 +167,15 @@ public class BasicFormatterTests
     public void Map_DuplicateKeys_ShouldThrowOnDeserialize()
     {
         // Arrange - Manually create invalid data with duplicate keys
-        var writer = new BcsWriter(new BcsWriterOptions());
+        var bw = new System.Buffers.ArrayBufferWriter<byte>(64);
+        var writer = new BcsWriter(bw);
         writer.WriteULEB(2u); // 2 entries
         writer.WriteString("key");
         writer.Write(100);
         writer.WriteString("key"); // Duplicate key
         writer.Write(200);
 
-        var invalidData = writer.ToBytes();
+        var invalidData = bw.WrittenSpan.ToArray();
 
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() =>
@@ -185,14 +186,15 @@ public class BasicFormatterTests
     public void Map_UnsortedKeys_ShouldThrowOnDeserialize()
     {
         // Arrange - Manually create invalid data with unsorted keys
-        var writer = new BcsWriter(new BcsWriterOptions());
+        var bw = new System.Buffers.ArrayBufferWriter<byte>(64);
+        var writer = new BcsWriter(bw);
         writer.WriteULEB(2u); // 2 entries
         writer.WriteString("zebra"); // Should come after "alpha"
         writer.Write(100);
         writer.WriteString("alpha");
         writer.Write(200);
 
-        var invalidData = writer.ToBytes();
+        var invalidData = bw.WrittenSpan.ToArray();
 
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() =>
