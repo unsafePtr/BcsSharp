@@ -11,16 +11,22 @@
     <Version>0.0.1</Version>
     <Authors>Your Name</Authors>
     <Description>Binary Canonical Serialization (BCS) library for .NET, wire-compatible with Rust BCS. Zero-allocation hot path, C# 15 union support, suited for Sui/Move and other BCS-based protocols.</Description>
-    <PackageTags>bcs;serialization;binary;canonical</PackageTags>
+    <PackageTags>bcs;serialization;binary;canonical;sui;move</PackageTags>
     <RepositoryUrl>https://github.com/yourusername/BcsSharp</RepositoryUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- PACKAGE.md lives one directory up next to README.md. README.md targets the GitHub
+         repo audience (building, layout); PACKAGE.md is the consumer-facing doc shown on nuget.org. -->
+    <None Include="..\PACKAGE.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Nethermind.Numerics.Int256" Version="1.5.0" />
     <PackageReference Include="OneOf" Version="3.0.271" />
   </ItemGroup>
-
 
 </Project>
