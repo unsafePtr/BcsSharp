@@ -63,6 +63,43 @@ jobs:
       - name: Test
         run: dotnet run --project BcsSharp/BcsSharp.Tests/BcsSharp.Tests.csproj --no-build --no-restore -c Debug
 
+  # Rust cross-implementation parity. Builds a Dockerized Rust fixture generator
+  # via Testcontainers, runs the explicit-only tests that compare bytes against the
+  # C# serializer. Linux-only (Docker is native there); kept separate from the main
+  # build matrix so it doesn't gate PR feedback on Docker availability.
+  rust-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -p:WarningLevel=0 -v:q --no-restore
+
+      # `-explicit on` enables tests marked [Fact(Explicit = true)] — the parity tests
+      # that spin up the Rust Docker container via Testcontainers and compare bytes.
+      - name: Parity tests (--explicit on)
+        run: >
+          dotnet run --project BcsSharp/BcsSharp.Tests/BcsSharp.Tests.csproj
+          --no-build --no-restore -c Debug
+          --
+          -explicit on
+
 # --- Manual dotnet-install fallback ----------------------------------------
 # If actions/setup-dotnet ever fails to find the pinned preview SDK on the CDN,
 # replace the "Setup .NET" step above with this two-step block:
