@@ -11,6 +11,14 @@ namespace BcsSharp.Tests;
 /// </summary>
 public class RustBcsCompatibilityTests
 {
+    /// <summary>
+    /// Resolves a fixture filename to its absolute path on disk. Anchored to the test
+    /// source file via <see cref="CallerFilePathAttribute"/> so the lookup is robust no
+    /// matter what working directory the test runner picked.
+    /// </summary>
+    private static string FixturePath(string filename, [CallerFilePath] string sourceFile = "")
+        => Path.Combine(Path.GetDirectoryName(sourceFile)!, "Fixtures", "rust-bcs", filename);
+
     #region Enums (C# equivalent of Rust enums)
 
     public enum AssetType
@@ -279,7 +287,7 @@ public class RustBcsCompatibilityTests
         Console.WriteLine($"Length: {serialized.Length} bytes");
 
         // Assert - Read expected bytes from user.bcs file and compare
-        var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "user.bcs");
+        var rustBcsPath = FixturePath("user.bcs");
         var expectedBytes = File.ReadAllBytes(rustBcsPath);
 
         Console.WriteLine($"Rust User serialized as: {Convert.ToHexString(expectedBytes)}");
@@ -315,7 +323,7 @@ public class RustBcsCompatibilityTests
         Console.WriteLine($"Length: {serialized.Length} bytes");
 
         // Assert - Read expected bytes from asset.bcs file and compare
-        var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "asset.bcs");
+        var rustBcsPath = FixturePath("asset.bcs");
         var expectedBytes = File.ReadAllBytes(rustBcsPath);
 
         Console.WriteLine($"Rust GameAsset serialized as: {Convert.ToHexString(expectedBytes)}");
@@ -346,7 +354,7 @@ public class RustBcsCompatibilityTests
         Console.WriteLine($"Length: {serialized.Length} bytes");
 
         // Assert - Read expected bytes from transaction.bcs file and compare
-        var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "transaction.bcs");
+        var rustBcsPath = FixturePath("transaction.bcs");
         var expectedBytes = File.ReadAllBytes(rustBcsPath);
 
         Console.WriteLine($"Rust Transaction serialized as: {Convert.ToHexString(expectedBytes)}");
@@ -388,7 +396,7 @@ public class RustBcsCompatibilityTests
         Console.WriteLine($"Length: {serialized.Length} bytes");
 
         // Assert - Read expected bytes from marketplace.bcs file and compare
-        var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "marketplace.bcs");
+        var rustBcsPath = FixturePath("marketplace.bcs");
         var expectedBytes = File.ReadAllBytes(rustBcsPath);
 
         Console.WriteLine($"Rust MarketplaceItem serialized as: {Convert.ToHexString(expectedBytes)}");
@@ -455,7 +463,7 @@ public class RustBcsCompatibilityTests
         Console.WriteLine($"Length: {serialized.Length} bytes");
 
         // Assert - Read expected bytes from tuples.bcs file and compare
-        var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "tuples.bcs");
+        var rustBcsPath = FixturePath("tuples.bcs");
         var expectedBytes = File.ReadAllBytes(rustBcsPath);
 
         Console.WriteLine($"Rust TupleExamples serialized as: {Convert.ToHexString(expectedBytes)}");
@@ -503,7 +511,7 @@ public class RustBcsCompatibilityTests
         Console.WriteLine($"Length: {serialized.Length} bytes");
 
         // Assert - Read expected bytes from maps.bcs file and compare
-        var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "maps.bcs");
+        var rustBcsPath = FixturePath("maps.bcs");
         var expectedBytes = File.ReadAllBytes(rustBcsPath);
 
         Console.WriteLine($"Rust MapExamples serialized as: {Convert.ToHexString(expectedBytes)}");
@@ -543,7 +551,7 @@ public class RustBcsCompatibilityTests
         Console.WriteLine($"Length: {serialized.Length} bytes");
 
         // Assert - Read expected bytes from large_string_map.bcs file and compare
-        var rustBcsPath = Path.Combine("..", "..", "..", "..", "..", "rust-sui-bcs-test", "large_string_map.bcs");
+        var rustBcsPath = FixturePath("large_string_map.bcs");
         var expectedBytes = File.ReadAllBytes(rustBcsPath);
 
         Console.WriteLine($"Rust LargeStringMap serialized as: {Convert.ToHexString(expectedBytes)}");
