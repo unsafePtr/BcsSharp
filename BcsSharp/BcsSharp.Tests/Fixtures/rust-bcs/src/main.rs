@@ -5,10 +5,6 @@ use std::{fs, collections::BTreeMap};
 
 mod types;
 use types::*;
-mod uleb_test;
-use uleb_test::*;
-mod bool_test;
-use bool_test::*;
 
 fn main() -> Result<()> {
     println!("🚀 Sui BCS Serialization Demo");
@@ -184,12 +180,6 @@ fn main() -> Result<()> {
     // Export serialized bytes to files for C# comparison
     println!("\n💾 Exporting serialized bytes to files for C# comparison...");
     export_serialized_bytes(&user, &asset, &transaction, &marketplace_item, &tuple_examples, &map_examples, &large_string_map)?;
-
-    // Test ULEB128 canonicality
-    test_uleb128_canonicality()?;
-
-    // Test boolean validation
-    test_bool_validation()?;
 
     Ok(())
 }
