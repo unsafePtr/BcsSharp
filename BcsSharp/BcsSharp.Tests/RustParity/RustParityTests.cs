@@ -17,7 +17,7 @@ namespace BcsSharp.Tests.RustParity;
 public class RustParityTests(RustBcsContainer rust)
 {
     [Fact(Explicit = true)]
-    public async Task User_BytesMatchRustExactly()
+    public async Task User()
     {
         var user = SampleUser();
 
@@ -28,7 +28,7 @@ public class RustParityTests(RustBcsContainer rust)
     }
 
     [Fact(Explicit = true)]
-    public async Task GameAsset_BytesMatchRustExactly()
+    public async Task GameAsset()
     {
         var asset = SampleAsset();
 
@@ -39,7 +39,7 @@ public class RustParityTests(RustBcsContainer rust)
     }
 
     [Fact(Explicit = true)]
-    public async Task Transaction_BytesMatchRustExactly()
+    public async Task Transaction()
     {
         var tx = SampleTransaction();
 
@@ -50,7 +50,7 @@ public class RustParityTests(RustBcsContainer rust)
     }
 
     [Fact(Explicit = true)]
-    public async Task MarketplaceItem_BytesMatchRustExactly()
+    public async Task MarketplaceItem()
     {
         var item = new RustBcsCompatibilityTests.MarketplaceItem
         {
@@ -69,7 +69,7 @@ public class RustParityTests(RustBcsContainer rust)
     }
 
     [Fact(Explicit = true)]
-    public async Task TupleExamples_BytesMatchRustExactly()
+    public async Task TupleExamples()
     {
         var tuples = new RustBcsCompatibilityTests.TupleExamples
         {
@@ -87,7 +87,7 @@ public class RustParityTests(RustBcsContainer rust)
     }
 
     [Fact(Explicit = true)]
-    public async Task MapExamples_BytesMatchRustExactly()
+    public async Task MapExamples()
     {
         var maps = new RustBcsCompatibilityTests.MapExamples
         {
@@ -117,7 +117,7 @@ public class RustParityTests(RustBcsContainer rust)
     }
 
     [Fact(Explicit = true)]
-    public async Task LargeStringMap_BytesMatchRustExactly()
+    public async Task LargeStringMap()
     {
         // 15 entries — verifies BCS key-byte sort order under realistic UTF-8 keys.
         var map = new Dictionary<string, uint>
