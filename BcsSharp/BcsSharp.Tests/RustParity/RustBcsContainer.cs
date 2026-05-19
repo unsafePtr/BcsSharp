@@ -64,8 +64,7 @@ public sealed class RustBcsContainer : IAsyncLifetime
                 .Build();
             await image.CreateAsync(ct);
 
-            var container = new ContainerBuilder()
-                .WithImage(ImageName)
+            var container = new ContainerBuilder(image)
                 .WithCleanUp(true)
                 .Build();
             await container.StartAsync(ct);
