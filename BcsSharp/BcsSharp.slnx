@@ -1,0 +1,10 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="BcsSharp.Benchmarks/BcsSharp.Benchmarks.csproj" />
+  <Project Path="BcsSharp.Core/BcsSharp.Core.csproj" />
+  <Project Path="BcsSharp.Tests/BcsSharp.Tests.csproj" />
+</Solution>
