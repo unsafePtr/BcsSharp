@@ -8,7 +8,7 @@
 # The image build is two stages — only the tiny runtime stage is kept around.
 
 # --- Stage 1: compile Rust binaries and run them to generate fixtures ----------
-FROM rust:1.93-slim AS builder
+FROM rust:1.93-alpine AS builder
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ RUN mkdir /fixtures && \
     /app/target/release/large_enum
 
 # --- Stage 2: just the generated fixtures + an idle entrypoint -----------------
-FROM debian:bookworm-slim
+FROM alpine:3
 
 COPY --from=builder /fixtures /fixtures
 
