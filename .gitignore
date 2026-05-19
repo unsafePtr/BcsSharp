@@ -428,3 +428,6 @@ FodyWeavers.xsd
 *.msp
 
 .serena/
+
+# Stray Windows reserved-name file (created when shells redirect to `nul` without proper quoting).
+nul
