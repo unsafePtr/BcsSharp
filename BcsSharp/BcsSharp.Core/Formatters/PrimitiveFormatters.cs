@@ -1,4 +1,3 @@
-using Nethermind.Int256;
 
 namespace BcsSharp.Core.Formatters;
 
@@ -93,15 +92,6 @@ public sealed class Int128Formatter : IBcsFormatter<Int128>
 
     public void Serialize(ref BcsWriter writer, Int128 value) => writer.Write(value);
     public Int128 Deserialize(ref BcsReader reader) => reader.ReadI128();
-}
-
-public sealed class UInt256Formatter : IBcsFormatter<UInt256>
-{
-    public static readonly UInt256Formatter Instance = new();
-    public Type TargetType => typeof(UInt256);
-
-    public void Serialize(ref BcsWriter writer, UInt256 value) => writer.Write(value);
-    public UInt256 Deserialize(ref BcsReader reader) => reader.Read256();
 }
 
 public sealed class BoolFormatter : IBcsFormatter<bool>

@@ -42,7 +42,6 @@ public sealed class SourceGeneratedFormatterResolver : IFormatterResolver
                 { typeof(long), Int64Formatter.Instance },
                 { typeof(UInt128), UInt128Formatter.Instance },
                 { typeof(Int128), Int128Formatter.Instance },
-                { typeof(Nethermind.Int256.UInt256), UInt256Formatter.Instance },
                 { typeof(bool), BoolFormatter.Instance },
 
                 { typeof(byte?), OptionFormatterCache.ByteOptionFormatter },
@@ -55,7 +54,6 @@ public sealed class SourceGeneratedFormatterResolver : IFormatterResolver
                 { typeof(long?), OptionFormatterCache.Int64OptionFormatter },
                 { typeof(UInt128?), OptionFormatterCache.UInt128OptionFormatter },
                 { typeof(Int128?), OptionFormatterCache.Int128OptionFormatter },
-                { typeof(Nethermind.Int256.UInt256?), OptionFormatterCache.UInt256OptionFormatter },
                 { typeof(bool?), OptionFormatterCache.BoolOptionFormatter }
 
         };

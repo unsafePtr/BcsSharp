@@ -2,7 +2,6 @@ using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using BcsSharp.Core.Helpers;
-using Nethermind.Int256;
 
 namespace BcsSharp.Core;
 
@@ -167,20 +166,6 @@ public ref struct BcsReader
     }
 
     /// <summary>
-    /// Read 256-bit unsigned integer
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public UInt256 Read256()
-    {
-        EnsureEnoughBytes(32);
-        var span = _data.Slice(_position, 32);
-        _position += 32;
-
-        // Create UInt256 from little-endian bytes - false means little-endian
-        return new UInt256(span, isBigEndian: false);
-    }
-
-    /// <summary>
     /// Read specified number of bytes into a newly-allocated array. Prefer
     /// <see cref="ReadBytesAsSpan"/> on hot paths where the caller doesn't need
     /// ownership — that overload returns a zero-copy span over the input buffer.
@@ -319,7 +304,7 @@ public ref struct BcsReader
     /// Uses MemoryMarshal to directly copy memory without element-by-element deserialization.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void ReadPrimitiveArray<T>(Span<T> destination) where T : unmanaged
+    public void ReadPrimitiveArray<T>(scoped Span<T> destination) where T : unmanaged
     {
         var byteLength = destination.Length * Unsafe.SizeOf<T>();
         EnsureEnoughBytes(byteLength);
@@ -341,7 +326,7 @@ public ref struct BcsReader
         _position += byteLength;
     }
 
-    private void ReadForBigEndian<T>(Span<T> destination, int typeSize, int byteLength) where T : unmanaged
+    private void ReadForBigEndian<T>(scoped Span<T> destination, int typeSize, int byteLength) where T : unmanaged
     {
         var sourceSpan = _data.Slice(_position, byteLength);
         var destBytes = MemoryMarshal.AsBytes(destination);

@@ -12,7 +12,6 @@ public static class OptionFormatterCache
     public static readonly OptionFormatter<long> Int64OptionFormatter = new OptionFormatter<long>(Int64Formatter.Instance);
     public static readonly OptionFormatter<UInt128> UInt128OptionFormatter = new OptionFormatter<UInt128>(UInt128Formatter.Instance);
     public static readonly OptionFormatter<Int128> Int128OptionFormatter = new OptionFormatter<Int128>(Int128Formatter.Instance);
-    public static readonly OptionFormatter<Nethermind.Int256.UInt256> UInt256OptionFormatter = new OptionFormatter<Nethermind.Int256.UInt256>(UInt256Formatter.Instance);
     public static readonly OptionFormatter<bool> BoolOptionFormatter = new OptionFormatter<bool>(BoolFormatter.Instance);
 }
 

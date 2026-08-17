@@ -45,7 +45,7 @@ ReadOnlySpan<byte> output = bw.WrittenSpan;
 
 | Rust | C# |
 |---|---|
-| `u8`/`u16`/`u32`/`u64`/`u128`/`u256` | `byte`, `ushort`, `uint`, `ulong`, `UInt128`, `UInt256` |
+| `u8`/`u16`/`u32`/`u64`/`u128` | `byte`, `ushort`, `uint`, `ulong`, `UInt128` |
 | `i8`/`i16`/`i32`/`i64`/`i128` | `sbyte`, `short`, `int`, `long`, `Int128` |
 | `bool`, `String` | `bool`, `string` |
 | `Vec<T>` | `List<T>` (not `T[]`) |
@@ -126,6 +126,24 @@ BcsSerializer.ClearFormatterCache();   // only needed if registering late
 ```
 
 `CustomFormatterResolver` sits first in the resolver chain — overrides any built-in formatter.
+
+### 256-bit integers (Sui `u256`)
+
+Not shipped, by design: BCS has no 256-bit type — the format and serde's data model both stop at 128 bits. Sui's Move `u256` delegates to a fixed `[u8; 32]` array, encoded as **32 bare little-endian bytes with no length prefix** (as a `Vec<u8>` it would be 33). That framing is an application convention, not BCS, so it lives in a consumer formatter:
+
+```csharp
+public void Serialize(ref BcsWriter writer, UInt256 value)   // Nethermind.Int256
+{
+    Span<byte> littleEndian = stackalloc byte[32];
+    value.ToLittleEndian(littleEndian);
+    writer.WriteBytes(littleEndian);
+}
+
+public UInt256 Deserialize(ref BcsReader reader)
+    => new(reader.ReadBytesAsSpan(32), isBigEndian: false);
+```
+
+Register it as above; `UInt256?`, `List<UInt256>` and `[BcsStruct]` fields then work unchanged.
 
 ## Allocation profile
 

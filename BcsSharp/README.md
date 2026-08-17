@@ -24,7 +24,7 @@ The compiled binary runs on any .NET 10+ runtime, but the build requires .NET 11
 
 | Rust BCS | C# |
 |---|---|
-| `u8`/`u16`/`u32`/`u64`/`u128`/`u256` | `byte`, `ushort`, `uint`, `ulong`, `UInt128`, `UInt256` |
+| `u8`/`u16`/`u32`/`u64`/`u128` | `byte`, `ushort`, `uint`, `ulong`, `UInt128` |
 | `i8`/`i16`/`i32`/`i64`/`i128` | `sbyte`, `short`, `int`, `long`, `Int128` |
 | `bool`, `String` | `bool`, `string` |
 | `Vec<T>` | `List<T>` (not `T[]`) |
@@ -159,6 +159,32 @@ BcsSerializer.ClearFormatterCache();   // only needed if registering late
 
 `CustomFormatterResolver` sits first in the resolver chain — it overrides any built-in formatter for the same type.
 
+### 256-bit integers (Sui `u256`)
+
+BCS has no 256-bit type — the format stops at 128 bits, as does serde's data model, which the reference Rust `bcs` crate is built on. Sui's Move `u256` gets its encoding by delegating to a fixed `[u8; 32]` array, so it is **32 bare little-endian bytes with no length prefix** (a `Vec<u8>` of the same bytes would be 33: ULEB `0x20` + data). Because that framing is an application-level convention rather than part of BCS, the library does not ship it — supply it with a formatter:
+
+```csharp
+public sealed class SuiUInt256Formatter : IBcsFormatter<UInt256>   // Nethermind.Int256
+{
+    public static readonly SuiUInt256Formatter Instance = new();
+    public Type TargetType => typeof(UInt256);
+
+    public void Serialize(ref BcsWriter writer, UInt256 value)
+    {
+        Span<byte> littleEndian = stackalloc byte[32];
+        value.ToLittleEndian(littleEndian);
+        writer.WriteBytes(littleEndian);          // no ULEB prefix — fixed-size array
+    }
+
+    public UInt256 Deserialize(ref BcsReader reader)
+        => new(reader.ReadBytesAsSpan(32), isBigEndian: false);   // zero-copy
+}
+
+CustomFormatterResolver.Instance.Register(SuiUInt256Formatter.Instance);
+```
+
+`UInt256?`, `List<UInt256>` and `[BcsStruct]` fields of that type then resolve through the same chain with no further wiring. A chain that encodes 256-bit values differently (big-endian, or length-prefixed) is a one-line change to the same formatter. See `BcsSharp.Tests/Extensibility/` for the worked example, verified byte-for-byte against Rust.
+
 ### Resolver chain (highest priority first)
 
 1. `CustomFormatterResolver` — manual `Register<T>(...)`
@@ -253,7 +279,7 @@ rust-sui-bcs-test/         # Reference Rust implementation + golden .bcs vectors
 
 Verified byte-for-byte against `rust-sui-bcs-test/*.bcs` for:
 
-- `User` (Option<String>, Option<Address>, UInt256, bool)
+- `User` (Option<String>, Option<Address>, Sui `u256` via a custom formatter, bool)
 - `GameAsset` (CLR enum, Vec<Attribute>)
 - `Transaction`, `MarketplaceItem` (nested structs)
 - `MapExamples` (BTreeMap with string and uint keys)
