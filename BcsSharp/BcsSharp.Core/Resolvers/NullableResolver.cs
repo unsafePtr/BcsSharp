@@ -56,7 +56,6 @@ public sealed class NullableResolver : IFormatterResolver
         if (underlyingType == typeof(long)) return OptionFormatterCache.Int64OptionFormatter;
         if (underlyingType == typeof(UInt128)) return OptionFormatterCache.UInt128OptionFormatter;
         if (underlyingType == typeof(Int128)) return OptionFormatterCache.Int128OptionFormatter;
-        if (underlyingType == typeof(Nethermind.Int256.UInt256)) return OptionFormatterCache.UInt256OptionFormatter;
         if (underlyingType == typeof(bool)) return OptionFormatterCache.BoolOptionFormatter;
 
         return null;

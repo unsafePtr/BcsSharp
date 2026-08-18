@@ -34,7 +34,6 @@ public sealed class StandardResolver : IFormatterResolver
         if (type == typeof(long)) return Int64Formatter.Instance;
         if (type == typeof(UInt128)) return UInt128Formatter.Instance;
         if (type == typeof(Int128)) return Int128Formatter.Instance;
-        if (type == typeof(Nethermind.Int256.UInt256)) return UInt256Formatter.Instance;
         if (type == typeof(bool)) return BoolFormatter.Instance;
         if (type == typeof(string)) return StringFormatter.Instance;
 

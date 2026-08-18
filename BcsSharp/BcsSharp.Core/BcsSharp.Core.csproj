@@ -25,7 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Nethermind.Numerics.Int256" Version="1.5.0" />
     <PackageReference Include="OneOf" Version="3.0.271" />
   </ItemGroup>
 

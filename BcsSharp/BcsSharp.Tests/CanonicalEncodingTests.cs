@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using BcsSharp.Core;
-using Nethermind.Int256;
 using Xunit;
 
 namespace BcsSharp.Tests;
@@ -275,29 +274,6 @@ public class CanonicalEncodingTests
         };
 
         Assert.Equal(expected, serialized);
-    }
-
-    [Fact]
-    public void U256Encoding_ShouldUseLittleEndian()
-    {
-        // Test u256 canonical encoding  
-        var value = new UInt256(0x12345678);
-        var serialized = BcsSerializer.Serialize(value);
-
-        // Should be 32 bytes in little-endian format
-        Assert.Equal(32, serialized.Length);
-
-        // First 4 bytes should contain the value in little-endian
-        Assert.Equal(0x78, serialized[0]);
-        Assert.Equal(0x56, serialized[1]);
-        Assert.Equal(0x34, serialized[2]);
-        Assert.Equal(0x12, serialized[3]);
-
-        // Remaining bytes should be zero
-        for (int i = 4; i < 32; i++)
-        {
-            Assert.Equal(0x00, serialized[i]);
-        }
     }
 
     [Fact]

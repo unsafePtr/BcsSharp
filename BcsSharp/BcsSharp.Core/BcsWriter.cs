@@ -3,7 +3,6 @@ using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using BcsSharp.Core.Helpers;
-using Nethermind.Int256;
 
 namespace BcsSharp.Core;
 
@@ -155,19 +154,6 @@ public ref struct BcsWriter
         AdvanceWrite(16);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Write(UInt256 value)
-    {
-        // The Nethermind library checks the destination size before writing, so we copy
-        // out to a stackalloc'd buffer first.
-        Span<byte> littleEndianBytes = stackalloc byte[32];
-        value.ToLittleEndian(littleEndianBytes);
-
-        var span = GetWriteSpan(32);
-        littleEndianBytes.CopyTo(span);
-        AdvanceWrite(32);
-    }
-
     /// <summary>
     /// Write ULEB128 from 32-bit uint. Used to encode lengths and enum variant indices.
     /// </summary>
@@ -222,7 +208,7 @@ public ref struct BcsWriter
     /// Write primitive array using a direct memory copy on little-endian platforms.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WritePrimitiveArray<T>(ReadOnlySpan<T> values) where T : unmanaged
+    public void WritePrimitiveArray<T>(scoped ReadOnlySpan<T> values) where T : unmanaged
     {
         if (BitConverter.IsLittleEndian)
         {
@@ -250,7 +236,7 @@ public ref struct BcsWriter
 
     /// <summary>Write raw bytes from a span.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WriteBytes(ReadOnlySpan<byte> bytes)
+    public void WriteBytes(scoped ReadOnlySpan<byte> bytes)
     {
         if (bytes.Length == 0) return;
         var span = GetWriteSpan(bytes.Length);
