@@ -28,6 +28,7 @@ public sealed class RustBcsContainer : IAsyncLifetime
         {
             await _container.DisposeAsync();
         }
+
         _startGate.Dispose();
     }
 
