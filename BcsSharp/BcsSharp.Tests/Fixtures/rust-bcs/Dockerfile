@@ -8,7 +8,7 @@
 # The image build is two stages — only the tiny runtime stage is kept around.
 
 # --- Stage 1: compile Rust binaries and run them to generate fixtures ----------
-FROM rust:1.93-alpine AS builder
+FROM rust:1.97-alpine AS builder
 
 WORKDIR /app
 

@@ -1,15 +1,11 @@
 [package]
 name = "sui-bcs-serialization"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
-# Standard BCS serialization - latest 0.1.x
-bcs = "0.1.6"
-# Serde for derive macros - latest 1.0.x
-serde = { version = "1.0.219", features = ["derive"] }
-# Error handling - latest 1.0.x
-anyhow = "1.0.98"
-# Hex encoding for display - latest 0.4.x
+bcs = "0.2.1"
+serde = { version = "1.0.229", features = ["derive"] }
+anyhow = "1.0.104"
 hex = "0.4.3"
-primitive-types = { version = "0.13.1" }
+primitive-types = "0.14.0"
