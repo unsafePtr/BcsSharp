@@ -56,7 +56,7 @@ public sealed class CompositeResolver : IFormatterResolver
     }
 
     /// <summary>
-    /// Default instance with recommended resolver chain for source-generated, nullable types, OneOf types, enums, objects, and standard types
+    /// Default instance with recommended resolver chain for source-generated, nullable types, unions, enums, objects, and standard types
     /// </summary>
     public static readonly CompositeResolver Default = new CompositeResolver(
         CreateResolverChain()

@@ -3,6 +3,7 @@ using BcsSharp.Core.Attributes;
 using BcsSharp.Core.Formatters;
 using BcsSharp.Core.Resolvers;
 using BcsSharp.Core.Unions;
+using BcsSharp.Tests.Extensibility;
 using OneOf;
 using BcsNone = BcsSharp.Core.Unions.None;
 using OneOfNone = OneOf.Types.None;
