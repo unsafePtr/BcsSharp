@@ -56,11 +56,6 @@ pub struct User {
     pub address: Option<Address>
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Notes {
-    pub description: String,
-}
-
 /// Represents an address for a user
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct  Address {
@@ -129,15 +124,6 @@ pub struct MarketplaceItem {
     pub is_active: bool,
 }
 
-/// Complex nested structure for advanced serialization testing
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct GameState {
-    pub players: Vec<User>,
-    pub active_transactions: Vec<Transaction>,
-    pub marketplace: Vec<MarketplaceItem>,
-    pub global_stats: GlobalStats,
-}
-
 /// legendary asset with additional properties
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LegendaryAsset {
@@ -174,20 +160,6 @@ pub struct SuiCompatibleData {
     pub balance: u64,
     /// Arbitrary metadata as raw bytes
     pub metadata: Vec<u8>,
-}
-
-/// Example of a struct that could represent a Sui object
-/// Note: Real Sui objects would use UID instead of String for id
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct SuiObjectExample {
-    /// Object ID (would be UID in real Sui Move)
-    pub id: String,
-    /// Version of the object
-    pub version: u64,
-    /// Object owner
-    pub owner: String,
-    /// Object data
-    pub data: Vec<u8>,
 }
 
 /// Tuple examples for BCS serialization testing
