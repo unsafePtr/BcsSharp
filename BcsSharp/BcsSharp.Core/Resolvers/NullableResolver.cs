@@ -19,6 +19,8 @@ public sealed class NullableResolver : IFormatterResolver
         return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), CreateFormatter);
     }
 
+    internal static void ClearCache() => _formatterCache.Clear();
+
     private static object? CreateFormatter(Type type)
     {
         // Only handle nullable value types (T?)

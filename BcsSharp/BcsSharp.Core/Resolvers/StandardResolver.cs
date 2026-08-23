@@ -21,6 +21,8 @@ public sealed class StandardResolver : IFormatterResolver
         return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), CreateFormatter);
     }
 
+    internal static void ClearCache() => _formatterCache.Clear();
+
     private static object? CreateFormatter(Type type)
     {
         // Primitive types

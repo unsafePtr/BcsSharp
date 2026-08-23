@@ -125,9 +125,20 @@ public static class BcsSerializer
     }
 
     /// <summary>
-    /// Clears <see cref="CompositeResolver"/>'s shared lookup cache. Call after any
+    /// Clears every formatter cache. Call after any
     /// <see cref="CustomFormatterResolver.Register{T}"/> done after the first serialize
     /// (e.g. in tests), so cached null misses don't shadow the new registration.
+    /// Composite formatters (maps, lists, tuples, object fields) capture their child
+    /// formatters at construction, so clearing the lookup caches alone is not enough —
+    /// <see cref="Formatters.FormatterCache"/> holds those composed instances and must
+    /// go too, otherwise a stale child formatter outlives the registration that made it.
     /// </summary>
-    public static void ClearFormatterCache() => CompositeResolver.ClearCache();
+    public static void ClearFormatterCache()
+    {
+        CompositeResolver.ClearCache();
+        StandardResolver.ClearCache();
+        NullableResolver.ClearCache();
+        UnionResolver.ClearCache();
+        Formatters.FormatterCache.Clear();
+    }
 }
