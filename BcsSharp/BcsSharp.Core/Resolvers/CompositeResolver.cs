@@ -19,11 +19,14 @@ public sealed class CompositeResolver : IFormatterResolver
         ObjectResolver.Instance
     ];
 
-    private static readonly ConcurrentDictionary<Type, object?> _formatterCache = new();
+    private readonly ConcurrentDictionary<Type, object?> _formatterCache = new();
 
     public CompositeResolver(params IFormatterResolver[] resolvers)
     {
-        _resolvers = resolvers ?? throw new ArgumentNullException(nameof(resolvers));
+        ArgumentNullException.ThrowIfNull(resolvers);
+
+        // Copy so a caller mutating their array later can't desync the chain from the cache.
+        _resolvers = resolvers.ToArray();
     }
 
     public IBcsFormatter<T>? GetFormatter<T>()
@@ -83,9 +86,12 @@ public sealed class CompositeResolver : IFormatterResolver
     }
 
     /// <summary>
-    /// Clears the shared formatter lookup cache. Call this after late
+    /// Clears this chain's formatter lookup cache. Call this after late
     /// <see cref="CustomFormatterResolver.Register{T}"/> calls so cached misses don't
     /// shadow the new registration. Intended for tests and one-shot startup wiring.
     /// </summary>
-    public static void ClearCache() => _formatterCache.Clear();
+    public void Clear() => _formatterCache.Clear();
+
+    /// <summary>Clears <see cref="Default"/>'s cache.</summary>
+    public static void ClearCache() => Default.Clear();
 }
