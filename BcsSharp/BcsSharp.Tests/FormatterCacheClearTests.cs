@@ -9,6 +9,7 @@ namespace BcsSharp.Tests;
 /// globally, so a registration that is later undone must not outlive
 /// <see cref="BcsSerializer.ClearFormatterCache"/>.
 /// </summary>
+[Collection("GlobalFormatterRegistry")]
 public class FormatterCacheClearTests
 {
     [Fact]

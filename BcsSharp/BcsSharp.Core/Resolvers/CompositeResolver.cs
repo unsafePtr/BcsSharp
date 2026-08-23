@@ -65,6 +65,19 @@ public sealed class CompositeResolver : IFormatterResolver
         CreateResolverChain()
     );
 
+    /// <summary>
+    /// Builds a chain with <paramref name="resolvers"/> ahead of the default chain, each
+    /// with its own lookup cache. Use this instead of registering on
+    /// <see cref="CustomFormatterResolver.Instance"/> when the override should not be
+    /// visible process-wide.
+    /// </summary>
+    public static CompositeResolver Create(params IFormatterResolver[] resolvers)
+    {
+        ArgumentNullException.ThrowIfNull(resolvers);
+
+        return new CompositeResolver([.. resolvers, .. CreateResolverChain()]);
+    }
+
     private static IFormatterResolver[] CreateResolverChain()
     {
         var resolvers = new List<IFormatterResolver>

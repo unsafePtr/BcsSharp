@@ -22,6 +22,7 @@ namespace BcsSharp.Tests;
 /// to the new <see cref="Option{T}"/> union output, so existing on-the-wire data
 /// remains compatible regardless of which optional type the user picks.
 /// </summary>
+[Collection("GlobalFormatterRegistry")]
 public class OneOfManualRegistrationTests
 {
     [Fact]

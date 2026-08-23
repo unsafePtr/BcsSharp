@@ -27,24 +27,18 @@ public class ByteArrayFormatterAllocTests
     [Fact]
     public void Deserialize_IsZeroAlloc()
     {
-        CustomFormatterResolver.Instance.Register<SpanAddress>(new SpanAddressFormatter());
-        BcsSerializer.ClearFormatterCache();
-        try
-        {
-            var bytes = BcsSerializer.Serialize(new SpanAddress(0xAB));
+        var custom = new CustomFormatterResolver();
+        custom.Register<SpanAddress>(new SpanAddressFormatter());
+        var resolver = CompositeResolver.Create(custom);
 
-            var perOp = MeasureBytesPerOp(() => _ = BcsSerializer.Deserialize<SpanAddress>(bytes));
+        var bytes = BcsSerializer.Serialize(new SpanAddress(0xAB), resolver);
 
-            Console.WriteLine($"ByteArrayFormatter deserialize: {perOp:F4} B/op");
-            // Effectively zero. The tiny upper bound tolerates one-off JIT codegen
-            // landing inside the measurement window on Debug builds.
-            Assert.True(perOp < 0.01, $"Expected ~0 B/op, got {perOp}");
-        }
-        finally
-        {
-            CustomFormatterResolver.Instance.Unregister<SpanAddress>();
-            BcsSerializer.ClearFormatterCache();
-        }
+        var perOp = MeasureBytesPerOp(() => _ = BcsSerializer.Deserialize<SpanAddress>(bytes, resolver));
+
+        Console.WriteLine($"ByteArrayFormatter deserialize: {perOp:F4} B/op");
+        // Effectively zero. The tiny upper bound tolerates one-off JIT codegen
+        // landing inside the measurement window on Debug builds.
+        Assert.True(perOp < 0.01, $"Expected ~0 B/op, got {perOp}");
     }
 
     // --- Fixtures -----------------------------------------------------------
