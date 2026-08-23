@@ -15,11 +15,16 @@ namespace BcsSharp.Core.Resolvers;
 /// </remarks>
 public sealed class CustomFormatterResolver : IFormatterResolver
 {
+    /// <summary>
+    /// Process-wide registry consulted by <see cref="CompositeResolver.Default"/>.
+    /// Registering here affects every caller; for a scoped override construct an instance
+    /// and pass it to <see cref="CompositeResolver.Create"/>.
+    /// </summary>
     public static readonly CustomFormatterResolver Instance = new();
 
     private readonly ConcurrentDictionary<Type, object> _formatters = new();
 
-    private CustomFormatterResolver() { }
+    public CustomFormatterResolver() { }
 
     public void Register<T>(IBcsFormatter<T> formatter)
     {

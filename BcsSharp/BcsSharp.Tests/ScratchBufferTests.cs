@@ -62,23 +62,16 @@ public class ScratchBufferTests
         // The formatter for the outer type performs its own nested BcsSerializer.Serialize
         // call while the outer scratch is still active. The nested call must transparently
         // fall back to a pooled buffer.
-        CustomFormatterResolver.Instance.Register<Outer>(new OuterFormatter());
-        BcsSerializer.ClearFormatterCache();
+        var custom = new CustomFormatterResolver();
+        custom.Register<Outer>(new OuterFormatter());
+        var resolver = CompositeResolver.Create(custom);
 
-        try
-        {
-            var outer = new Outer(123, "nested");
-            var bytes = BcsSerializer.Serialize(outer);
-            var back = BcsSerializer.Deserialize<Outer>(bytes);
+        var outer = new Outer(123, "nested");
+        var bytes = BcsSerializer.Serialize(outer, resolver);
+        var back = BcsSerializer.Deserialize<Outer>(bytes, resolver);
 
-            Assert.Equal(outer.Id, back.Id);
-            Assert.Equal(outer.Name, back.Name);
-        }
-        finally
-        {
-            CustomFormatterResolver.Instance.Unregister<Outer>();
-            BcsSerializer.ClearFormatterCache();
-        }
+        Assert.Equal(outer.Id, back.Id);
+        Assert.Equal(outer.Name, back.Name);
     }
 
     [Fact]
@@ -124,24 +117,17 @@ public class ScratchBufferTests
         // Register a formatter that always throws. If Serialize<T>'s finally{Return()}
         // is wired correctly, t_scratchInUse is cleared and the next call on this
         // thread can claim the scratch again — and produce a correct payload.
-        CustomFormatterResolver.Instance.Register<ThrowingMarker>(new ThrowingFormatter());
-        BcsSerializer.ClearFormatterCache();
+        var custom = new CustomFormatterResolver();
+        custom.Register<ThrowingMarker>(new ThrowingFormatter());
+        var resolver = CompositeResolver.Create(custom);
 
-        try
-        {
-            Assert.Throws<InvalidOperationException>(() =>
-                BcsSerializer.Serialize(new ThrowingMarker()));
+        Assert.Throws<InvalidOperationException>(() =>
+            BcsSerializer.Serialize(new ThrowingMarker(), resolver));
 
-            // Same thread, immediately after — must not see "scratch already in use".
-            var bytes = BcsSerializer.Serialize<uint>(0xDEADBEEF);
-            var back = BcsSerializer.Deserialize<uint>(bytes);
-            Assert.Equal(0xDEADBEEFu, back);
-        }
-        finally
-        {
-            CustomFormatterResolver.Instance.Unregister<ThrowingMarker>();
-            BcsSerializer.ClearFormatterCache();
-        }
+        // Same thread, immediately after — must not see "scratch already in use".
+        var bytes = BcsSerializer.Serialize<uint>(0xDEADBEEF, resolver);
+        var back = BcsSerializer.Deserialize<uint>(bytes, resolver);
+        Assert.Equal(0xDEADBEEFu, back);
     }
 
     public sealed record ThrowingMarker;

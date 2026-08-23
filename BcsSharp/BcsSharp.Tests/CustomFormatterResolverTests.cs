@@ -12,23 +12,16 @@ public class CustomFormatterResolverTests
     [Fact]
     public void RegisterBeforeFirstUse_Works()
     {
-        CustomFormatterResolver.Instance.Register<UnattributedAddress>(new UnattributedAddressFormatter());
-        BcsSerializer.ClearFormatterCache();
+        var custom = new CustomFormatterResolver();
+        custom.Register<UnattributedAddress>(new UnattributedAddressFormatter());
+        var resolver = CompositeResolver.Create(custom);
 
-        try
-        {
-            var addr = new UnattributedAddress(0xCD);
+        var addr = new UnattributedAddress(0xCD);
 
-            var bytes = BcsSerializer.Serialize(addr);
-            var back = BcsSerializer.Deserialize<UnattributedAddress>(bytes);
+        var bytes = BcsSerializer.Serialize(addr, resolver);
+        var back = BcsSerializer.Deserialize<UnattributedAddress>(bytes, resolver);
 
-            Assert.Equal(addr, back);
-        }
-        finally
-        {
-            CustomFormatterResolver.Instance.Unregister<UnattributedAddress>();
-            BcsSerializer.ClearFormatterCache();
-        }
+        Assert.Equal(addr, back);
     }
 
     [Fact]
@@ -37,19 +30,12 @@ public class CustomFormatterResolverTests
         // The built-in int formatter writes a little-endian 4-byte payload. FakeIntFormatter
         // emits a single 0xFF byte regardless of input — observing that proves the manual
         // registration beats StandardResolver in the chain.
-        CustomFormatterResolver.Instance.Register<int>(new FakeIntFormatter());
-        BcsSerializer.ClearFormatterCache();
+        var custom = new CustomFormatterResolver();
+        custom.Register<int>(new FakeIntFormatter());
+        var resolver = CompositeResolver.Create(custom);
 
-        try
-        {
-            var bytes = BcsSerializer.Serialize(123);
-            Assert.Equal(new byte[] { 0xFF }, bytes);
-        }
-        finally
-        {
-            CustomFormatterResolver.Instance.Unregister<int>();
-            BcsSerializer.ClearFormatterCache();
-        }
+        var bytes = BcsSerializer.Serialize(123, resolver);
+        Assert.Equal(new byte[] { 0xFF }, bytes);
     }
 
     public readonly struct UnattributedAddress : IEquatable<UnattributedAddress>
