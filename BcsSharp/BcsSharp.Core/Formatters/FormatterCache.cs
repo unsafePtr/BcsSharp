@@ -20,4 +20,10 @@ internal static class FormatterCache
     {
         return (T)_formatterCache.GetOrAdd(key, t => factory(t)!);
     }
+
+    /// <summary>
+    /// Drops every cached formatter. Entries here capture their child formatters at
+    /// construction, so a late registration is invisible until they are rebuilt.
+    /// </summary>
+    public static void Clear() => _formatterCache.Clear();
 }

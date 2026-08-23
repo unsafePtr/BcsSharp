@@ -20,6 +20,8 @@ public sealed class UnionResolver : IFormatterResolver
     public IBcsFormatter<T>? GetFormatter<T>() =>
         (IBcsFormatter<T>?)_cache.GetOrAdd(typeof(T), CreateFormatter);
 
+    internal static void ClearCache() => _cache.Clear();
+
     private static object? CreateFormatter(Type type)
     {
         if (type.GetCustomAttribute<UnionAttribute>() is null)
