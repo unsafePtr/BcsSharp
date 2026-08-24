@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 
 namespace BcsSharp.Core.Resolvers;
 
@@ -29,6 +30,7 @@ public sealed class CompositeResolver : IFormatterResolver
         _resolvers = resolvers.ToArray();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? root)
     {
         // Fast path: avoid the GetOrAdd lambda because it captures both `this` (for

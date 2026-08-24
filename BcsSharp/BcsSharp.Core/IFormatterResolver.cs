@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace BcsSharp.Core;
 
 /// <summary>
@@ -20,6 +22,7 @@ public static class FormatterResolverExtensions
     /// an optional parameter so it stays a genuine zero-argument method — an optional
     /// parameter would break every method-group conversion of <c>GetFormatter</c>.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IBcsFormatter<T>? GetFormatter<T>(this IFormatterResolver resolver) =>
         resolver.GetFormatter<T>(null);
 }
