@@ -24,7 +24,9 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
     public Type TargetType => TypeCached;
     private static Type TypeCached { get; } = typeof(T);
 
-    public BcsObjectFormatter()
+    public BcsObjectFormatter() : this(null) { }
+
+    public BcsObjectFormatter(IFormatterResolver? root)
     {
         var bcsStructAttr = TargetType.GetCustomAttribute<BcsStructAttribute>();
         if (bcsStructAttr == null)
@@ -33,7 +35,7 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
         }
 
         _isValueType = TargetType.IsValueType;
-        _fields = DiscoverAndCompileFields(TargetType);
+        _fields = DiscoverAndCompileFields(TargetType, root);
         _constructor = CreateConstructorDelegate();
 
         if (_fields.Length == 0)
@@ -97,7 +99,7 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
         }
     }
 
-    private static BcsObjectFieldSerializer<T>[] DiscoverAndCompileFields(Type objectType)
+    private static BcsObjectFieldSerializer<T>[] DiscoverAndCompileFields(Type objectType, IFormatterResolver? root)
     {
         var serializers = new List<BcsObjectFieldSerializer<T>>();
 
@@ -137,7 +139,7 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
                 continue;
             }
 
-            var serializer = CreateTypedFieldSerializer(member, memberType);
+            var serializer = CreateTypedFieldSerializer(member, memberType, root);
             serializer.Order = fieldAttr.Order;
             serializers.Add(serializer);
         }
@@ -146,7 +148,7 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
         return [.. serializers];
     }
 
-    private static BcsObjectFieldSerializer<T> CreateTypedFieldSerializer(MemberInfo member, Type memberType)
+    private static BcsObjectFieldSerializer<T> CreateTypedFieldSerializer(MemberInfo member, Type memberType, IFormatterResolver? root)
     {
         var memberName = member.Name;
 
@@ -165,18 +167,18 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
         var setter = Expression.Lambda(setterDelegateType, setterAssign, setterInstanceParam, setterValueParam).Compile();
 
         // Resolve the typed IBcsFormatter<TField> directly (skip the boxed adapter).
-        var typedFormatter = GetTypedFormatter(memberType)
+        var typedFormatter = GetTypedFormatter(memberType, root)
             ?? throw new InvalidOperationException($"No BCS formatter found for field {memberName} of type {memberType.Name}");
 
         var serializerType = typeof(TypedBcsObjectFieldSerializer<,>).MakeGenericType(typeof(T), memberType);
         return (BcsObjectFieldSerializer<T>)Activator.CreateInstance(serializerType, getter, setter, typedFormatter)!;
     }
 
-    private static object? GetTypedFormatter(Type type)
+    private static object? GetTypedFormatter(Type type, IFormatterResolver? root)
     {
         var method = typeof(BcsSerializer).GetMethod(nameof(BcsSerializer.GetFormatter), BindingFlags.Public | BindingFlags.Static);
         var generic = method?.MakeGenericMethod(type);
-        return generic?.Invoke(null, new object?[] { null });
+        return generic?.Invoke(null, [root]);
     }
 }
 

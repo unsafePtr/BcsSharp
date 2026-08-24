@@ -19,10 +19,12 @@ public sealed class ObjectResolver : IFormatterResolver
 
     public IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? root)
     {
-        return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), CreateFormatter);
+        // The formatter captures a formatter per field, so it belongs to the chain that
+        // built it. The root chain owns the cache.
+        return (IBcsFormatter<T>?)CreateFormatter(typeof(T), root ?? this);
     }
 
-    private static object? CreateFormatter(Type type)
+    private static object? CreateFormatter(Type type, IFormatterResolver root)
     {
         try
         {
@@ -43,7 +45,7 @@ public sealed class ObjectResolver : IFormatterResolver
 
             // Create BcsObjectFormatter<T>
             var formatterType = typeof(BcsObjectFormatter<>).MakeGenericType(type);
-            return Activator.CreateInstance(formatterType);
+            return Activator.CreateInstance(formatterType, root);
         }
         catch (Exception)
         {
