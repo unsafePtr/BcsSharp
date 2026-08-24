@@ -133,9 +133,5 @@ public static class BcsSerializer
     /// <see cref="CompositeResolver.Create"/> is unaffected — clear it via its own
     /// <see cref="CompositeResolver.Clear"/>.
     /// </summary>
-    public static void ClearFormatterCache()
-    {
-        CompositeResolver.ClearCache();
-        UnionResolver.ClearCache();
-    }
+    public static void ClearFormatterCache() => CompositeResolver.ClearCache();
 }

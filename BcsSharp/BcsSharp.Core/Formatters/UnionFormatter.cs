@@ -28,7 +28,9 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
     private readonly FrozenDictionary<Type, int> _caseIndexByType;
     private readonly Func<TUnion, object?> _valueGetter;
 
-    public UnionFormatter()
+    public UnionFormatter() : this(null) { }
+
+    public UnionFormatter(IFormatterResolver? root)
     {
         var unionType = typeof(TUnion);
         if (unionType.GetCustomAttribute<UnionAttribute>() is null)
@@ -61,7 +63,7 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
                 Constructor = CompileCtorDelegate(ctors[i]),
                 Formatter = isUnit
                     ? null
-                    : BcsSerializerExtensions.GetFormatter(caseType)
+                    : BcsSerializerExtensions.GetFormatter(caseType, root)
                       ?? throw new InvalidOperationException(
                           $"No BCS formatter resolved for union case {caseType.FullName} of {unionType.FullName}. " +
                           "Mark the case type with [BcsStruct], register a formatter via CustomFormatterResolver, " +

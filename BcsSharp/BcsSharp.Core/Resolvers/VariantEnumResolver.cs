@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Reflection;
 using BcsSharp.Core.Attributes;
 using BcsSharp.Core.Formatters;
@@ -28,16 +27,14 @@ public sealed class VariantEnumResolver : IFormatterResolver
 {
     public static readonly VariantEnumResolver Instance = new();
 
-    private readonly ConcurrentDictionary<Type, object?> _formatterCache = new();
-
     private VariantEnumResolver() { }
 
     public IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? root)
     {
-        return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), CreateFormatter);
+        return (IBcsFormatter<T>?)CreateFormatter(typeof(T), root ?? this);
     }
 
-    private static object? CreateFormatter(Type type)
+    private static object? CreateFormatter(Type type, IFormatterResolver root)
     {
         if (type.GetCustomAttribute<BcsEnumAttribute>() is null)
         {
@@ -45,6 +42,6 @@ public sealed class VariantEnumResolver : IFormatterResolver
         }
 
         var formatterType = typeof(BcsVariantEnumFormatter<>).MakeGenericType(type);
-        return Activator.CreateInstance(formatterType);
+        return Activator.CreateInstance(formatterType, root);
     }
 }

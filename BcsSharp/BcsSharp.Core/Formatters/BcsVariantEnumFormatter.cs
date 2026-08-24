@@ -24,8 +24,13 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>, IBcsFormatter
 
     public Type TargetType { get; } = typeof(T);
 
-    public BcsVariantEnumFormatter()
+    private readonly IFormatterResolver? _root;
+
+    public BcsVariantEnumFormatter() : this(null) { }
+
+    public BcsVariantEnumFormatter(IFormatterResolver? root)
     {
+        _root = root;
         var bcsEnumAttr = TargetType.GetCustomAttribute<BcsEnumAttribute>() ?? throw new InvalidOperationException($"Type {TargetType.Name} must be marked with [BcsEnum] attribute");
         var variants = DiscoverVariants(TargetType);
 
@@ -167,7 +172,7 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>, IBcsFormatter
             if (dataAttr == null)
                 continue;
 
-            var formatter = BcsSerializerExtensions.GetFormatter(prop.PropertyType) ?? throw new InvalidOperationException($"No BCS formatter found for property {prop.Name} of type {prop.PropertyType.Name}");
+            var formatter = BcsSerializerExtensions.GetFormatter(prop.PropertyType, _root) ?? throw new InvalidOperationException($"No BCS formatter found for property {prop.Name} of type {prop.PropertyType.Name}");
             properties.Add(new BcsDataProperty
             {
                 Property = prop,
@@ -327,11 +332,11 @@ public class BcsObjectFormatterAdapter<T> : IBcsObjectFormatter
 /// </summary>
 public static class BcsSerializerExtensions
 {
-    public static IBcsObjectFormatter? GetFormatter(Type type)
+    public static IBcsObjectFormatter? GetFormatter(Type type, IFormatterResolver? root = null)
     {
         var method = typeof(BcsSerializer).GetMethod(nameof(BcsSerializer.GetFormatter), BindingFlags.Public | BindingFlags.Static);
         var genericMethod = method?.MakeGenericMethod(type);
-        var formatter = genericMethod?.Invoke(null, new object?[] { null }); // Pass null for the optional resolver parameter
+        var formatter = genericMethod?.Invoke(null, [root]); // null falls back to the default chain
 
         if (formatter == null)
             return null;
