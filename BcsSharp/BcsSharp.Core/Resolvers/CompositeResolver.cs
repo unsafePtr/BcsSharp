@@ -29,7 +29,7 @@ public sealed class CompositeResolver : IFormatterResolver
         _resolvers = resolvers.ToArray();
     }
 
-    public IBcsFormatter<T>? GetFormatter<T>()
+    public IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? root)
     {
         // Fast path: avoid the GetOrAdd lambda because it captures both `this` (for
         // _resolvers) and the generic parameter T, forcing a fresh delegate allocation
@@ -39,14 +39,14 @@ public sealed class CompositeResolver : IFormatterResolver
             return (IBcsFormatter<T>?)cached;
         }
 
-        return GetFormatterSlow<T>();
+        return GetFormatterSlow<T>(root ?? this);
     }
 
-    private IBcsFormatter<T>? GetFormatterSlow<T>()
+    private IBcsFormatter<T>? GetFormatterSlow<T>(IFormatterResolver root)
     {
         foreach (var resolver in _resolvers)
         {
-            var formatter = resolver.GetFormatter<T>();
+            var formatter = resolver.GetFormatter<T>(root);
             if (formatter != null)
             {
                 _formatterCache.TryAdd(typeof(T), formatter);

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using BcsSharp.Core.Formatters;
 
 namespace BcsSharp.Core.Resolvers;
@@ -10,18 +9,15 @@ namespace BcsSharp.Core.Resolvers;
 public sealed class NullableResolver : IFormatterResolver
 {
     public static readonly NullableResolver Instance = new();
-    private static readonly ConcurrentDictionary<Type, object?> _formatterCache = new();
 
     private NullableResolver() { }
 
-    public IBcsFormatter<T>? GetFormatter<T>()
+    public IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? root)
     {
-        return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), CreateFormatter);
+        return (IBcsFormatter<T>?)CreateFormatter(typeof(T), root ?? this);
     }
 
-    internal static void ClearCache() => _formatterCache.Clear();
-
-    private static object? CreateFormatter(Type type)
+    private static object? CreateFormatter(Type type, IFormatterResolver root)
     {
         // Only handle nullable value types (T?)
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
@@ -34,7 +30,7 @@ public sealed class NullableResolver : IFormatterResolver
                 return cachedFormatter;
 
             // Fall back to dynamic creation for other types
-            var underlyingFormatter = GetFormatterForUnderlyingType(underlyingType);
+            var underlyingFormatter = GetFormatterForUnderlyingType(underlyingType, root);
             if (underlyingFormatter != null)
             {
                 var optionFormatterType = typeof(OptionFormatter<>).MakeGenericType(underlyingType);
@@ -63,7 +59,7 @@ public sealed class NullableResolver : IFormatterResolver
         return null;
     }
 
-    private static object? GetFormatterForUnderlyingType(Type type)
+    private static object? GetFormatterForUnderlyingType(Type type, IFormatterResolver root)
     {
         // Go through the full resolver chain so that [BcsStruct] value types, custom
         // attribute-registered types, etc. all work as Nullable<T> payloads — not just
@@ -71,6 +67,6 @@ public sealed class NullableResolver : IFormatterResolver
         // delegate-to-chain pattern used by GetFormatterForType in StandardResolver.
         var method = typeof(IFormatterResolver).GetMethod(nameof(IFormatterResolver.GetFormatter))
             ?.MakeGenericMethod(type);
-        return method?.Invoke(CompositeResolver.Default, null);
+        return method?.Invoke(root, [null]);
     }
 }

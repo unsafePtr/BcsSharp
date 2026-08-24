@@ -17,7 +17,9 @@ public sealed class ListFormatter<T> : IBcsFormatter<List<T>>
 
     public static ListFormatter<T> GetInstance(IBcsFormatter<T> elementFormatter)
     {
-        return FormatterCache.GetOrAddFormatter(typeof(List<T>), _ => new ListFormatter<T>(elementFormatter));
+        // Captures elementFormatter, so it belongs to the chain that resolved it; the root
+        // chain owns the cache.
+        return new ListFormatter<T>(elementFormatter);
     }
 
     public void Serialize(ref BcsWriter writer, List<T> value)

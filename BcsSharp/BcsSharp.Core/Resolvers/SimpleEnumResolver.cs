@@ -16,7 +16,7 @@ public sealed class SimpleEnumResolver : IFormatterResolver
 
     private SimpleEnumResolver() { }
 
-    public IBcsFormatter<T>? GetFormatter<T>()
+    public IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? root)
     {
         return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), CreateFormatter);
     }
