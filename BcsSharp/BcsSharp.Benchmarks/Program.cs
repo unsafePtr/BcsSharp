@@ -11,7 +11,6 @@ public class Program
     {
         Console.WriteLine("🚀 BcsSharp vs MessagePack Benchmarks");
         Console.WriteLine("=====================================");
-        // Forward args so --filter / --job work from the command line.
         BenchmarkRunner.Run<SerializationBenchmarks>(null, args);
 
         //var config = ManualConfig.Create(DefaultConfig.Instance)
