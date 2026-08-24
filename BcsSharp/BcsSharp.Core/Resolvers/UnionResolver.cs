@@ -17,7 +17,7 @@ public sealed class UnionResolver : IFormatterResolver
 
     private UnionResolver() { }
 
-    public IBcsFormatter<T>? GetFormatter<T>() =>
+    public IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? root) =>
         (IBcsFormatter<T>?)_cache.GetOrAdd(typeof(T), CreateFormatter);
 
     internal static void ClearCache() => _cache.Clear();

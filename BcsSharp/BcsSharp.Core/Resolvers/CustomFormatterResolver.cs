@@ -52,7 +52,7 @@ public sealed class CustomFormatterResolver : IFormatterResolver
 
     public void Clear() => _formatters.Clear();
 
-    public IBcsFormatter<T>? GetFormatter<T>()
+    public IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? root)
     {
         return _formatters.TryGetValue(typeof(T), out var formatter)
             ? (IBcsFormatter<T>)formatter

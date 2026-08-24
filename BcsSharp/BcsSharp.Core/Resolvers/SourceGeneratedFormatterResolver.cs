@@ -24,7 +24,7 @@ public sealed class SourceGeneratedFormatterResolver : IFormatterResolver
     }
 
     /// <inheritdoc/>
-    public IBcsFormatter<T>? GetFormatter<T>() => FormatterCache<T>.Formatter;
+    public IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? root) => FormatterCache<T>.Formatter;
 
     private static class FormatterCache<T>
     {
@@ -74,7 +74,7 @@ public sealed class SourceGeneratedFormatterResolver : IFormatterResolver
                 return null;
             });
 
-            var formatter = resolver?.GetFormatter<T>();
+            var formatter = resolver?.GetFormatter<T>(null);
             if (formatter != null)
                 return formatter;
 
@@ -95,7 +95,7 @@ public sealed class SourceGeneratedFormatterResolver : IFormatterResolver
                         return null;
                     });
 
-                    formatter = assemblyResolver?.GetFormatter<T>();
+                    formatter = assemblyResolver?.GetFormatter<T>(null);
                     if (formatter != null)
                         return formatter;
                 }

@@ -14,7 +14,7 @@ public sealed class AttributeFormatterResolver : IFormatterResolver
 
     private AttributeFormatterResolver() { }
 
-    public IBcsFormatter<T>? GetFormatter<T>() => Cache<T>.Formatter;
+    public IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? root) => Cache<T>.Formatter;
 
     private static class Cache<T>
     {

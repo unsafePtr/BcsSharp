@@ -11,7 +11,7 @@ public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T :
 
     public static PrimitiveListFormatter<T> GetInstance()
     {
-        return FormatterCache.GetOrAddFormatter(typeof(List<T>), _ => new PrimitiveListFormatter<T>());
+        return new PrimitiveListFormatter<T>();
     }
 
     public void Serialize(ref BcsWriter writer, List<T> value)

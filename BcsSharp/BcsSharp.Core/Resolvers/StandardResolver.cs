@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using BcsSharp.Core.Formatters;
 using BcsSharp.Core.Helpers;
@@ -12,18 +11,18 @@ namespace BcsSharp.Core.Resolvers;
 public sealed class StandardResolver : IFormatterResolver
 {
     public static readonly StandardResolver Instance = new();
-    private static readonly ConcurrentDictionary<Type, object?> _formatterCache = new();
 
     private StandardResolver() { }
 
-    public IBcsFormatter<T>? GetFormatter<T>()
+    public IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? root)
     {
-        return (IBcsFormatter<T>?)_formatterCache.GetOrAdd(typeof(T), CreateFormatter);
+        // Composed formatters (list/map/tuple) capture their children, so they are only
+        // valid for the chain that supplied them. The root chain owns that cache; caching
+        // here by type alone would serve one chain's children to another.
+        return (IBcsFormatter<T>?)CreateFormatter(typeof(T), root ?? this);
     }
 
-    internal static void ClearCache() => _formatterCache.Clear();
-
-    private static object? CreateFormatter(Type type)
+    private static object? CreateFormatter(Type type, IFormatterResolver root)
     {
         // Primitive types
         if (type == typeof(byte)) return ByteFormatter.Instance;
@@ -46,7 +45,7 @@ public sealed class StandardResolver : IFormatterResolver
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
         {
             var method = typeof(NullableResolver).GetMethod(nameof(NullableResolver.GetFormatter))?.MakeGenericMethod(type);
-            return method?.Invoke(NullableResolver.Instance, null);
+            return method?.Invoke(NullableResolver.Instance, [root]);
         }
 
         // Generic arrays
@@ -63,14 +62,14 @@ public sealed class StandardResolver : IFormatterResolver
             // Use specialized primitive formatter for primitive types
             if (IsPrimitiveType(elementType))
             {
-                return FormatterCache.GetOrAddFormatter(type, _ => CreatePrimitiveListFormatter(elementType));
+                return CreatePrimitiveListFormatter(elementType);
             }
             else
             {
-                var elementFormatter = GetFormatterForType(elementType);
+                var elementFormatter = GetFormatterForType(elementType, root);
                 if (elementFormatter != null)
                 {
-                    return FormatterCache.GetOrAddFormatter(type, _ => CreateListFormatter(elementType, elementFormatter));
+                    return CreateListFormatter(elementType, elementFormatter);
                 }
             }
         }
@@ -86,12 +85,12 @@ public sealed class StandardResolver : IFormatterResolver
             var comparableInterface = typeof(IComparable<>).MakeGenericType(keyType);
             if (comparableInterface.IsAssignableFrom(keyType))
             {
-                var keyFormatter = GetFormatterForType(keyType);
-                var valueFormatter = GetFormatterForType(valueType);
+                var keyFormatter = GetFormatterForType(keyType, root);
+                var valueFormatter = GetFormatterForType(valueType, root);
 
                 if (keyFormatter != null && valueFormatter != null)
                 {
-                    return FormatterCache.GetOrAddFormatter(type, _ => CreateMapFormatter(keyType, valueType, keyFormatter, valueFormatter));
+                    return CreateMapFormatter(keyType, valueType, keyFormatter, valueFormatter);
                 }
             }
         }
@@ -104,35 +103,35 @@ public sealed class StandardResolver : IFormatterResolver
 
             if (genericTypeDef == typeof(ValueTuple<,>) && typeArgs.Length == 2)
             {
-                var formatter1 = GetFormatterForType(typeArgs[0]);
-                var formatter2 = GetFormatterForType(typeArgs[1]);
+                var formatter1 = GetFormatterForType(typeArgs[0], root);
+                var formatter2 = GetFormatterForType(typeArgs[1], root);
 
                 if (formatter1 != null && formatter2 != null)
                 {
-                    return FormatterCache.GetOrAddFormatter(type, _ => CreateTuple2Formatter(typeArgs[0], typeArgs[1], formatter1, formatter2));
+                    return CreateTuple2Formatter(typeArgs[0], typeArgs[1], formatter1, formatter2);
                 }
             }
             else if (genericTypeDef == typeof(ValueTuple<,,>) && typeArgs.Length == 3)
             {
-                var formatter1 = GetFormatterForType(typeArgs[0]);
-                var formatter2 = GetFormatterForType(typeArgs[1]);
-                var formatter3 = GetFormatterForType(typeArgs[2]);
+                var formatter1 = GetFormatterForType(typeArgs[0], root);
+                var formatter2 = GetFormatterForType(typeArgs[1], root);
+                var formatter3 = GetFormatterForType(typeArgs[2], root);
 
                 if (formatter1 != null && formatter2 != null && formatter3 != null)
                 {
-                    return FormatterCache.GetOrAddFormatter(type, _ => CreateTuple3Formatter(typeArgs[0], typeArgs[1], typeArgs[2], formatter1, formatter2, formatter3));
+                    return CreateTuple3Formatter(typeArgs[0], typeArgs[1], typeArgs[2], formatter1, formatter2, formatter3);
                 }
             }
             else if (genericTypeDef == typeof(ValueTuple<,,,>) && typeArgs.Length == 4)
             {
-                var formatter1 = GetFormatterForType(typeArgs[0]);
-                var formatter2 = GetFormatterForType(typeArgs[1]);
-                var formatter3 = GetFormatterForType(typeArgs[2]);
-                var formatter4 = GetFormatterForType(typeArgs[3]);
+                var formatter1 = GetFormatterForType(typeArgs[0], root);
+                var formatter2 = GetFormatterForType(typeArgs[1], root);
+                var formatter3 = GetFormatterForType(typeArgs[2], root);
+                var formatter4 = GetFormatterForType(typeArgs[3], root);
 
                 if (formatter1 != null && formatter2 != null && formatter3 != null && formatter4 != null)
                 {
-                    return FormatterCache.GetOrAddFormatter(type, _ => CreateTuple4Formatter(typeArgs[0], typeArgs[1], typeArgs[2], typeArgs[3], formatter1, formatter2, formatter3, formatter4));
+                    return CreateTuple4Formatter(typeArgs[0], typeArgs[1], typeArgs[2], typeArgs[3], formatter1, formatter2, formatter3, formatter4);
                 }
             }
         }
@@ -140,13 +139,12 @@ public sealed class StandardResolver : IFormatterResolver
         return null;
     }
 
-    private static object? GetFormatterForType(Type type)
+    private static object? GetFormatterForType(Type type, IFormatterResolver root)
     {
-        // Use the default CompositeResolver to ensure all formatters (including custom ones) are available
-        // This prevents circular dependency issues when arrays/collections contain custom types
-        var resolverType = typeof(IFormatterResolver);
-        var method = resolverType.GetMethod(nameof(IFormatterResolver.GetFormatter))?.MakeGenericMethod(type);
-        return method?.Invoke(CompositeResolver.Default, null);
+        // Resolve children through the chain that started resolution, so a scoped chain
+        // does not silently fall back to the global default.
+        var method = typeof(IFormatterResolver).GetMethod(nameof(IFormatterResolver.GetFormatter))?.MakeGenericMethod(type);
+        return method?.Invoke(root, [null]);
     }
 
     private static bool IsPrimitiveType(Type type)
