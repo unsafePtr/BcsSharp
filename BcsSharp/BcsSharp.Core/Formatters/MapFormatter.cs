@@ -41,9 +41,9 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
             return;
         }
 
-        // Reuse the per-thread scratch buffer. If the outer Serialize is already holding
-        // it (the byte[]-returning overload does), ScratchBufferWriter's re-entrancy
-        // fallback rents from ArrayPool<byte>.Shared for the duration of this map.
+        // Reuse the per-thread scratch wrapper. If the outer Serialize is already holding
+        // it (the byte[]-returning overload does), Rent() hands back a fresh wrapper with
+        // its own pooled buffer, so a nested map never shares scratch with its parent.
         var scratch = ScratchBufferWriter.Rent();
         PairOffsets[]? rentedPairs = null;
 

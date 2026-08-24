@@ -28,6 +28,12 @@ internal sealed class ScratchBufferWriter : IBufferWriter<byte>
 
     private ScratchBufferWriter() { }
 
+    /// <summary>
+    /// Takes the thread's pooled wrapper, or a fresh one if it is already lent out — which
+    /// is what a nested serialize (a map inside a map) hits, so the two never share a buffer.
+    /// Only <see cref="Return"/> publishes to the slot, and only after releasing its buffer,
+    /// so anything sitting there is guaranteed free.
+    /// </summary>
     public static ScratchBufferWriter Rent()
     {
         var instance = t_pooledInstance ?? new ScratchBufferWriter();
@@ -37,13 +43,20 @@ internal sealed class ScratchBufferWriter : IBufferWriter<byte>
         return instance;
     }
 
+    /// <summary>
+    /// Releases the buffer and offers the wrapper back to this thread's slot. Idempotent:
+    /// a second call must not republish an instance the caller may still be writing to,
+    /// or the next <see cref="Rent"/> on this thread would hand out a live buffer.
+    /// </summary>
     public void Return()
     {
-        if (_rented is not null)
+        if (_rented is null)
         {
-            ArrayPool<byte>.Shared.Return(_rented);
-            _rented = null!;
+            return;
         }
+
+        ArrayPool<byte>.Shared.Return(_rented);
+        _rented = null!;
         _written = 0;
         t_pooledInstance = this;
     }

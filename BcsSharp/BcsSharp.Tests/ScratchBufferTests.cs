@@ -115,7 +115,7 @@ public class ScratchBufferTests
     public void ExceptionDuringSerialize_ReleasesScratch_NextCallSucceeds()
     {
         // Register a formatter that always throws. If Serialize<T>'s finally{Return()}
-        // is wired correctly, t_scratchInUse is cleared and the next call on this
+        // is wired correctly, the buffer goes back to the pool and the next call on this
         // thread can claim the scratch again — and produce a correct payload.
         var custom = new CustomFormatterResolver();
         custom.Register<ThrowingMarker>(new ThrowingFormatter());
