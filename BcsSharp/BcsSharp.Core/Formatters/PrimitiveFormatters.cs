@@ -103,11 +103,14 @@ public sealed class BoolFormatter : IBcsFormatter<bool>
     public bool Deserialize(ref BcsReader reader) => reader.ReadBool();
 }
 
-public sealed class StringFormatter : IBcsFormatter<string?>
+// BCS has no nullable string: the optional form is Option<String>, so the formatter is
+// declared over non-nullable string. Serialize still tolerates a null reference and writes
+// it as the empty string rather than throwing.
+public sealed class StringFormatter : IBcsFormatter<string>
 {
     public static readonly StringFormatter Instance = new();
     public Type TargetType => typeof(string);
 
-    public void Serialize(ref BcsWriter writer, string? value) => writer.WriteString(value);
+    public void Serialize(ref BcsWriter writer, string value) => writer.WriteString(value);
     public string Deserialize(ref BcsReader reader) => reader.ReadString();
 }
