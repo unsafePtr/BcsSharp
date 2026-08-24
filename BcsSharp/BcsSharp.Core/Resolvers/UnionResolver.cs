@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using BcsSharp.Core.Formatters;
@@ -13,16 +12,12 @@ public sealed class UnionResolver : IFormatterResolver
 {
     public static readonly UnionResolver Instance = new();
 
-    private static readonly ConcurrentDictionary<Type, object?> _cache = new();
-
     private UnionResolver() { }
 
     public IBcsFormatter<T>? GetFormatter<T>(IFormatterResolver? root) =>
-        (IBcsFormatter<T>?)_cache.GetOrAdd(typeof(T), CreateFormatter);
+        (IBcsFormatter<T>?)CreateFormatter(typeof(T), root ?? this);
 
-    internal static void ClearCache() => _cache.Clear();
-
-    private static object? CreateFormatter(Type type)
+    private static object? CreateFormatter(Type type, IFormatterResolver root)
     {
         if (type.GetCustomAttribute<UnionAttribute>() is null)
         {
@@ -30,6 +25,6 @@ public sealed class UnionResolver : IFormatterResolver
         }
 
         var formatterType = typeof(UnionFormatter<>).MakeGenericType(type);
-        return Activator.CreateInstance(formatterType);
+        return Activator.CreateInstance(formatterType, root);
     }
 }
