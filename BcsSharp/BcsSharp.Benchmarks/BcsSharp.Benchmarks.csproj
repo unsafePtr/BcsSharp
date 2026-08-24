@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.16.0-nightly.20260816.607" />
     <PackageReference Include="MessagePack" Version="3.1.8" />
     <PackageReference Include="MessagePackAnalyzer" Version="3.1.8">
       <PrivateAssets>all</PrivateAssets>
