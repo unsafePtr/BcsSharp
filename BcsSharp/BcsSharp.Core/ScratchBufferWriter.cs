@@ -99,10 +99,7 @@ internal sealed class ScratchBufferWriter : IBufferWriter<byte>
         // Writing through a returned writer would otherwise surface as a bare NullReferenceException.
         Debug.Assert(_rented is not null, "scratch writer used after Return");
 
-        if (sizeHint < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(sizeHint));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegative(sizeHint);
 
         var needed = sizeHint == 0 ? 1 : sizeHint;
         if (_rented.Length - _written >= needed)
