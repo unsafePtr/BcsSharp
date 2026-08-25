@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Diagnostics;
 
 namespace BcsSharp.Core;
 
@@ -37,6 +38,11 @@ internal sealed class ScratchBufferWriter : IBufferWriter<byte>
     public static ScratchBufferWriter Rent()
     {
         var instance = t_pooledInstance ?? new ScratchBufferWriter();
+
+        // Nothing in the slot may still hold a buffer. If it does, some caller returned a
+        // live writer and the next two renters are about to share one array.
+        Debug.Assert(instance._rented is null, "pooled scratch writer was still holding a buffer");
+
         t_pooledInstance = null;
         instance._rented = ArrayPool<byte>.Shared.Rent(InitialRentSize);
         instance._written = 0;
@@ -90,6 +96,9 @@ internal sealed class ScratchBufferWriter : IBufferWriter<byte>
 
     private void EnsureCapacity(int sizeHint)
     {
+        // Writing through a returned writer would otherwise surface as a bare NullReferenceException.
+        Debug.Assert(_rented is not null, "scratch writer used after Return");
+
         if (sizeHint < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(sizeHint));
