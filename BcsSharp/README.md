@@ -208,12 +208,11 @@ CustomFormatterResolver.Instance.Register(SuiUInt256Formatter.Instance);
 
 1. `CustomFormatterResolver` — manual `Register<T>(...)`
 2. `AttributeFormatterResolver` — `[BcsFormatter]` attribute
-3. `SourceGeneratedFormatterResolver` — currently a no-op stub (kept for future source generator)
-4. `StandardResolver` — primitives, `List<T>`, `Dictionary<K,V>`, `ValueTuple<,>/<,,>/<,,,>`, `Nullable<T>`
-5. `UnionResolver` — C# 15 `union` types
-6. `VariantEnumResolver` — `[BcsEnum]` tagged unions
-7. `SimpleEnumResolver` — CLR enums
-8. `ObjectResolver` — `[BcsStruct]` classes/structs
+3. `StandardResolver` — primitives, `List<T>`, `Dictionary<K,V>`, `ValueTuple<,>/<,,>/<,,,>`, `Nullable<T>`
+4. `UnionResolver` — C# 15 `union` types
+5. `VariantEnumResolver` — `[BcsEnum]` tagged unions
+6. `SimpleEnumResolver` — CLR enums
+7. `ObjectResolver` — `[BcsStruct]` classes/structs
 
 ## Allocation profile
 
