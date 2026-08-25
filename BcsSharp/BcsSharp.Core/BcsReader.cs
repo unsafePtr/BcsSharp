@@ -172,8 +172,7 @@ public ref struct BcsReader
     /// </summary>
     public byte[] ReadBytes(int length)
     {
-        if (length < 0)
-            throw new ArgumentException("Length cannot be negative", nameof(length));
+        ArgumentOutOfRangeException.ThrowIfNegative(length);
 
         EnsureEnoughBytes(length);
 
@@ -187,8 +186,7 @@ public ref struct BcsReader
     /// </summary>
     public ReadOnlySpan<byte> ReadBytesAsSpan(int length)
     {
-        if (length < 0)
-            throw new ArgumentException("Length cannot be negative", nameof(length));
+        ArgumentOutOfRangeException.ThrowIfNegative(length);
 
         EnsureEnoughBytes(length);
 

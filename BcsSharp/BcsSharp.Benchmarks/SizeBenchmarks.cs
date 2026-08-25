@@ -53,7 +53,7 @@ public class SizeBenchmarks
         PrintSizeComparison("Large Map (1000)", _largeMap);
     }
 
-    private void PrintSizeComparison<T>(string name, T obj)
+    private static void PrintSizeComparison<T>(string name, T obj)
     {
         var bcsBytes = BcsSerializer.Serialize(obj);
         var msgPackBytes = MessagePackSerializer.Serialize(obj);

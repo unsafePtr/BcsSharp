@@ -159,15 +159,13 @@ public sealed class StandardResolver : IFormatterResolver
     private static object CreatePrimitiveListFormatter(Type elementType)
     {
         var formatterType = typeof(PrimitiveListFormatter<>).MakeGenericType(elementType);
-        var getInstanceMethod = formatterType.GetMethod("GetInstance");
-        return getInstanceMethod!.Invoke(null, null)!;
+        return Activator.CreateInstance(formatterType)!;
     }
 
     private static object CreateListFormatter(Type elementType, object elementFormatter)
     {
         var formatterType = typeof(ListFormatter<>).MakeGenericType(elementType);
-        var getInstanceMethod = formatterType.GetMethod("GetInstance");
-        return getInstanceMethod!.Invoke(null, new[] { elementFormatter })!;
+        return Activator.CreateInstance(formatterType, elementFormatter)!;
     }
 
     private static object CreateMapFormatter(Type keyType, Type valueType, object keyFormatter, object valueFormatter)

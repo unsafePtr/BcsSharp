@@ -107,6 +107,14 @@ dotnet_diagnostic.CA1511.severity = error
 dotnet_diagnostic.CA1512.severity = error
 # CA1513: Use ObjectDisposedException.ThrowIf
 dotnet_diagnostic.CA1513.severity = error
+# CA1000: Do not declare static members on generic types
+dotnet_diagnostic.CA1000.severity = error
+# CA1805: Do not initialize unnecessarily
+dotnet_diagnostic.CA1805.severity = error
+# CA1822: Mark members as static
+dotnet_diagnostic.CA1822.severity = error
+# CA2263: Prefer the generic overload of Enum.GetValues
+dotnet_diagnostic.CA2263.severity = error
 # Disable nullability check when there is no constructor, since our classes are usually DTOs
 dotnet_diagnostic.CS8618.severity = suggestion
 # Null check can be simplified

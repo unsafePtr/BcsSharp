@@ -4,7 +4,7 @@ namespace BcsSharp.Core.Formatters;
 /// <summary>
 /// Formatters for primitive types
 /// </summary>
-public sealed class ByteFormatter : IBcsFormatter<byte>
+public sealed class ByteFormatter : IBcsFormatter<byte>, IBcsFormatter
 {
     public static readonly ByteFormatter Instance = new();
     public Type TargetType => typeof(byte);
@@ -13,7 +13,7 @@ public sealed class ByteFormatter : IBcsFormatter<byte>
     public byte Deserialize(ref BcsReader reader) => reader.Read8();
 }
 
-public sealed class SByteFormatter : IBcsFormatter<sbyte>
+public sealed class SByteFormatter : IBcsFormatter<sbyte>, IBcsFormatter
 {
     public static readonly SByteFormatter Instance = new();
     public Type TargetType => typeof(sbyte);
@@ -22,7 +22,7 @@ public sealed class SByteFormatter : IBcsFormatter<sbyte>
     public sbyte Deserialize(ref BcsReader reader) => reader.ReadI8();
 }
 
-public sealed class UInt16Formatter : IBcsFormatter<ushort>
+public sealed class UInt16Formatter : IBcsFormatter<ushort>, IBcsFormatter
 {
     public static readonly UInt16Formatter Instance = new();
     public Type TargetType => typeof(ushort);
@@ -31,7 +31,7 @@ public sealed class UInt16Formatter : IBcsFormatter<ushort>
     public ushort Deserialize(ref BcsReader reader) => reader.Read16();
 }
 
-public sealed class Int16Formatter : IBcsFormatter<short>
+public sealed class Int16Formatter : IBcsFormatter<short>, IBcsFormatter
 {
     public static readonly Int16Formatter Instance = new();
     public Type TargetType => typeof(short);
@@ -40,7 +40,7 @@ public sealed class Int16Formatter : IBcsFormatter<short>
     public short Deserialize(ref BcsReader reader) => reader.ReadI16();
 }
 
-public sealed class UInt32Formatter : IBcsFormatter<uint>
+public sealed class UInt32Formatter : IBcsFormatter<uint>, IBcsFormatter
 {
     public static readonly UInt32Formatter Instance = new();
     public Type TargetType => typeof(uint);
@@ -49,7 +49,7 @@ public sealed class UInt32Formatter : IBcsFormatter<uint>
     public uint Deserialize(ref BcsReader reader) => reader.Read32();
 }
 
-public sealed class Int32Formatter : IBcsFormatter<int>
+public sealed class Int32Formatter : IBcsFormatter<int>, IBcsFormatter
 {
     public static readonly Int32Formatter Instance = new();
     public Type TargetType => typeof(int);
@@ -58,7 +58,7 @@ public sealed class Int32Formatter : IBcsFormatter<int>
     public int Deserialize(ref BcsReader reader) => reader.ReadI32();
 }
 
-public sealed class UInt64Formatter : IBcsFormatter<ulong>
+public sealed class UInt64Formatter : IBcsFormatter<ulong>, IBcsFormatter
 {
     public static readonly UInt64Formatter Instance = new();
     public Type TargetType => typeof(ulong);
@@ -67,7 +67,7 @@ public sealed class UInt64Formatter : IBcsFormatter<ulong>
     public ulong Deserialize(ref BcsReader reader) => reader.Read64();
 }
 
-public sealed class Int64Formatter : IBcsFormatter<long>
+public sealed class Int64Formatter : IBcsFormatter<long>, IBcsFormatter
 {
     public static readonly Int64Formatter Instance = new();
     public Type TargetType => typeof(long);
@@ -76,7 +76,7 @@ public sealed class Int64Formatter : IBcsFormatter<long>
     public long Deserialize(ref BcsReader reader) => reader.ReadI64();
 }
 
-public sealed class UInt128Formatter : IBcsFormatter<UInt128>
+public sealed class UInt128Formatter : IBcsFormatter<UInt128>, IBcsFormatter
 {
     public static readonly UInt128Formatter Instance = new();
     public Type TargetType => typeof(UInt128);
@@ -85,7 +85,7 @@ public sealed class UInt128Formatter : IBcsFormatter<UInt128>
     public UInt128 Deserialize(ref BcsReader reader) => reader.Read128();
 }
 
-public sealed class Int128Formatter : IBcsFormatter<Int128>
+public sealed class Int128Formatter : IBcsFormatter<Int128>, IBcsFormatter
 {
     public static readonly Int128Formatter Instance = new();
     public Type TargetType => typeof(Int128);
@@ -94,7 +94,7 @@ public sealed class Int128Formatter : IBcsFormatter<Int128>
     public Int128 Deserialize(ref BcsReader reader) => reader.ReadI128();
 }
 
-public sealed class BoolFormatter : IBcsFormatter<bool>
+public sealed class BoolFormatter : IBcsFormatter<bool>, IBcsFormatter
 {
     public static readonly BoolFormatter Instance = new();
     public Type TargetType => typeof(bool);
@@ -104,9 +104,8 @@ public sealed class BoolFormatter : IBcsFormatter<bool>
 }
 
 // BCS has no nullable string: the optional form is Option<String>, so the formatter is
-// declared over non-nullable string. Serialize still tolerates a null reference and writes
-// it as the empty string rather than throwing.
-public sealed class StringFormatter : IBcsFormatter<string>
+// declared over non-nullable string and a null is rejected rather than coerced to empty.
+public sealed class StringFormatter : IBcsFormatter<string>, IBcsFormatter
 {
     public static readonly StringFormatter Instance = new();
     public Type TargetType => typeof(string);
