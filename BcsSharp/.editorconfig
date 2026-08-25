@@ -98,6 +98,15 @@ csharp_indent_braces = false
 
 # CA1852: Seal internal types
 dotnet_diagnostic.CA1852.severity = error
+# Argument throw helpers — errors so they get fixed where they are introduced.
+# CA1510: Use ArgumentNullException.ThrowIfNull
+dotnet_diagnostic.CA1510.severity = error
+# CA1511: Use ArgumentException.ThrowIfNullOrEmpty
+dotnet_diagnostic.CA1511.severity = error
+# CA1512: Use ArgumentOutOfRangeException throw helper
+dotnet_diagnostic.CA1512.severity = error
+# CA1513: Use ObjectDisposedException.ThrowIf
+dotnet_diagnostic.CA1513.severity = error
 # Disable nullability check when there is no constructor, since our classes are usually DTOs
 dotnet_diagnostic.CS8618.severity = suggestion
 # Null check can be simplified
