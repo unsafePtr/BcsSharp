@@ -5,7 +5,7 @@ namespace BcsSharp.Core.Formatters;
 /// </summary>
 public readonly struct Unit : IEquatable<Unit>
 {
-    public static readonly Unit Value = new();
+    public static readonly Unit Value;
 
     public bool Equals(Unit other) => true;
     public override bool Equals(object? obj) => obj is Unit;

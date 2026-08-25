@@ -20,7 +20,7 @@ public sealed class BcsSimpleEnumFormatter<T> : IBcsFormatter<T>, IBcsFormatter
     where T : struct, Enum
 {
     // Static cache per generic type - this is efficient and appropriate for enum values
-    private static readonly T[] _staticEnumValues = (Enum.GetValues(typeof(T)) as T[])!;
+    private static readonly T[] _staticEnumValues = Enum.GetValues<T>();
     private static readonly int _enumCount = _staticEnumValues.Length;
 
     public Type TargetType => typeof(T);

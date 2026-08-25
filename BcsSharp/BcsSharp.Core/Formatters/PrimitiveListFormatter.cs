@@ -9,11 +9,6 @@ public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T :
 {
     public Type TargetType => typeof(List<T>);
 
-    public static PrimitiveListFormatter<T> GetInstance()
-    {
-        return new PrimitiveListFormatter<T>();
-    }
-
     public void Serialize(ref BcsWriter writer, List<T> value)
     {
         if (value == null || value.Count == 0)
