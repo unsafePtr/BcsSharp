@@ -61,7 +61,7 @@ public sealed class CompositeResolver : IFormatterResolver
     }
 
     /// <summary>
-    /// Default instance with recommended resolver chain for source-generated, nullable types, unions, enums, objects, and standard types
+    /// Default instance with recommended resolver chain for nullable types, unions, enums, objects, and standard types
     /// </summary>
     public static readonly CompositeResolver Default = new CompositeResolver(
         CreateResolverChain()
@@ -89,10 +89,6 @@ public sealed class CompositeResolver : IFormatterResolver
 
             // [BcsFormatter(typeof(...))] on the target type — declarative cross-assembly hook.
             AttributeFormatterResolver.Instance,
-
-            // Source generator was dropped (commit 75458b2) but the resolver hook is kept
-            // so reintroducing a generator later is a no-op for callers.
-            SourceGeneratedFormatterResolver.Instance,
         };
 
         resolvers.AddRange(DefaultResolvers);
