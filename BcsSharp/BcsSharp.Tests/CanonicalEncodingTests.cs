@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using BcsSharp.Core;
+using BcsSharp.Core.Unions;
 using Xunit;
 
 namespace BcsSharp.Tests;
@@ -193,15 +194,17 @@ public class CanonicalEncodingTests
     [Fact]
     public void OptionEncoding_ShouldBeCanonical()
     {
-        // None should encode as single 0 byte
-        string? noneValue = null;
-        var noneEncoded = BcsSerializer.Serialize(noneValue);
-        Assert.Equal(new byte[] { 0x00 }, noneEncoded);
+        // The optional form in BCS is Option<T>, not a nullable reference. This previously
+        // asserted plain-string bytes under an Option name, which hid the missing discriminant.
+        Option<string> noneValue = None.Instance;
+        Assert.Equal(new byte[] { 0x00 }, BcsSerializer.Serialize(noneValue));
 
-        // Some should encode as 1 followed by the value
-        string? someValue = "test";
-        var someEncoded = BcsSerializer.Serialize(someValue);
-        Assert.Equal(new byte[] { 0x04, 0x74, 0x65, 0x73, 0x74 }, someEncoded);
+        // Some is tag 1 followed by the value.
+        Option<string> someValue = "test";
+        Assert.Equal(new byte[] { 0x01, 0x04, 0x74, 0x65, 0x73, 0x74 }, BcsSerializer.Serialize(someValue));
+
+        // A plain string carries no discriminant — this is what makes the two incompatible.
+        Assert.Equal(new byte[] { 0x04, 0x74, 0x65, 0x73, 0x74 }, BcsSerializer.Serialize("test"));
     }
 
     [Fact]
@@ -210,13 +213,15 @@ public class CanonicalEncodingTests
         // Test that serialization -> deserialization -> serialization 
         // produces identical results (canonical form is preserved)
 
-        var originalData = new List<string?> { "hello", null, "world", "" };
+        // null is not a legal BCS string; the empty string is. Optional entries would need
+        // List<Option<string>>.
+        var originalData = new List<string> { "hello", "world", string.Empty };
 
         // First serialization
         var firstSerialization = BcsSerializer.Serialize(originalData);
 
         // Deserialize
-        var deserialized = BcsSerializer.Deserialize<List<string?>>(firstSerialization);
+        var deserialized = BcsSerializer.Deserialize<List<string>>(firstSerialization);
 
         // Second serialization
         var secondSerialization = BcsSerializer.Serialize(deserialized);

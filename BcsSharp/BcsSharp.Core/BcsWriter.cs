@@ -187,9 +187,17 @@ public ref struct BcsWriter
     /// Write string value (length-prefixed UTF-8) without intermediate allocations.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WriteString(string? value)
+    /// <summary>
+    /// Writes a ULEB-length-prefixed UTF-8 string. BCS has no null string — the optional form
+    /// is <c>Option&lt;String&gt;</c> — so null is rejected rather than coerced to empty.
+    /// Coercing it would encode identically to <c>Option.None</c> for the null case while
+    /// silently omitting the discriminant for every other value.
+    /// </summary>
+    public void WriteString(string value)
     {
-        if (value == null || value == string.Empty)
+        ArgumentNullException.ThrowIfNull(value);
+
+        if (value.Length == 0)
         {
             WriteULEB(0u);
             return;
