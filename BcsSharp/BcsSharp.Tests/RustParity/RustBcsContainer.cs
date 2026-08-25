@@ -1,4 +1,6 @@
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
@@ -12,7 +14,7 @@ namespace BcsSharp.Tests.RustParity;
 /// </summary>
 public sealed class RustBcsContainer : IAsyncLifetime
 {
-    private const string ImageName = "bcssharp-rust-fixtures:tests";
+    private const string ImageName = "bcssharp-rust-fixtures";
     private IContainer? _container;
     private readonly SemaphoreSlim _startGate = new(1, 1);
 
@@ -58,7 +60,7 @@ public sealed class RustBcsContainer : IAsyncLifetime
             }
 
             var image = new ImageFromDockerfileBuilder()
-                .WithName(ImageName)
+                .WithName($"{ImageName}:{FixturesTag()}")
                 .WithDockerfile("Dockerfile")
                 .WithDockerfileDirectory(DockerfileDirectory())
                 .WithCleanUp(false)   // keep the image cached across test sessions
@@ -75,6 +77,33 @@ public sealed class RustBcsContainer : IAsyncLifetime
         {
             _startGate.Release();
         }
+    }
+
+    /// <summary>
+    /// Tag derived from the fixture sources. Keying the image name on their content means a
+    /// change to the Rust code yields a new tag and forces a rebuild — with a fixed tag the
+    /// cached image is reused and the new fixtures never appear in the container.
+    /// </summary>
+    private static string FixturesTag()
+    {
+        var dir = DockerfileDirectory();
+        var files = new[] { "Dockerfile", "Cargo.toml", "Cargo.lock" }
+            .Select(name => Path.Combine(dir, name))
+            .Concat(Directory.EnumerateFiles(Path.Combine(dir, "src"), "*.rs", SearchOption.AllDirectories))
+            .Where(File.Exists)
+            .OrderBy(path => path, StringComparer.Ordinal);
+
+        using var sha = SHA256.Create();
+        foreach (var file in files)
+        {
+            var name = Encoding.UTF8.GetBytes(Path.GetFileName(file));
+            sha.TransformBlock(name, 0, name.Length, null, 0);
+            var content = File.ReadAllBytes(file);
+            sha.TransformBlock(content, 0, content.Length, null, 0);
+        }
+
+        sha.TransformFinalBlock([], 0, 0);
+        return Convert.ToHexString(sha.Hash!)[..12].ToLowerInvariant();
     }
 
     /// <summary>

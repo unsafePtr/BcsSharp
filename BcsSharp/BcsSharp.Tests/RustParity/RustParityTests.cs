@@ -146,6 +146,56 @@ public class RustParityTests(RustBcsContainer rust)
         Assert.Equal(rustBytes, csharpBytes);
     }
 
+    [Fact(Explicit = true)]
+    public async Task GlobalStatsWithEveryRarity()
+    {
+        // Covers the tagged-enum path end to end: every Rarity variant, reached through
+        // List<(Rarity, ulong)> — a list of tuples whose first element is a union.
+        var stats = new RustBcsCompatibilityTests.GlobalStats
+        {
+            TotalUsers = 3,
+            TotalTransactions = 7,
+            TotalVolume = 4242,
+            AssetsByRarity =
+            [
+                (new RustBcsCompatibilityTests.Common(), 1UL),
+                (new RustBcsCompatibilityTests.Uncommon { Value = 42 }, 2UL),
+                (new RustBcsCompatibilityTests.Rare { Values = [15, 16] }, 3UL),
+                (new RustBcsCompatibilityTests.Epic { Name = "Sword" }, 4UL),
+                (new RustBcsCompatibilityTests.Legendary
+                {
+                    Data = ("Excalibur", 999UL, new RustBcsCompatibilityTests.LegendaryAsset
+                    {
+                        AssetId = "leg-1",
+                        Level = 80,
+                    }),
+                }, 5UL),
+            ],
+        };
+
+        var csharpBytes = BcsSerializer.Serialize(stats);
+        var rustBytes = await rust.ReadFixtureAsync("global_stats.bcs", TestContext.Current.CancellationToken);
+
+        Assert.Equal(rustBytes, csharpBytes);
+    }
+
+    [Fact(Explicit = true)]
+    public async Task SuiCompatibleData()
+    {
+        // metadata is Vec<u8> — length-prefixed, unlike the fixed-width [u8; 32] path.
+        var data = new RustBcsCompatibilityTests.SuiCompatibleData
+        {
+            Owner = "0x123456789abcdef123456789abcdef123456789abcdef123456789abcdef12",
+            Balance = 1000,
+            Metadata = [0x01, 0x02, 0x03, 0x04],
+        };
+
+        var csharpBytes = BcsSerializer.Serialize(data);
+        var rustBytes = await rust.ReadFixtureAsync("sui_data.bcs", TestContext.Current.CancellationToken);
+
+        Assert.Equal(rustBytes, csharpBytes);
+    }
+
     // --- Sample data shared across tests (matches what Rust main.rs constructs) ---
 
     private static RustBcsCompatibilityTests.User SampleUser() => new()

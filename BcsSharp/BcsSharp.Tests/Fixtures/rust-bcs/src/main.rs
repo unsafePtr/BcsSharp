@@ -164,6 +164,37 @@ fn main() -> Result<()> {
     };
     serialize_and_display("GlobalStats (TupleExamples)", &stats_tuple)?;
 
+    // Every Rarity variant in one value, including Legendary — the tuple-bearing case
+    // that nothing else constructs. This is the fixture the C# side compares against,
+    // so the tagged-enum encoding is covered rather than only printed.
+    let stats_all_rarities = GlobalStats {
+        total_users: 3,
+        total_transactions: 7,
+        total_volume: 4242,
+        assets_by_rarity: vec![
+            (Rarity::Common, 1),
+            (Rarity::Uncommon(42), 2),
+            (Rarity::Rare(vec![15, 16]), 3),
+            (Rarity::Epic("Sword".to_string()), 4),
+            (
+                Rarity::Legendary((
+                    "Excalibur".to_string(),
+                    999,
+                    LegendaryAsset { asset_id: "leg-1".to_string(), level: 80 },
+                )),
+                5,
+            ),
+        ],
+    };
+    serialize_and_display("GlobalStats (all rarities)", &stats_all_rarities)?;
+
+    let sui_data = SuiCompatibleData {
+        owner: "0x123456789abcdef123456789abcdef123456789abcdef123456789abcdef12".to_string(),
+        balance: 1000,
+        metadata: vec![0x01, 0x02, 0x03, 0x04],
+    };
+    serialize_and_display("SuiCompatibleData", &sui_data)?;
+
     // Demonstrate deserialization
     println!("\n🔄 Testing serialization round-trip...\n");
 
@@ -179,7 +210,7 @@ fn main() -> Result<()> {
 
     // Export serialized bytes to files for C# comparison
     println!("\n💾 Exporting serialized bytes to files for C# comparison...");
-    export_serialized_bytes(&user, &asset, &transaction, &marketplace_item, &tuple_examples, &map_examples, &large_string_map)?;
+    export_serialized_bytes(&user, &asset, &transaction, &marketplace_item, &tuple_examples, &map_examples, &large_string_map, &stats_all_rarities, &sui_data)?;
 
     Ok(())
 }
@@ -249,7 +280,9 @@ fn export_serialized_bytes(
     marketplace_item: &MarketplaceItem,
     tuple_examples: &TupleExamples,
     map_examples: &MapExamples,
-    large_string_map: &BTreeMap<String, u32>
+    large_string_map: &BTreeMap<String, u32>,
+    global_stats: &GlobalStats,
+    sui_data: &SuiCompatibleData
 ) -> Result<()> {
     // Serialize each struct to bytes
     let user_bytes = bcs::to_bytes(user)?;
@@ -259,6 +292,8 @@ fn export_serialized_bytes(
     let tuple_bytes = bcs::to_bytes(tuple_examples)?;
     let map_bytes = bcs::to_bytes(map_examples)?;
     let large_string_map_bytes = bcs::to_bytes(large_string_map)?;
+    let global_stats_bytes = bcs::to_bytes(global_stats)?;
+    let sui_data_bytes = bcs::to_bytes(sui_data)?;
 
     // Write bytes to files
     fs::write("user.bcs", &user_bytes)?;
@@ -268,6 +303,8 @@ fn export_serialized_bytes(
     fs::write("tuples.bcs", &tuple_bytes)?;
     fs::write("maps.bcs", &map_bytes)?;
     fs::write("large_string_map.bcs", &large_string_map_bytes)?;
+    fs::write("global_stats.bcs", &global_stats_bytes)?;
+    fs::write("sui_data.bcs", &sui_data_bytes)?;
 
     // Also create a summary file with hex dumps for easier debugging
     let summary = format!(
