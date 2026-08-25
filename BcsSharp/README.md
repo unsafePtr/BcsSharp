@@ -26,7 +26,7 @@ The compiled binary runs on any .NET 10+ runtime, but the build requires .NET 11
 |---|---|
 | `u8`/`u16`/`u32`/`u64`/`u128` | `byte`, `ushort`, `uint`, `ulong`, `UInt128` |
 | `i8`/`i16`/`i32`/`i64`/`i128` | `sbyte`, `short`, `int`, `long`, `Int128` |
-| `bool`, `String` | `bool`, `string` |
+| `bool`, `String` | `bool`, `string` (non-null — see Options) |
 | `Vec<T>` | `List<T>` (not `T[]`) |
 | `BTreeMap<K, V>` | `Dictionary<K, V>` (sorted by serialized key bytes) |
 | `Option<T>` for value-type `T` | `T?` (e.g. `uint?`, `bool?`) |
@@ -94,6 +94,25 @@ string city = opt switch
 ```
 
 Wire format: `0x00` = None, `0x01 + payload` = Some. Identical to Rust's `Option<T>`.
+
+### Strings are never optional by annotation
+
+BCS has no null string — `Option<String>` is the optional form. C# nullable annotations are
+erased at runtime, so `string` and `string?` are the *same* type and the library cannot tell
+them apart. Serializing a null string therefore throws `ArgumentNullException` rather than
+silently encoding it as empty:
+
+```csharp
+[BcsField(0)] public string Name { get; set; } = "";                      // required
+[BcsField(1)] public Option<string> Email { get; set; } = None.Instance;  // optional
+```
+
+`string? Email` is **not** a shorthand for `Option<string>`. It encodes `"hi"` as
+`02 68 69`, missing the `0x01` discriminant that Rust's `Option<String>` writes — a silent
+wire mismatch. Only the absent case coincides (`0x00` for both a zero-length string and
+`Option.None`), which is exactly what makes the mistake hard to spot.
+
+Deserialization never returns null: a zero-length string decodes to `""`.
 
 ## Tagged unions (Rust enums with payloads)
 
@@ -241,6 +260,7 @@ ReadOnlySpan<byte> raw = reader.ReadBytesAsSpan(8);
 - **`[BcsField]` order is the wire order.** Numbering must be sequential `0, 1, 2, …`. Skipping or reordering is a wire break.
 - **Map keys are sorted by serialized bytes**, not by `IComparable`. Matches BCS spec and Rust's `bcs::ser::MapSerializer` (which re-sorts after `BTreeMap` iteration). For numeric keys, byte order and numeric order coincide for values 0–127 but diverge above that.
 - **Variant index = declaration order** for both `union` and `[BcsEnum]` paths. Re-ordering breaks the wire.
+- **A null `string` is rejected.** BCS has no null string, so `WriteString` throws `ArgumentNullException` instead of coercing to `""`. Use `Option<string>` for an optional string — `string?` is erased to `string` at runtime and encodes without the `Option` discriminant.
 
 ## Building & testing
 
