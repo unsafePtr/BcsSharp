@@ -7,7 +7,6 @@ namespace BcsSharp.Core.Formatters;
 /// </summary>
 public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T : unmanaged
 {
-    public Type TargetType => typeof(List<T>);
 
     public void Serialize(ref BcsWriter writer, List<T> value)
     {
@@ -57,6 +56,5 @@ public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T :
             reader.ReadPrimitiveArray(CollectionsMarshal.AsSpan(value));
         }
     }
-
 
 }

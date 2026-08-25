@@ -8,8 +8,6 @@ public sealed class ListFormatter<T> : IBcsFormatter<List<T>>
 {
     private readonly IBcsFormatter<T> _elementFormatter;
 
-    public Type TargetType => typeof(List<T>);
-
     public ListFormatter(IBcsFormatter<T> elementFormatter)
     {
         _elementFormatter = elementFormatter;
@@ -69,6 +67,5 @@ public sealed class ListFormatter<T> : IBcsFormatter<List<T>>
             value.Add(_elementFormatter.Deserialize(ref reader));
         }
     }
-
 
 }

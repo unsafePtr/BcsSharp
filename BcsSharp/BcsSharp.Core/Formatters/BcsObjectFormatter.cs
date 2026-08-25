@@ -15,32 +15,31 @@ namespace BcsSharp.Core.Formatters;
 /// Example: struct Person { name: String, age: u32 } -> [name_data...] + [age_data...]
 /// </summary>
 /// <typeparam name="T">The object type to serialize.</typeparam>
-public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>, IBcsFormatter
+public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>
 {
     private readonly BcsObjectFieldSerializer<T>[] _fields;
     private readonly Func<T> _constructor;
     private readonly bool _isValueType;
 
-    public Type TargetType => TypeCached;
-    private static Type TypeCached { get; } = typeof(T);
+    private static readonly Type TypeCached = typeof(T);
 
     public BcsObjectFormatter() : this(null) { }
 
     public BcsObjectFormatter(IFormatterResolver? root)
     {
-        var bcsStructAttr = TargetType.GetCustomAttribute<BcsStructAttribute>();
+        var bcsStructAttr = TypeCached.GetCustomAttribute<BcsStructAttribute>();
         if (bcsStructAttr == null)
         {
-            ThrowHelper.ThrowInvalidOperationException($"Type {TargetType.Name} must be marked with [BcsStruct] attribute");
+            ThrowHelper.ThrowInvalidOperationException($"Type {TypeCached.Name} must be marked with [BcsStruct] attribute");
         }
 
-        _isValueType = TargetType.IsValueType;
-        _fields = DiscoverAndCompileFields(TargetType, root);
+        _isValueType = TypeCached.IsValueType;
+        _fields = DiscoverAndCompileFields(TypeCached, root);
         _constructor = CreateConstructorDelegate();
 
         if (_fields.Length == 0)
         {
-            ThrowHelper.ThrowInvalidOperationException($"Type {TargetType.Name} has no serializable fields marked with [BcsField]");
+            ThrowHelper.ThrowInvalidOperationException($"Type {TypeCached.Name} has no serializable fields marked with [BcsField]");
         }
     }
 

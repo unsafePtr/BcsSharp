@@ -114,7 +114,6 @@ public static class BcsSerializer
         formatter.Deserialize(ref reader, ref value);
     }
 
-
     /// <summary>
     /// Get formatter for type
     /// </summary>

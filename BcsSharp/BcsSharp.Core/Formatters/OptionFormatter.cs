@@ -22,8 +22,6 @@ public sealed class OptionFormatter<T> : IBcsFormatter<T?> where T : struct
 {
     private readonly IBcsFormatter<T> _valueFormatter;
 
-    public Type TargetType => typeof(T?);
-
     public OptionFormatter(IBcsFormatter<T> valueFormatter)
     {
         _valueFormatter = valueFormatter ?? throw new ArgumentNullException(nameof(valueFormatter));

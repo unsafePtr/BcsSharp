@@ -22,7 +22,6 @@ public readonly struct Unit : IEquatable<Unit>
 public sealed class UnitFormatter : IBcsFormatter<Unit>
 {
     public static readonly UnitFormatter Instance = new();
-    public static Type TargetType => typeof(Unit);
 
     public void Serialize(ref BcsWriter writer, Unit value)
     {

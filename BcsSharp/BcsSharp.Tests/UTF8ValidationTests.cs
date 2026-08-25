@@ -171,7 +171,6 @@ public class UTF8ValidationTests
         Assert.Equal(maxCodePoint, deserialized);
     }
 
-
     [Fact]
     public void EmptyStringHandling_ShouldWork()
     {

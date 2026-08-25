@@ -26,11 +26,3 @@ public interface IBcsFormatter<T>
         value = Deserialize(ref reader);
     }
 }
-
-/// <summary>
-/// Non-generic base interface for formatter discovery
-/// </summary>
-public interface IBcsFormatter
-{
-    Type TargetType { get; }
-}
