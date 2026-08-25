@@ -186,7 +186,6 @@ BCS has no 256-bit type — the format stops at 128 bits, as does serde's data m
 public sealed class SuiUInt256Formatter : IBcsFormatter<UInt256>   // Nethermind.Int256
 {
     public static readonly SuiUInt256Formatter Instance = new();
-    public Type TargetType => typeof(UInt256);
 
     public void Serialize(ref BcsWriter writer, UInt256 value)
     {

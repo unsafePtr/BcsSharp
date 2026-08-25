@@ -228,7 +228,6 @@ public class RustBcsCompatibilityTests
         public List<byte> Metadata { get; set; } = [];
     }
 
-
     #endregion
 
     [Fact]

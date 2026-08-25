@@ -18,8 +18,6 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
     private readonly IBcsFormatter<TKey> _keyFormatter;
     private readonly IBcsFormatter<TValue> _valueFormatter;
 
-    public Type TargetType => typeof(Dictionary<TKey, TValue>);
-
     public MapFormatter(IBcsFormatter<TKey> keyFormatter, IBcsFormatter<TValue> valueFormatter)
     {
         _keyFormatter = keyFormatter ?? throw new ArgumentNullException(nameof(keyFormatter));

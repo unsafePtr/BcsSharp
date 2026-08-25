@@ -16,14 +16,12 @@ namespace BcsSharp.Core.Formatters;
 /// positions ≥ 128).
 /// </summary>
 /// <typeparam name="T">The enum type</typeparam>
-public sealed class BcsSimpleEnumFormatter<T> : IBcsFormatter<T>, IBcsFormatter
+public sealed class BcsSimpleEnumFormatter<T> : IBcsFormatter<T>
     where T : struct, Enum
 {
     // Static cache per generic type - this is efficient and appropriate for enum values
     private static readonly T[] _staticEnumValues = Enum.GetValues<T>();
     private static readonly int _enumCount = _staticEnumValues.Length;
-
-    public Type TargetType => typeof(T);
 
     public void Serialize(ref BcsWriter writer, T value)
     {

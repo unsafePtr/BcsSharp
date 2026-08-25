@@ -14,7 +14,7 @@ namespace BcsSharp.Core.Formatters;
 /// Example: E::Variant2("hello") -> [2, 5, 'h', 'e', 'l', 'l', 'o']
 /// </summary>
 /// <typeparam name="T">The base enum type or interface.</typeparam>
-public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>, IBcsFormatter
+public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
 {
     private readonly Dictionary<uint, BcsVariantInfo> _variantsByIndex;
     private readonly Dictionary<Type, BcsVariantInfo> _variantsByType;
@@ -22,7 +22,7 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>, IBcsFormatter
     // Static cache for constructor delegates to avoid recompilation - local per formatter type
     private static readonly ConcurrentDictionary<Type, Func<object>> _constructorCache = new();
 
-    public Type TargetType { get; } = typeof(T);
+    private static readonly Type TypeCached = typeof(T);
 
     private readonly IFormatterResolver? _root;
 
@@ -31,8 +31,8 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>, IBcsFormatter
     public BcsVariantEnumFormatter(IFormatterResolver? root)
     {
         _root = root;
-        var bcsEnumAttr = TargetType.GetCustomAttribute<BcsEnumAttribute>() ?? throw new InvalidOperationException($"Type {TargetType.Name} must be marked with [BcsEnum] attribute");
-        var variants = DiscoverVariants(TargetType);
+        var bcsEnumAttr = TypeCached.GetCustomAttribute<BcsEnumAttribute>() ?? throw new InvalidOperationException($"Type {TypeCached.Name} must be marked with [BcsEnum] attribute");
+        var variants = DiscoverVariants(TypeCached);
 
         _variantsByIndex = variants.ToDictionary(v => v.Index);
         _variantsByType = variants.ToDictionary(v => v.VariantType);
@@ -77,7 +77,6 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>, IBcsFormatter
 
         return (T)instance;
     }
-
 
     private List<BcsVariantInfo> DiscoverVariants(Type enumBaseType)
     {

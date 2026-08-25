@@ -10,8 +10,6 @@ public sealed class TupleFormatter<T1, T2> : IBcsFormatter<(T1, T2)>
     private readonly IBcsFormatter<T1> _item1Formatter;
     private readonly IBcsFormatter<T2> _item2Formatter;
 
-    public Type TargetType => typeof((T1, T2));
-
     public TupleFormatter(IBcsFormatter<T1> item1Formatter, IBcsFormatter<T2> item2Formatter)
     {
         _item1Formatter = item1Formatter ?? throw new ArgumentNullException(nameof(item1Formatter));
@@ -41,8 +39,6 @@ public sealed class TupleFormatter<T1, T2, T3> : IBcsFormatter<(T1, T2, T3)>
     private readonly IBcsFormatter<T1> _item1Formatter;
     private readonly IBcsFormatter<T2> _item2Formatter;
     private readonly IBcsFormatter<T3> _item3Formatter;
-
-    public Type TargetType => typeof((T1, T2, T3));
 
     public TupleFormatter(IBcsFormatter<T1> item1Formatter, IBcsFormatter<T2> item2Formatter, IBcsFormatter<T3> item3Formatter)
     {
@@ -77,8 +73,6 @@ public sealed class TupleFormatter<T1, T2, T3, T4> : IBcsFormatter<(T1, T2, T3, 
     private readonly IBcsFormatter<T2> _item2Formatter;
     private readonly IBcsFormatter<T3> _item3Formatter;
     private readonly IBcsFormatter<T4> _item4Formatter;
-
-    public Type TargetType => typeof((T1, T2, T3, T4));
 
     public TupleFormatter(IBcsFormatter<T1> item1Formatter, IBcsFormatter<T2> item2Formatter, IBcsFormatter<T3> item3Formatter, IBcsFormatter<T4> item4Formatter)
     {

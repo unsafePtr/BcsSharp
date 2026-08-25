@@ -21,8 +21,6 @@ public sealed class OneOfFormatter<T> : IBcsFormatter<OneOf<None, T>>
 {
     private readonly IBcsFormatter<T> _valueFormatter;
 
-    public Type TargetType => typeof(OneOf<None, T>);
-
     public OneOfFormatter(IBcsFormatter<T> valueFormatter)
     {
         _valueFormatter = valueFormatter ?? throw new ArgumentNullException(nameof(valueFormatter));

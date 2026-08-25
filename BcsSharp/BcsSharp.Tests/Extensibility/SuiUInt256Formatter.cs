@@ -25,11 +25,9 @@ namespace BcsSharp.Tests.Extensibility;
 /// worked example for consumers who need Sui's flavour — copy it as-is.
 /// </para>
 /// </remarks>
-public sealed class SuiUInt256Formatter : IBcsFormatter<UInt256>, IBcsFormatter
+public sealed class SuiUInt256Formatter : IBcsFormatter<UInt256>
 {
     public static readonly SuiUInt256Formatter Instance = new();
-
-    public Type TargetType => typeof(UInt256);
 
     public void Serialize(ref BcsWriter writer, UInt256 value)
     {
