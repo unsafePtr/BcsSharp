@@ -196,6 +196,22 @@ public class RustParityTests(RustBcsContainer rust)
         Assert.Equal(rustBytes, csharpBytes);
     }
 
+    [Theory(Explicit = true)]
+    [InlineData(BcsSharp.Tests.BcsSimpleEnumUlebTests.LargeEnum.V0, "large_enum_0.bcs")]
+    [InlineData(BcsSharp.Tests.BcsSimpleEnumUlebTests.LargeEnum.V127, "large_enum_127.bcs")]
+    [InlineData(BcsSharp.Tests.BcsSimpleEnumUlebTests.LargeEnum.V128, "large_enum_128.bcs")]
+    [InlineData(BcsSharp.Tests.BcsSimpleEnumUlebTests.LargeEnum.V129, "large_enum_129.bcs")]
+    public async Task LargeEnumVariantIndex(BcsSharp.Tests.BcsSimpleEnumUlebTests.LargeEnum value, string fixture)
+    {
+        // Variant indices are ULEB128, so 127 -> one byte and 128 -> two. BcsSimpleEnumUlebTests
+        // asserts these bytes from a hand-transcribed copy; this compares against the live
+        // fixture so the two cannot drift apart.
+        var csharpBytes = BcsSerializer.Serialize(value);
+        var rustBytes = await rust.ReadFixtureAsync(fixture, TestContext.Current.CancellationToken);
+
+        Assert.Equal(rustBytes, csharpBytes);
+    }
+
     // --- Sample data shared across tests (matches what Rust main.rs constructs) ---
 
     private static RustBcsCompatibilityTests.User SampleUser() => new()
