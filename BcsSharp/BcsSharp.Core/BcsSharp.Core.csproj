@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net11.0</TargetFramework>
@@ -17,6 +17,11 @@
     <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ScratchBufferWriter is internal; its pooling invariants are worth testing directly. -->
+    <InternalsVisibleTo Include="BcsSharp.Tests" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- PACKAGE.md lives one directory up next to README.md. README.md targets the GitHub
