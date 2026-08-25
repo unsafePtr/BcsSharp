@@ -1,4 +1,5 @@
 using BcsSharp.Core;
+using BcsSharp.Core.Unions;
 using Nethermind.Int256;
 using Attribute = BcsSharp.Tests.RustBcsCompatibilityTests.Attribute;
 
@@ -151,14 +152,14 @@ public class RustParityTests(RustBcsContainer rust)
     {
         Id = 12345,
         Name = "Alice",
-        Email = null,
+        Email = None.Instance,
         Balance = UInt256.MaxValue,
         IsVerified = true,
         Address = new RustBcsCompatibilityTests.Address
         {
             Street = "",
             City = "Plovdiv",
-            State = null,
+            State = None.Instance,
             Zip = "12345",
         },
     };

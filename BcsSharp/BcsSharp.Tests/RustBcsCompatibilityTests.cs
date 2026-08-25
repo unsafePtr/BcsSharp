@@ -85,7 +85,7 @@ public class RustBcsCompatibilityTests
         [BcsField(1)]
         public string City { get; set; } = string.Empty;
         [BcsField(2)]
-        public string? State { get; set; }
+        public Option<string> State { get; set; } = None.Instance;
         [BcsField(3)]
         public string Zip { get; set; } = string.Empty;
     }
@@ -182,7 +182,7 @@ public class RustBcsCompatibilityTests
         [BcsField(1)]
         public string Name { get; set; } = string.Empty;
         [BcsField(2)]
-        public string? Email { get; set; }
+        public Option<string> Email { get; set; } = None.Instance;
         [BcsField(3)]
         public UInt256 Balance { get; set; }  // U256 in Rust
         [BcsField(4)]
