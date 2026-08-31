@@ -153,7 +153,9 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
 
                 // A null here would build a union whose Value is null, which only surfaces at the
                 // next Serialize — far from the formatter that caused it.
-                if (payload is null)
+                // The IsValueType guard keeps `is null` from boxing TCase: the JIT folds that box
+                // away when optimizing, but an unoptimized Debug build pays it on every read.
+                if (!typeof(TCase).IsValueType && payload is null)
                 {
                     throw new InvalidOperationException(
                         $"Case formatter for {typeof(TCase).FullName} returned null.");
