@@ -164,7 +164,7 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
     }
 
     /// <summary>
-    /// Struct comparer used by <see cref="Span{T}.Sort{TComparer}"/>.
+    /// Struct comparer used by <see cref="MemoryExtensions.Sort{T, TComparer}(Span{T}, TComparer)"/>.
     /// Holds the buffer as <see cref="ReadOnlyMemory{T}"/> (heap-friendly, can be a struct field) and compares slices via <c>SequenceCompareTo</c>.
     /// </summary>
     private readonly struct ByteRangeComparer(ReadOnlyMemory<byte> buffer) : IComparer<PairOffsets>
