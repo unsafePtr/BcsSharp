@@ -19,4 +19,4 @@ public sealed class None
 /// For value-typed optionality use <c>T?</c> (Nullable) instead — boxing T into this union would cost an allocation per construction.
 /// </summary>
 /// <typeparam name="T">A reference type.</typeparam>
-public union Option<T>(None, T) where T : class;
+public readonly union Option<T>(None, T) where T : class;
