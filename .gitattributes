@@ -1,0 +1,16 @@
+# Store every text file with LF, check it out with the platform's native endings.
+# The repository is already uniformly LF; this makes that a property of the repo rather than
+# of whatever core.autocrlf each contributor happens to have set.
+* text=auto
+
+# Hunk headers name the enclosing type or member instead of showing a bare line range.
+*.cs text diff=csharp
+
+# Copied into a Linux container by the Rust parity fixture. A CR before a line continuation
+# breaks the build, so these stay LF in the working tree on every platform.
+Dockerfile text eol=lf
+*.sh text eol=lf
+
+# BCS vectors are byte-exact wire fixtures. None are committed today — the Rust fixture
+# generates them at test time — but EOL conversion would silently corrupt one that ever is.
+*.bcs binary
