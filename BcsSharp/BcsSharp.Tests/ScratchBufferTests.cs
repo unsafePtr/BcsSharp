@@ -7,8 +7,7 @@ namespace BcsSharp.Tests;
 
 /// <summary>
 /// Exercises the thread-static scratch path used by <see cref="BcsSerializer.Serialize{T}(T,IFormatterResolver?)"/>.
-/// Covers small payloads (stay in scratch), large payloads (overflow to ArrayPool), and
-/// re-entrant serialization (nested call must not clobber the outer scratch contents).
+/// Covers small payloads (stay in scratch), large payloads (overflow to ArrayPool), and re-entrant serialization (nested call must not clobber the outer scratch contents).
 /// </summary>
 public class ScratchBufferTests
 {

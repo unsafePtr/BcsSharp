@@ -6,10 +6,7 @@ using Nethermind.Int256;
 namespace BcsSharp.Tests.Extensibility;
 
 /// <summary>
-/// Proves the custom-formatter extension point carries 256-bit integers end to end now that
-/// BcsSharp.Core no longer ships them: registration happens once in
-/// <see cref="SuiFormatterRegistration"/>, and every composition below resolves through the
-/// same chain a consuming application would use.
+/// Proves the custom-formatter extension point carries 256-bit integers end to end now that BcsSharp.Core no longer ships them: registration happens once in <see cref="SuiFormatterRegistration"/>, and every composition below resolves through the same chain a consuming application would use.
 /// </summary>
 public class SuiUInt256FormatterTests
 {

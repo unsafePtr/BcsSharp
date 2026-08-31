@@ -5,9 +5,7 @@ using BcsSharp.Core.Resolvers;
 namespace BcsSharp.Tests;
 
 /// <summary>
-/// Composite formatters capture their child formatters at construction and are cached
-/// globally, so a registration that is later undone must not outlive
-/// <see cref="BcsSerializer.ClearFormatterCache"/>.
+/// Composite formatters capture their child formatters at construction and are cached globally, so a registration that is later undone must not outlive <see cref="BcsSerializer.ClearFormatterCache"/>.
 /// </summary>
 [Collection("GlobalFormatterRegistry")]
 public class FormatterCacheClearTests

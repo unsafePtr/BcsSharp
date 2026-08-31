@@ -5,8 +5,7 @@ using BcsSharp.Core.Formatters;
 namespace BcsSharp.Core.Resolvers;
 
 /// <summary>
-/// Resolves <see cref="UnionFormatter{T}"/> for C# 15 union types — any type carrying
-/// <see cref="UnionAttribute"/> (which the compiler stamps on every <c>union</c> declaration).
+/// Resolves <see cref="UnionFormatter{T}"/> for C# 15 union types — any type carrying <see cref="UnionAttribute"/> (which the compiler stamps on every <c>union</c> declaration).
 /// </summary>
 public sealed class UnionResolver : IFormatterResolver
 {

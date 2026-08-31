@@ -8,7 +8,7 @@ namespace BcsSharp.Tests;
 /// <summary>
 /// Tests for proper BCS enum serialization following the official BCS specification.
 /// BCS enums use ULEB128-encoded variant indices and support associated data of any BCS type.
-/// 
+///
 /// Format: [ULEB128 variant_index] + [associated_data...]
 /// Example: E::Variant2("hello") -> [2, 5, 'h', 'e', 'l', 'l', 'o']
 /// </summary>
@@ -17,8 +17,7 @@ public class BcsEnumSerializationTests
     #region Test Enum Definitions (following BCS specification)
 
     /// <summary>
-    /// Base interface for the test enum (similar to Rust enum)
-    /// enum E { Variant0(u16), Variant1(u8), Variant2(String) }
+    /// Base interface for the test enum (similar to Rust enum) enum E { Variant0(u16), Variant1(u8), Variant2(String) }
     /// </summary>
     [BcsEnum]
     public interface ITestEnum { }

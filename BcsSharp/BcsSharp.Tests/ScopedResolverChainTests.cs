@@ -6,8 +6,7 @@ namespace BcsSharp.Tests;
 
 /// <summary>
 /// Composed formatters capture their children, so they belong to the chain that built them.
-/// Two chains overriding the same type must not see each other's formatters, and neither
-/// may leak into the default chain.
+/// Two chains overriding the same type must not see each other's formatters, and neither may leak into the default chain.
 /// </summary>
 public class ScopedResolverChainTests
 {

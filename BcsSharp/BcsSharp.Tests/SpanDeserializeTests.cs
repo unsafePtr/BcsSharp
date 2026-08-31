@@ -5,9 +5,7 @@ using System.Buffers;
 namespace BcsSharp.Tests;
 
 /// <summary>
-/// Verifies the <see cref="BcsSerializer.Deserialize{T}(ReadOnlySpan{byte}, IFormatterResolver?)"/>
-/// overload — zero-copy entry point for callers holding stack-allocated buffers, slices
-/// of larger arrays, or any other span source.
+/// Verifies the <see cref="BcsSerializer.Deserialize{T}(ReadOnlySpan{byte}, IFormatterResolver?)"/> overload — zero-copy entry point for callers holding stack-allocated buffers, slices of larger arrays, or any other span source.
 /// </summary>
 public class SpanDeserializeTests
 {

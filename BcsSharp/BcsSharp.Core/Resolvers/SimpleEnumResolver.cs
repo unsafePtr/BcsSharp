@@ -4,8 +4,7 @@ using BcsSharp.Core.Formatters;
 namespace BcsSharp.Core.Resolvers;
 
 /// <summary>
-/// Resolves <see cref="BcsSimpleEnumFormatter{T}"/> for plain CLR enums — the natural C#
-/// mapping of Rust's unit-only sum types (e.g. <c>enum AssetType { Weapon, Armor, ... }</c>).
+/// Resolves <see cref="BcsSimpleEnumFormatter{T}"/> for plain CLR enums — the natural C# mapping of Rust's unit-only sum types (e.g. <c>enum AssetType { Weapon, Armor, ... }</c>).
 /// Wire format: ULEB128 of the declaration index (the assigned discriminant values are ignored).
 /// </summary>
 public sealed class SimpleEnumResolver : IFormatterResolver

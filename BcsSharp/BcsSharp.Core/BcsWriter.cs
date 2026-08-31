@@ -7,9 +7,7 @@ using BcsSharp.Core.Helpers;
 namespace BcsSharp.Core;
 
 /// <summary>
-/// Writes BCS-encoded bytes into either an <see cref="IBufferWriter{T}"/> (heap-pooled
-/// buffer, auto-grow) or a caller-owned <see cref="Span{T}"/> destination (e.g. a
-/// <c>stackalloc</c>'d buffer, fixed size).
+/// Writes BCS-encoded bytes into either an <see cref="IBufferWriter{T}"/> (heap-pooled buffer, auto-grow) or a caller-owned <see cref="Span{T}"/> destination (e.g. a <c>stackalloc</c>'d buffer, fixed size).
 /// </summary>
 public ref struct BcsWriter
 {
@@ -25,9 +23,9 @@ public ref struct BcsWriter
     }
 
     /// <summary>
-    /// Construct over a caller-owned <see cref="Span{T}"/>. The span must outlive this
-    /// writer (typical pattern: caller does <c>stackalloc byte[N]</c> and passes the
-    /// span). Throws on overflow — there is no auto-grow in this mode.
+    /// Construct over a caller-owned <see cref="Span{T}"/>.
+    /// The span must outlive this writer (typical pattern: caller does <c>stackalloc byte[N]</c> and passes the span).
+    /// Throws on overflow — there is no auto-grow in this mode.
     /// </summary>
     public BcsWriter(Span<byte> destination)
     {
@@ -37,8 +35,8 @@ public ref struct BcsWriter
     }
 
     /// <summary>
-    /// Bytes written so far. Only meaningful in <see cref="Span{T}"/> destination mode —
-    /// for <see cref="IBufferWriter{T}"/> mode the buffer writer itself tracks this.
+    /// Bytes written so far.
+    /// Only meaningful in <see cref="Span{T}"/> destination mode — for <see cref="IBufferWriter{T}"/> mode the buffer writer itself tracks this.
     /// </summary>
     public int WrittenCount =>
         _bufferWriter is null
@@ -155,7 +153,8 @@ public ref struct BcsWriter
     }
 
     /// <summary>
-    /// Write ULEB128 from 32-bit uint. Used to encode lengths and enum variant indices.
+    /// Write ULEB128 from 32-bit uint.
+    /// Used to encode lengths and enum variant indices.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteULEB(uint value)
@@ -188,10 +187,9 @@ public ref struct BcsWriter
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     /// <summary>
-    /// Writes a ULEB-length-prefixed UTF-8 string. BCS has no null string — the optional form
-    /// is <c>Option&lt;String&gt;</c> — so null is rejected rather than coerced to empty.
-    /// Coercing it would encode identically to <c>Option.None</c> for the null case while
-    /// silently omitting the discriminant for every other value.
+    /// Writes a ULEB-length-prefixed UTF-8 string.
+    /// BCS has no null string — the optional form is <c>Option&lt;String&gt;</c> — so null is rejected rather than coerced to empty.
+    /// Coercing it would encode identically to <c>Option.None</c> for the null case while silently omitting the discriminant for every other value.
     /// </summary>
     public void WriteString(string value)
     {

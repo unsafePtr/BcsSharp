@@ -200,8 +200,7 @@ public class RustBcsCompatibilityTests
         public uint Value { get; set; }
     }
 
-    /// Mirrors Rust's `GlobalStats`. `Vec<(Rarity, u64)>` exercises the tagged-enum path
-    /// through a list of tuples, which is the deepest nesting the fixtures cover.
+    /// Mirrors Rust's `GlobalStats`. `Vec<(Rarity, u64)>` exercises the tagged-enum path through a list of tuples, which is the deepest nesting the fixtures cover.
     [BcsStruct]
     public class GlobalStats
     {
@@ -215,8 +214,7 @@ public class RustBcsCompatibilityTests
         public List<(Rarity, ulong)> AssetsByRarity { get; set; } = [];
     }
 
-    /// Mirrors Rust's `SuiCompatibleData`. `metadata` is `Vec<u8>`, which is
-    /// length-prefixed — distinct from the fixed-width `[u8; 32]` byte-array path.
+    /// Mirrors Rust's `SuiCompatibleData`. `metadata` is `Vec<u8>`, which is length-prefixed — distinct from the fixed-width `[u8; 32]` byte-array path.
     [BcsStruct]
     public class SuiCompatibleData
     {

@@ -3,9 +3,8 @@ using BcsSharp.Core;
 namespace BcsSharp.Tests;
 
 /// <summary>
-/// Direct tests for the pooling invariants of <see cref="ScratchBufferWriter"/>. The public
-/// round-trip tests exercise it indirectly; these pin the rent/return contract itself, which
-/// is what a buffered <see cref="BcsWriter"/> would have to rely on.
+/// Direct tests for the pooling invariants of <see cref="ScratchBufferWriter"/>.
+/// The public round-trip tests exercise it indirectly; these pin the rent/return contract itself, which is what a buffered <see cref="BcsWriter"/> would have to rely on.
 /// </summary>
 public class ScratchBufferWriterTests
 {

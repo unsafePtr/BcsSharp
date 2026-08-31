@@ -6,13 +6,11 @@ using Attribute = BcsSharp.Tests.RustBcsCompatibilityTests.Attribute;
 namespace BcsSharp.Tests.RustParity;
 
 /// <summary>
-/// Live cross-implementation parity tests. Each test serializes a C# value and asserts
-/// the bytes match what the Rust <c>bcs</c> crate produced for the equivalent value
-/// (fetched from the Dockerized fixture container).
+/// Live cross-implementation parity tests.
+/// Each test serializes a C# value and asserts the bytes match what the Rust <c>bcs</c> crate produced for the equivalent value (fetched from the Dockerized fixture container).
 ///
-/// All tests are <c>[Fact(Explicit = true)]</c> so they don't run on the default PR CI
-/// (which avoids the Docker dependency). A dedicated CI job runs them via
-/// <c>--explicit on</c> to catch drift between the Rust source and the C# serializer.
+/// All tests are <c>[Fact(Explicit = true)]</c> so they don't run on the default PR CI (which avoids the Docker dependency).
+/// A dedicated CI job runs them via <c>--explicit on</c> to catch drift between the Rust source and the C# serializer.
 /// </summary>
 [Collection(nameof(RustBcsContainerCollection))]
 public class RustParityTests(RustBcsContainer rust)

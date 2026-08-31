@@ -4,10 +4,8 @@ using BcsSharp.Core.Attributes;
 namespace BcsSharp.Tests;
 
 /// <summary>
-/// In-place <c>Deserialize&lt;T&gt;(span, ref T)</c> reuses the caller's instance /
-/// collection rather than allocating fresh. Strings are unavoidable allocations
-/// (immutable, can't be mutated in place), so the "zero alloc" tests use only
-/// primitive-typed targets.
+/// In-place <c>Deserialize&lt;T&gt;(span, ref T)</c> reuses the caller's instance / collection rather than allocating fresh.
+/// Strings are unavoidable allocations (immutable, can't be mutated in place), so the "zero alloc" tests use only primitive-typed targets.
 /// </summary>
 public class InPlaceDeserializeTests
 {

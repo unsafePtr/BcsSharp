@@ -139,9 +139,7 @@ public class NullableResolverTests
     /// <summary>
     /// Regression: a value-type marked [BcsStruct] used as Nullable&lt;T&gt; must round-trip.
     /// The wire format is the standard BCS Option: 0x00 for None, 0x01 + payload for Some.
-    /// Today this hits a latent gap because <see cref="NullableResolver"/> only delegates
-    /// inner-type lookup to <see cref="StandardResolver"/>, which doesn't know about
-    /// <c>[BcsStruct]</c> types.
+    /// Today this hits a latent gap because <see cref="NullableResolver"/> only delegates inner-type lookup to <see cref="StandardResolver"/>, which doesn't know about <c>[BcsStruct]</c> types.
     /// </summary>
     [Fact]
     public void NullableBcsStructValueType_Some_RoundTrips()

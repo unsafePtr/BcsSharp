@@ -4,18 +4,13 @@ using System.Diagnostics;
 namespace BcsSharp.Core;
 
 /// <summary>
-/// Thin <see cref="IBufferWriter{T}"/> wrapper around an <see cref="ArrayPool{T}.Shared"/>
-/// rental. Used by <see cref="BcsSerializer.Serialize{T}(T,IFormatterResolver?)"/> to plug
-/// the typed-formatter chain (which expects <see cref="IBufferWriter{T}"/>) into a
-/// pool-managed buffer.
+/// Thin <see cref="IBufferWriter{T}"/> wrapper around an <see cref="ArrayPool{T}.Shared"/> rental.
+/// Used by <see cref="BcsSerializer.Serialize{T}(T,IFormatterResolver?)"/> to plug the typed-formatter chain (which expects <see cref="IBufferWriter{T}"/>) into a pool-managed buffer.
 ///
 /// <para>
-/// We don't maintain an additional per-thread byte[] cache because
-/// <see cref="ArrayPool{T}.Shared"/> already has a per-thread first tier — Rent/Return
-/// on the same thread hits that cache and reuses the same array. Re-entrant calls
-/// (e.g. nested map serialization) naturally get different arrays from the pool's
-/// per-CPU partition. The only thing we pool ourselves is the wrapper instance,
-/// via a <c>[ThreadStatic]</c> slot, so even the wrapper object isn't re-allocated.
+/// We don't maintain an additional per-thread byte[] cache because <see cref="ArrayPool{T}.Shared"/> already has a per-thread first tier — Rent/Return on the same thread hits that cache and reuses the same array.
+/// Re-entrant calls (e.g. nested map serialization) naturally get different arrays from the pool's per-CPU partition.
+/// The only thing we pool ourselves is the wrapper instance, via a <c>[ThreadStatic]</c> slot, so even the wrapper object isn't re-allocated.
 /// </para>
 /// </summary>
 internal sealed class ScratchBufferWriter : IBufferWriter<byte>
@@ -30,10 +25,8 @@ internal sealed class ScratchBufferWriter : IBufferWriter<byte>
     private ScratchBufferWriter() { }
 
     /// <summary>
-    /// Takes the thread's pooled wrapper, or a fresh one if it is already lent out — which
-    /// is what a nested serialize (a map inside a map) hits, so the two never share a buffer.
-    /// Only <see cref="Return"/> publishes to the slot, and only after releasing its buffer,
-    /// so anything sitting there is guaranteed free.
+    /// Takes the thread's pooled wrapper, or a fresh one if it is already lent out — which is what a nested serialize (a map inside a map) hits, so the two never share a buffer.
+    /// Only <see cref="Return"/> publishes to the slot, and only after releasing its buffer, so anything sitting there is guaranteed free.
     /// </summary>
     public static ScratchBufferWriter Rent()
     {
@@ -50,9 +43,8 @@ internal sealed class ScratchBufferWriter : IBufferWriter<byte>
     }
 
     /// <summary>
-    /// Releases the buffer and offers the wrapper back to this thread's slot. Idempotent:
-    /// a second call must not republish an instance the caller may still be writing to,
-    /// or the next <see cref="Rent"/> on this thread would hand out a live buffer.
+    /// Releases the buffer and offers the wrapper back to this thread's slot.
+    /// Idempotent: a second call must not republish an instance the caller may still be writing to, or the next <see cref="Rent"/> on this thread would hand out a live buffer.
     /// </summary>
     public void Return()
     {

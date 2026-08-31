@@ -8,9 +8,8 @@ using DotNet.Testcontainers.Images;
 namespace BcsSharp.Tests.RustParity;
 
 /// <summary>
-/// xUnit collection fixture that builds the Rust BCS Docker image and keeps an idle
-/// container running for the duration of the test session. Tests retrieve baked-in
-/// fixture bytes via <see cref="ReadFixtureAsync(string, CancellationToken)"/>.
+/// xUnit collection fixture that builds the Rust BCS Docker image and keeps an idle container running for the duration of the test session.
+/// Tests retrieve baked-in fixture bytes via <see cref="ReadFixtureAsync(string, CancellationToken)"/>.
 /// </summary>
 public sealed class RustBcsContainer : IAsyncLifetime
 {
@@ -80,9 +79,8 @@ public sealed class RustBcsContainer : IAsyncLifetime
     }
 
     /// <summary>
-    /// Tag derived from the fixture sources. Keying the image name on their content means a
-    /// change to the Rust code yields a new tag and forces a rebuild — with a fixed tag the
-    /// cached image is reused and the new fixtures never appear in the container.
+    /// Tag derived from the fixture sources.
+    /// Keying the image name on their content means a change to the Rust code yields a new tag and forces a rebuild — with a fixed tag the cached image is reused and the new fixtures never appear in the container.
     /// </summary>
     private static string FixturesTag()
     {
@@ -107,8 +105,7 @@ public sealed class RustBcsContainer : IAsyncLifetime
     }
 
     /// <summary>
-    /// The path of the Dockerfile directory on the host, anchored to this source file's
-    /// compile-time location (works regardless of the test runner's CWD).
+    /// The path of the Dockerfile directory on the host, anchored to this source file's compile-time location (works regardless of the test runner's CWD).
     /// </summary>
     private static string DockerfileDirectory([CallerFilePath] string sourceFile = "")
     {
@@ -119,8 +116,7 @@ public sealed class RustBcsContainer : IAsyncLifetime
 }
 
 /// <summary>
-/// xUnit collection definition — tests that need the Rust container live in this
-/// collection so the fixture is constructed exactly once per test session.
+/// xUnit collection definition — tests that need the Rust container live in this collection so the fixture is constructed exactly once per test session.
 /// </summary>
 [CollectionDefinition(nameof(RustBcsContainerCollection))]
 public class RustBcsContainerCollection : ICollectionFixture<RustBcsContainer>;

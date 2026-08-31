@@ -3,9 +3,7 @@ using System.Reflection;
 namespace BcsSharp.Core.Helpers;
 
 /// <summary>
-/// Materialises a formatter instance for a given closed formatter type, preferring the
-/// project-wide singleton convention (<c>public static readonly Instance</c> field, or a
-/// <c>public static Instance</c> property) before falling back to a parameterless constructor.
+/// Materialises a formatter instance for a given closed formatter type, preferring the project-wide singleton convention (<c>public static readonly Instance</c> field, or a <c>public static Instance</c> property) before falling back to a parameterless constructor.
 /// </summary>
 internal static class FormatterInstanceFactory
 {

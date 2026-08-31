@@ -3,22 +3,19 @@ using System.Collections.Concurrent;
 namespace BcsSharp.Core.Resolvers;
 
 /// <summary>
-/// Resolver populated at runtime via <see cref="Register{T}"/>. Sits first in
-/// <see cref="CompositeResolver.Default"/> so explicit registrations override any
-/// other resolver, including built-ins.
+/// Resolver populated at runtime via <see cref="Register{T}"/>.
+/// Sits first in <see cref="CompositeResolver.Default"/> so explicit registrations override any other resolver, including built-ins.
 /// </summary>
 /// <remarks>
 /// Register at application startup, before the first serialize/deserialize call.
-/// <see cref="CompositeResolver"/> memoises lookups (including misses), so registering
-/// after a miss has been cached will appear to do nothing. Call
-/// <see cref="BcsSerializer.ClearFormatterCache"/> if you must register late (e.g. in tests).
+/// <see cref="CompositeResolver"/> memoises lookups (including misses), so registering after a miss has been cached will appear to do nothing.
+/// Call <see cref="BcsSerializer.ClearFormatterCache"/> if you must register late (e.g. in tests).
 /// </remarks>
 public sealed class CustomFormatterResolver : IFormatterResolver
 {
     /// <summary>
     /// Process-wide registry consulted by <see cref="CompositeResolver.Default"/>.
-    /// Registering here affects every caller; for a scoped override construct an instance
-    /// and pass it to <see cref="CompositeResolver.Create"/>.
+    /// Registering here affects every caller; for a scoped override construct an instance and pass it to <see cref="CompositeResolver.Create"/>.
     /// </summary>
     public static readonly CustomFormatterResolver Instance = new();
 

@@ -4,18 +4,12 @@ using BcsSharp.Core.Attributes;
 namespace BcsSharp.Tests;
 
 /// <summary>
-/// Measures per-op allocation for value-type vs reference-type <c>[BcsStruct]</c>
-/// objects to check the "boxing on value-type field set" concern.
+/// Measures per-op allocation for value-type vs reference-type <c>[BcsStruct]</c> objects to check the "boxing on value-type field set" concern.
 ///
-/// Theoretical concern: <see cref="BcsSharp.Core.Formatters.BcsObjectFormatter{T}"/>'s
-/// value-type deserialize path uses <c>object boxedInstance = _constructor()</c> and
-/// reflective <c>FieldInfo.SetValue</c>, and <c>ArgumentNullException.ThrowIfNull(value)</c>
-/// in serialize would box a struct argument.
+/// Theoretical concern: <see cref="BcsSharp.Core.Formatters.BcsObjectFormatter{T}"/>'s value-type deserialize path uses <c>object boxedInstance = _constructor()</c> and reflective <c>FieldInfo.SetValue</c>, and <c>ArgumentNullException.ThrowIfNull(value)</c> in serialize would box a struct argument.
 ///
-/// Measured reality on net11 P3: the struct and class paths allocate the same number
-/// of bytes per op. The JIT erases the speculative struct-boxes, leaving only the
-/// genuine per-field boxes (which happen on both paths because <c>IBcsObjectFormatter</c>
-/// uses <c>object?</c> at the call boundary).
+/// Measured reality on net11 P3: the struct and class paths allocate the same number of bytes per op.
+/// The JIT erases the speculative struct-boxes, leaving only the genuine per-field boxes (which happen on both paths because <c>IBcsObjectFormatter</c> uses <c>object?</c> at the call boundary).
 ///
 /// This test guards against future regressions where the gap reopens.
 /// </summary>

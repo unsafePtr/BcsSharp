@@ -5,15 +5,11 @@ namespace BcsSharp.Core.Formatters;
 
 /// <summary>
 /// High-performance formatter for simple C-style enums (integer-backed enums).
-/// BCS specification: variant index = ordinal position within the enum declaration
-/// (the assigned discriminant values are ignored), encoded as ULEB128. For positions
-/// 0-127 ULEB128 collapses to a single byte; positions 128+ produce 2+ bytes —
-/// matching what Rust's <c>bcs</c> crate emits for unit-only enums.
+/// BCS specification: variant index = ordinal position within the enum declaration (the assigned discriminant values are ignored), encoded as ULEB128.
+/// For positions 0-127 ULEB128 collapses to a single byte; positions 128+ produce 2+ bytes — matching what Rust's <c>bcs</c> crate emits for unit-only enums.
 ///
 /// Example: enum Status { Pending = 100, Active = 200, Disabled = 300 }
-/// Status.Active serializes as ULEB128(1) = [0x01], not [0xC8] (assigned value 200)
-/// and not [0x01] (which would also be correct for raw u8; the encoding diverges for
-/// positions ≥ 128).
+/// Status.Active serializes as ULEB128(1) = [0x01], not [0xC8] (assigned value 200) and not [0x01] (which would also be correct for raw u8; the encoding diverges for positions ≥ 128).
 /// </summary>
 /// <typeparam name="T">The enum type</typeparam>
 public sealed class BcsSimpleEnumFormatter<T> : IBcsFormatter<T>

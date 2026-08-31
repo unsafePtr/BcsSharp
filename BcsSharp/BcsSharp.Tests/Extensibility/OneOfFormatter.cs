@@ -5,17 +5,12 @@ using OneOf.Types;
 namespace BcsSharp.Tests.Extensibility;
 
 /// <summary>
-/// Consumer-side formatter for <c>OneOf&lt;None, T&gt;</c> as a BCS <c>Option&lt;T&gt;</c>:
-/// discriminant byte 0 for None, 1 followed by the payload for Some(T).
+/// Consumer-side formatter for <c>OneOf&lt;None, T&gt;</c> as a BCS <c>Option&lt;T&gt;</c>: discriminant byte 0 for None, 1 followed by the payload for Some(T).
 /// </summary>
 /// <remarks>
-/// The library's own optional type is the C# 15 <c>union Option&lt;T&gt;</c> served by
-/// <c>UnionResolver</c>; OneOf was never wired into <see cref="Core.Resolvers.CompositeResolver.Default"/>,
-/// so shipping it only forced the OneOf package on every consumer. It lives here as the
-/// worked example for projects that already model optionals with OneOf — register it on
-/// <c>CustomFormatterResolver</c> at startup, per closed generic.
-/// See <see cref="OneOfManualRegistrationTests"/>, which asserts the wire output is
-/// byte-identical to the union path.
+/// The library's own optional type is the C# 15 <c>union Option&lt;T&gt;</c> served by <c>UnionResolver</c>; OneOf was never wired into <see cref="Core.Resolvers.CompositeResolver.Default"/>, so shipping it only forced the OneOf package on every consumer.
+/// It lives here as the worked example for projects that already model optionals with OneOf — register it on <c>CustomFormatterResolver</c> at startup, per closed generic.
+/// See <see cref="OneOfManualRegistrationTests"/>, which asserts the wire output is byte-identical to the union path.
 /// </remarks>
 public sealed class OneOfFormatter<T> : IBcsFormatter<OneOf<None, T>>
 {

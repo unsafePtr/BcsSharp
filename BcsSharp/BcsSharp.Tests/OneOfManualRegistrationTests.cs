@@ -11,16 +11,11 @@ using OneOfNone = OneOf.Types.None;
 namespace BcsSharp.Tests;
 
 /// <summary>
-/// Demonstrates the supported migration path for downstream consumers that still want to
-/// use OneOf&lt;None, T&gt; as their optional type. The built-in resolver no longer wires
-/// <see cref="OneOfFormatter{T}"/> into <see cref="CompositeResolver.Default"/> — that
-/// slot is filled by <see cref="UnionResolver"/> for the C# 15 <c>union</c> default
-/// path. Users plug OneOf back in by registering its formatters on
-/// <see cref="CustomFormatterResolver"/> at startup.
+/// Demonstrates the supported migration path for downstream consumers that still want to use OneOf&lt;None, T&gt; as their optional type.
+/// The built-in resolver no longer wires <see cref="OneOfFormatter{T}"/> into <see cref="CompositeResolver.Default"/> — that slot is filled by <see cref="UnionResolver"/> for the C# 15 <c>union</c> default path.
+/// Users plug OneOf back in by registering its formatters on <see cref="CustomFormatterResolver"/> at startup.
 ///
-/// The two tests below also cross-verify that the OneOf wire output is byte-identical
-/// to the new <see cref="Option{T}"/> union output, so existing on-the-wire data
-/// remains compatible regardless of which optional type the user picks.
+/// The two tests below also cross-verify that the OneOf wire output is byte-identical to the new <see cref="Option{T}"/> union output, so existing on-the-wire data remains compatible regardless of which optional type the user picks.
 /// </summary>
 public class OneOfManualRegistrationTests
 {

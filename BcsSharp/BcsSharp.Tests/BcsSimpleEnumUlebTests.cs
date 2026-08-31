@@ -3,13 +3,12 @@ using BcsSharp.Core;
 namespace BcsSharp.Tests;
 
 /// <summary>
-/// BCS spec: enum variant indices are ULEB128-encoded. For positions 0..127 that's a
-/// single byte (matches a raw u8). For 128+ ULEB128 uses two or more bytes — at index
-/// 128 the encoding is [0x80, 0x01], not [0x80]. These tests guard against the
-/// single-byte regression in <c>BcsSimpleEnumFormatter</c>.
+/// BCS spec: enum variant indices are ULEB128-encoded.
+/// For positions 0..127 that's a single byte (matches a raw u8).
+/// For 128+ ULEB128 uses two or more bytes — at index 128 the encoding is [0x80, 0x01], not [0x80].
+/// These tests guard against the single-byte regression in <c>BcsSimpleEnumFormatter</c>.
 ///
-/// Ground-truth bytes were produced by running rust-sui-bcs-test's large_enum binary
-/// against the Rust bcs 0.1.x crate (see rust-sui-bcs-test/large_enum_*.bcs).
+/// Ground-truth bytes were produced by running rust-sui-bcs-test's large_enum binary against the Rust bcs 0.1.x crate (see rust-sui-bcs-test/large_enum_*.bcs).
 /// </summary>
 public class BcsSimpleEnumUlebTests
 {

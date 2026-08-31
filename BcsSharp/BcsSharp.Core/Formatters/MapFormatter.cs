@@ -4,10 +4,8 @@ using System.Runtime.CompilerServices;
 namespace BcsSharp.Core.Formatters;
 
 /// <summary>
-/// Formatter for Dictionary/Map types in BCS format. Keys are sorted by lexicographical
-/// order of their BCS-serialized bytes for deterministic output — matches Rust's
-/// <c>bcs::ser::MapSerializer</c>, which re-sorts pairs by serialized key bytes regardless
-/// of the source container's iteration order.
+/// Formatter for Dictionary/Map types in BCS format.
+/// Keys are sorted by lexicographical order of their BCS-serialized bytes for deterministic output — matches Rust's <c>bcs::ser::MapSerializer</c>, which re-sorts pairs by serialized key bytes regardless of the source container's iteration order.
 /// </summary>
 public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, TValue>>
     where TKey : notnull
@@ -166,9 +164,8 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
     }
 
     /// <summary>
-    /// Struct comparer used by <see cref="Span{T}.Sort{TComparer}"/>. Holds the buffer
-    /// as <see cref="ReadOnlyMemory{T}"/> (heap-friendly, can be a struct field) and
-    /// compares slices via <c>SequenceCompareTo</c>.
+    /// Struct comparer used by <see cref="Span{T}.Sort{TComparer}"/>.
+    /// Holds the buffer as <see cref="ReadOnlyMemory{T}"/> (heap-friendly, can be a struct field) and compares slices via <c>SequenceCompareTo</c>.
     /// </summary>
     private readonly struct ByteRangeComparer(ReadOnlyMemory<byte> buffer) : IComparer<PairOffsets>
     {
