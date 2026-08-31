@@ -9,13 +9,29 @@
     <!-- NuGet Package Properties -->
     <PackageId>BcsSharp</PackageId>
     <Version>0.0.1</Version>
-    <Authors>Your Name</Authors>
+    <Authors>Nikolay Zdravkov</Authors>
     <Description>Binary Canonical Serialization (BCS) library for .NET, wire-compatible with Rust BCS. Zero-allocation hot path, C# 15 union support, suited for Sui/Move and other BCS-based protocols.</Description>
     <PackageTags>bcs;serialization;binary;canonical;sui;move</PackageTags>
-    <RepositoryUrl>https://github.com/yourusername/BcsSharp</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/unsafePtr/BcsSharp</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/unsafePtr/BcsSharp</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Copyright>Copyright (c) Nikolay Zdravkov</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageReadmeFile>PACKAGE.md</PackageReadmeFile>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+
+    <!-- Ships the XML docs so consumers get IntelliSense for the invariants documented here.
+         CS1591 (missing comment on a public member) stays off: members whose signature already
+         says everything are deliberately undocumented, and 326 warnings would bury the real ones. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Normalizes source paths so the Source Link URLs resolve off the build agent.
+         Local builds keep real paths, otherwise stepping through a local F5 session breaks.
+         It stays out of Directory.Build.props because the tests locate the Rust fixtures through [CallerFilePath], which the normalized paths would break. -->
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <ItemGroup>

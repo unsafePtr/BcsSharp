@@ -1,5 +1,20 @@
 <Project>
+
   <PropertyGroup>
     <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
   </PropertyGroup>
+
+  <!--
+    Debugging metadata for the shipped package. Source Link is part of the SDK since .NET 8,
+    so these properties are all it takes — no Microsoft.SourceLink.GitHub reference.
+    It maps each source file in the PDB to its raw.githubusercontent.com URL at the built
+    commit, letting consumers step into library code from their own debugger.
+  -->
+  <PropertyGroup>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
 </Project>
