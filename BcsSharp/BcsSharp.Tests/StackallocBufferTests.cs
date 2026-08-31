@@ -3,8 +3,7 @@ using BcsSharp.Core;
 namespace BcsSharp.Tests;
 
 /// <summary>
-/// Guards the stack-allocated-buffer path through the public reader/writer API: these fail at
-/// build time, not run time, if the span parameters stop accepting a <c>stackalloc</c> buffer.
+/// Guards the stack-allocated-buffer path through the public reader/writer API: these fail at build time, not run time, if the span parameters stop accepting a <c>stackalloc</c> buffer.
 /// </summary>
 public class StackallocBufferTests
 {

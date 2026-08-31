@@ -7,9 +7,8 @@ namespace BcsSharp.Core.Formatters;
 
 /// <summary>
 /// High-performance formatter for BCS-serializable objects (structs/classes) marked with [BcsStruct].
-/// Dispatch to per-field typed <see cref="IBcsFormatter{T}"/>s goes through a virtual call on
-/// <see cref="BcsObjectFieldSerializer{TInstance}"/>, avoiding the <c>object?</c> boxing path of
-/// <see cref="IBcsObjectFormatter"/>. Field accessors are compiled expression trees.
+/// Dispatch to per-field typed <see cref="IBcsFormatter{T}"/>s goes through a virtual call on <see cref="BcsObjectFieldSerializer{TInstance}"/>, avoiding the <c>object?</c> boxing path of <see cref="IBcsObjectFormatter"/>.
+/// Field accessors are compiled expression trees.
 ///
 /// BCS Format: Fields are serialized consecutively in order without any headers or separators.
 /// Example: struct Person { name: String, age: u32 } -> [name_data...] + [age_data...]
@@ -182,9 +181,8 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>
 }
 
 /// <summary>
-/// Non-generic-in-TField field serializer. <see cref="BcsObjectFormatter{T}"/> holds an array of
-/// these so it can dispatch per-field via a single virtual call — no <c>object?</c> boxing of
-/// field values across the formatter boundary.
+/// Non-generic-in-TField field serializer.
+/// <see cref="BcsObjectFormatter{T}"/> holds an array of these so it can dispatch per-field via a single virtual call — no <c>object?</c> boxing of field values across the formatter boundary.
 /// </summary>
 /// <typeparam name="TInstance">The object type whose field is being serialized.</typeparam>
 internal abstract class BcsObjectFieldSerializer<TInstance>
@@ -195,9 +193,8 @@ internal abstract class BcsObjectFieldSerializer<TInstance>
 }
 
 /// <summary>
-/// Compiled ref-T setter: writes <typeparamref name="TField"/> directly into the field
-/// storage of <typeparamref name="TInstance"/> without boxing. For struct instances the
-/// caller passes <c>ref instance</c>, so the assignment lands in the original storage.
+/// Compiled ref-T setter: writes <typeparamref name="TField"/> directly into the field storage of <typeparamref name="TInstance"/> without boxing.
+/// For struct instances the caller passes <c>ref instance</c>, so the assignment lands in the original storage.
 /// </summary>
 internal delegate void RefSetter<TInstance, TField>(ref TInstance instance, TField value);
 

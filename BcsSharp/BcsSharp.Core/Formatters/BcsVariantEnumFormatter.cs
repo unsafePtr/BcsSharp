@@ -9,7 +9,7 @@ namespace BcsSharp.Core.Formatters;
 /// High-performance formatter for Rust-style variant enums (tagged unions) following the official BCS specification.
 /// Uses compiled expression trees for fast object creation and property access.
 /// Uses ULEB128-encoded variant indices and supports associated data of any BCS type.
-/// 
+///
 /// BCS Format: [ULEB128 variant_index] + [associated_data...]
 /// Example: E::Variant2("hello") -> [2, 5, 'h', 'e', 'l', 'l', 'o']
 /// </summary>

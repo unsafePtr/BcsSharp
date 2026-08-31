@@ -5,8 +5,7 @@ using BcsSharp.Core.Formatters;
 namespace BcsSharp.Tests;
 
 /// <summary>
-/// Covers <see cref="BcsFormatterAttribute"/>-driven formatter discovery for types
-/// declared in (or routed through) a separate assembly.
+/// Covers <see cref="BcsFormatterAttribute"/>-driven formatter discovery for types declared in (or routed through) a separate assembly.
 /// </summary>
 public class AttributeFormatterTests
 {

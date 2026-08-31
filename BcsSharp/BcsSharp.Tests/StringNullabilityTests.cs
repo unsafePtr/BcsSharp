@@ -5,11 +5,8 @@ using BcsSharp.Core.Unions;
 namespace BcsSharp.Tests;
 
 /// <summary>
-/// BCS has no null string: the optional form is <c>Option&lt;String&gt;</c>. These tests pin
-/// that a null is rejected rather than coerced to empty, and that a <c>string?</c> field is
-/// therefore not a substitute for <c>Option&lt;string&gt;</c> — the fixture type in
-/// Fixtures/rust-bcs/src/types.rs declares <c>pub email: Option&lt;String&gt;</c>, which
-/// encodes with a discriminant that a plain string does not carry.
+/// BCS has no null string: the optional form is <c>Option&lt;String&gt;</c>.
+/// These tests pin that a null is rejected rather than coerced to empty, and that a <c>string?</c> field is therefore not a substitute for <c>Option&lt;string&gt;</c> — the fixture type in Fixtures/rust-bcs/src/types.rs declares <c>pub email: Option&lt;String&gt;</c>, which encodes with a discriminant that a plain string does not carry.
 /// </summary>
 public class StringNullabilityTests
 {

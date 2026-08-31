@@ -68,10 +68,8 @@ public sealed class CompositeResolver : IFormatterResolver
     );
 
     /// <summary>
-    /// Builds a chain with <paramref name="resolvers"/> ahead of the default chain, each
-    /// with its own lookup cache. Use this instead of registering on
-    /// <see cref="CustomFormatterResolver.Instance"/> when the override should not be
-    /// visible process-wide.
+    /// Builds a chain with <paramref name="resolvers"/> ahead of the default chain, each with its own lookup cache.
+    /// Use this instead of registering on <see cref="CustomFormatterResolver.Instance"/> when the override should not be visible process-wide.
     /// </summary>
     public static CompositeResolver Create(params IFormatterResolver[] resolvers)
     {
@@ -97,9 +95,9 @@ public sealed class CompositeResolver : IFormatterResolver
     }
 
     /// <summary>
-    /// Clears this chain's formatter lookup cache. Call this after late
-    /// <see cref="CustomFormatterResolver.Register{T}"/> calls so cached misses don't
-    /// shadow the new registration. Intended for tests and one-shot startup wiring.
+    /// Clears this chain's formatter lookup cache.
+    /// Call this after late <see cref="CustomFormatterResolver.Register{T}"/> calls so cached misses don't shadow the new registration.
+    /// Intended for tests and one-shot startup wiring.
     /// </summary>
     public void Clear() => _formatterCache.Clear();
 

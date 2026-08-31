@@ -166,9 +166,8 @@ public ref struct BcsReader
     }
 
     /// <summary>
-    /// Read specified number of bytes into a newly-allocated array. Prefer
-    /// <see cref="ReadBytesAsSpan"/> on hot paths where the caller doesn't need
-    /// ownership — that overload returns a zero-copy span over the input buffer.
+    /// Read specified number of bytes into a newly-allocated array.
+    /// Prefer <see cref="ReadBytesAsSpan"/> on hot paths where the caller doesn't need ownership — that overload returns a zero-copy span over the input buffer.
     /// </summary>
     public byte[] ReadBytes(int length)
     {
@@ -347,9 +346,8 @@ public ref struct BcsReader
     public int Position => _position;
 
     /// <summary>
-    /// Zero-copy view of the entire underlying buffer. Useful for formatters that need
-    /// to compare already-decoded byte ranges (e.g. <see cref="BcsSharp.Core.Formatters.MapFormatter{TKey,TValue}"/>'s
-    /// sort-order check) without re-serializing.
+    /// Zero-copy view of the entire underlying buffer.
+    /// Useful for formatters that need to compare already-decoded byte ranges (e.g. <see cref="BcsSharp.Core.Formatters.MapFormatter{TKey,TValue}"/>'s sort-order check) without re-serializing.
     /// </summary>
     public ReadOnlySpan<byte> Source => _data;
 

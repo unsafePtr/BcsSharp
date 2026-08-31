@@ -21,10 +21,8 @@ public static class BcsSerializer
     }
 
     /// <summary>
-    /// Serialize value to byte array. Internally rents a buffer from
-    /// <see cref="ArrayPool{T}.Shared"/> (per-thread cache as the first tier) and pools
-    /// the writer wrapper instance via a thread-static slot, so the only heap allocation
-    /// per call is the returned <c>byte[]</c>.
+    /// Serialize value to byte array.
+    /// Internally rents a buffer from <see cref="ArrayPool{T}.Shared"/> (per-thread cache as the first tier) and pools the writer wrapper instance via a thread-static slot, so the only heap allocation per call is the returned <c>byte[]</c>.
     /// </summary>
     public static byte[] Serialize<T>(T value, IFormatterResolver? resolver = null)
     {
@@ -70,8 +68,8 @@ public static class BcsSerializer
     }
 
     /// <summary>
-    /// Deserialize from ReadOnlySpan&lt;byte&gt;. Zero-copy entry point for callers holding
-    /// a stack-allocated buffer, a slice of a larger array, or any other span source.
+    /// Deserialize from ReadOnlySpan&lt;byte&gt;.
+    /// Zero-copy entry point for callers holding a stack-allocated buffer, a slice of a larger array, or any other span source.
     /// </summary>
     public static T Deserialize<T>(ReadOnlySpan<byte> data, IFormatterResolver? resolver = null)
     {
@@ -90,10 +88,9 @@ public static class BcsSerializer
     }
 
     /// <summary>
-    /// In-place deserialize. Mutates <paramref name="value"/> rather than allocating:
-    /// class targets reuse the existing instance (allocates only if null), collections
-    /// are cleared and refilled, value-type targets are written directly into the
-    /// caller's storage. Useful for pooled-message loops.
+    /// In-place deserialize.
+    /// Mutates <paramref name="value"/> rather than allocating: class targets reuse the existing instance (allocates only if null), collections are cleared and refilled, value-type targets are written directly into the caller's storage.
+    /// Useful for pooled-message loops.
     /// </summary>
     public static void Deserialize<T>(ReadOnlySpan<byte> data, ref T value, IFormatterResolver? resolver = null)
     {
@@ -124,13 +121,10 @@ public static class BcsSerializer
     }
 
     /// <summary>
-    /// Clears the default chain's lookup cache. Call after any
-    /// <see cref="CustomFormatterResolver.Register{T}"/> done after the first serialize
-    /// (e.g. in tests), so cached null misses don't shadow the new registration.
-    /// Composed formatters are cached by the chain that built them, so clearing that
-    /// chain drops them with it. A scoped chain from
-    /// <see cref="CompositeResolver.Create"/> is unaffected — clear it via its own
-    /// <see cref="CompositeResolver.Clear"/>.
+    /// Clears the default chain's lookup cache.
+    /// Call after any <see cref="CustomFormatterResolver.Register{T}"/> done after the first serialize (e.g. in tests), so cached null misses don't shadow the new registration.
+    /// Composed formatters are cached by the chain that built them, so clearing that chain drops them with it.
+    /// A scoped chain from <see cref="CompositeResolver.Create"/> is unaffected — clear it via its own <see cref="CompositeResolver.Clear"/>.
     /// </summary>
     public static void ClearFormatterCache() => CompositeResolver.ClearCache();
 }

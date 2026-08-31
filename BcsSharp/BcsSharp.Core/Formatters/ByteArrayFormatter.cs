@@ -1,9 +1,9 @@
 namespace BcsSharp.Core.Formatters;
 
 /// <summary>
-/// Base class for fixed-length byte-array-backed types (e.g. Sui's 32-byte
-/// <c>SuiAddress</c>). Subclasses provide the length, the byte view of an instance,
-/// and a constructor from a span. Both Serialize and Deserialize are allocation-free.
+/// Base class for fixed-length byte-array-backed types (e.g. Sui's 32-byte <c>SuiAddress</c>).
+/// Subclasses provide the length, the byte view of an instance, and a constructor from a span.
+/// Both Serialize and Deserialize are allocation-free.
 /// </summary>
 /// <example>
 /// <code>

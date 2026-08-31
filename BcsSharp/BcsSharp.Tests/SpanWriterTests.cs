@@ -4,9 +4,8 @@ using BcsSharp.Core.Attributes;
 namespace BcsSharp.Tests;
 
 /// <summary>
-/// Exercises the <see cref="BcsWriter(Span{byte})"/> constructor — direct serialization
-/// into a caller-owned buffer (typically <c>stackalloc</c>'d). No heap involvement at all
-/// on the writer side.
+/// Exercises the <see cref="BcsWriter(Span{byte})"/> constructor — direct serialization into a caller-owned buffer (typically <c>stackalloc</c>'d).
+/// No heap involvement at all on the writer side.
 /// </summary>
 public class SpanWriterTests
 {

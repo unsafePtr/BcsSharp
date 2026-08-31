@@ -6,8 +6,7 @@ namespace BcsSharp.Tests;
 
 /// <summary>
 /// Verifies that <see cref="ByteArrayFormatter{T}"/> subclasses deserialize allocation-free.
-/// The base class' only abstract Deserialize hook is <c>GetFromBytes(ReadOnlySpan&lt;byte&gt;)</c>,
-/// so every subclass automatically gets the zero-alloc path — no opt-in required.
+/// The base class' only abstract Deserialize hook is <c>GetFromBytes(ReadOnlySpan&lt;byte&gt;)</c>, so every subclass automatically gets the zero-alloc path — no opt-in required.
 /// </summary>
 public class ByteArrayFormatterAllocTests
 {
