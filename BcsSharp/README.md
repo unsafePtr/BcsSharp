@@ -95,6 +95,9 @@ string city = opt switch
 
 Wire format: `0x00` = None, `0x01 + payload` = Some. Identical to Rust's `Option<T>`.
 
+Both directions are allocation-free for the None case: serializing writes one byte, and deserializing hands back `None.Instance` itself rather than a fresh instance.
+Some allocates exactly the payload — nothing wrapping it.
+
 ### Strings are never optional by annotation
 
 BCS has no null string — `Option<String>` is the optional form. C# nullable annotations are
@@ -131,6 +134,9 @@ byte[] bytes = BcsSerializer.Serialize(r);
 ```
 
 The variant index is the **declaration order** of constructors (Common=0, Uncommon=1, …). Re-ordering cases is a wire-breaking change — pin the order.
+
+Prefer `class` case payloads.
+A union stores its payload in an `object` slot, so a `struct` case is boxed once when the union value is constructed — correct on the wire, but an allocation on a path that is otherwise free.
 
 **Legacy `[BcsEnum]` path** (still supported, useful when you need a shared interface for runtime polymorphism beyond just BCS):
 

@@ -2,28 +2,35 @@ using System.Collections.Frozen;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 
 namespace BcsSharp.Core.Formatters;
 
 /// <summary>
-/// BCS formatter for C# 15 <c>union</c> types. Variant index = declaration order of the
-/// compiler-synthesised single-argument case constructors. Each case payload is serialized
-/// via its own formatter, resolved through the standard chain.
+/// BCS formatter for C# 15 <c>union</c> types.
+/// Variant index = declaration order of the compiler-synthesised single-argument case constructors.
+/// Each case payload is serialized via its own formatter, resolved through the standard chain.
 ///
 /// Case-payload resolution rules:
 /// <list type="bullet">
-///   <item>Unit-like cases (no instance fields/properties — e.g. an empty record class like
-///   <c>None</c>) emit a zero-byte payload, matching Rust's unit-variant wire format.</item>
-///   <item>Any other case type must be resolvable by the active formatter resolver (i.e.
-///   primitive, <c>[BcsStruct]</c>, or registered manually).</item>
+///   <item>Unit-like cases (no instance fields/properties — e.g. an empty record class like <c>None</c>) emit a zero-byte payload, matching Rust's unit-variant wire format.</item>
+///   <item>Any other case type must be resolvable by the active formatter resolver (i.e. primitive, <c>[BcsStruct]</c>, or registered manually).</item>
 /// </list>
 /// </summary>
 /// <remarks>
-/// The Value getter is compiled as a delegate against the union struct's <c>Value</c> property
-/// directly, avoiding the 24 B/op boxing cost of casting the struct to <see cref="IUnion"/>.
+/// The Value getter is compiled as a delegate against the union struct's <c>Value</c> property directly, avoiding the 24 B/op boxing cost of casting the struct to <see cref="IUnion"/>.
+/// Per-case read and write run through typed delegates closed over <see cref="IBcsFormatter{T}"/> rather than the <c>object?</c> boundary of <see cref="IBcsObjectFormatter"/>, so a struct payload is boxed once — by the union itself — instead of twice.
+/// A unit case deserializes to one shared instance built at formatter construction: a zero-byte payload carries no state that could distinguish two instances, and reusing the singleton is what makes absence free.
 /// </remarks>
 public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
 {
+    private delegate void CaseWriter(ref BcsWriter writer, object payload);
+
+    private delegate TUnion CaseReader(ref BcsReader reader);
+
+    private static readonly MethodInfo CreateCaseMethod =
+        typeof(UnionFormatter<TUnion>).GetMethod(nameof(CreateCase), BindingFlags.NonPublic | BindingFlags.Static)!;
+
     private readonly UnionCase[] _cases;
     private readonly FrozenDictionary<Type, int> _caseIndexByType;
     private readonly Func<TUnion, object?> _valueGetter;
@@ -55,27 +62,14 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
         for (int i = 0; i < ctors.Length; i++)
         {
             var caseType = ctors[i].GetParameters()[0].ParameterType;
-            var isUnit = IsUnitLike(caseType);
-            _cases[i] = new UnionCase
-            {
-                Type = caseType,
-                IsUnit = isUnit,
-                Constructor = CompileCtorDelegate(ctors[i]),
-                Formatter = isUnit
-                    ? null
-                    : BcsSerializerExtensions.GetFormatter(caseType, root)
-                      ?? throw new InvalidOperationException(
-                          $"No BCS formatter resolved for union case {caseType.FullName} of {unionType.FullName}. " +
-                          "Mark the case type with [BcsStruct], register a formatter via CustomFormatterResolver, " +
-                          "or annotate it with [BcsFormatter(typeof(...))]."),
-                UnitConstructor = isUnit ? CompileParameterlessCtor(caseType) : null,
-            };
 
             if (!indexBuilder.TryAdd(caseType, i))
             {
                 throw new InvalidOperationException(
                     $"Union {unionType.FullName} declares case type {caseType.FullName} more than once.");
             }
+
+            _cases[i] = CreateCaseReflected(caseType, ctors[i], root);
         }
 
         // Built once at formatter construction, looked up on every Serialize. Read-heavy
@@ -104,11 +98,7 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
         }
 
         writer.WriteULEB((uint)idx);
-        ref readonly var caseInfo = ref _cases[idx];
-        if (!caseInfo.IsUnit)
-        {
-            caseInfo.Formatter!.SerializeObject(ref writer, payload);
-        }
+        _cases[idx].Write(ref writer, payload);
     }
 
     public TUnion Deserialize(ref BcsReader reader)
@@ -120,33 +110,85 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
                 $"Variant index {idx} is out of range for union {typeof(TUnion).FullName} (expected 0..{_cases.Length - 1}).");
         }
 
-        ref readonly var c = ref _cases[idx];
-        var payload = c.IsUnit
-            ? c.UnitConstructor!()
-            : c.Formatter!.DeserializeObject(ref reader)
-              ?? throw new InvalidOperationException(
-                  $"Case formatter for {c.Type.FullName} returned null.");
-
-        return c.Constructor(payload);
+        return _cases[idx].Read(ref reader);
     }
 
-    private static Func<object, TUnion> CompileCtorDelegate(ConstructorInfo ctor)
+    private static UnionCase CreateCaseReflected(Type caseType, ConstructorInfo ctor, IFormatterResolver? root)
     {
-        var paramType = ctor.GetParameters()[0].ParameterType;
-        var p = Expression.Parameter(typeof(object), "payload");
-        var cast = Expression.Convert(p, paramType);
-        var newExpr = Expression.New(ctor, cast);
-        return Expression.Lambda<Func<object, TUnion>>(newExpr, p).Compile();
+        try
+        {
+            return (UnionCase)CreateCaseMethod.MakeGenericMethod(caseType).Invoke(null, [ctor, root])!;
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            // Surface the case-level diagnostic, not the reflection wrapper around it.
+            ExceptionDispatchInfo.Throw(ex.InnerException);
+            throw;
+        }
     }
 
-    private static Func<object> CompileParameterlessCtor(Type t)
+    private static UnionCase CreateCase<TCase>(ConstructorInfo ctor, IFormatterResolver? root)
     {
-        var ctor = t.GetConstructor(Type.EmptyTypes)
+        var construct = CompileCaseCtor<TCase>(ctor);
+
+        if (IsUnitLike(typeof(TCase)))
+        {
+            var unitValue = construct(CreateUnitInstance<TCase>());
+            return new UnionCase(
+                static (ref BcsWriter writer, object payload) => { },
+                (ref BcsReader reader) => unitValue);
+        }
+
+        var formatter = BcsSerializer.GetFormatter<TCase>(root)
             ?? throw new InvalidOperationException(
-                $"Unit-like union case {t.FullName} must expose a public parameterless constructor.");
-        var newExpr = Expression.New(ctor);
-        var asObj = Expression.Convert(newExpr, typeof(object));
-        return Expression.Lambda<Func<object>>(asObj).Compile();
+                $"No BCS formatter resolved for union case {typeof(TCase).FullName} of {typeof(TUnion).FullName}. " +
+                "Mark the case type with [BcsStruct], register a formatter via CustomFormatterResolver, " +
+                "or annotate it with [BcsFormatter(typeof(...))].");
+
+        return new UnionCase(
+            (ref BcsWriter writer, object payload) => formatter.Serialize(ref writer, (TCase)payload),
+            (ref BcsReader reader) =>
+            {
+                var payload = formatter.Deserialize(ref reader);
+
+                // A null here would build a union whose Value is null, which only surfaces at the
+                // next Serialize — far from the formatter that caused it.
+                if (payload is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Case formatter for {typeof(TCase).FullName} returned null.");
+                }
+
+                return construct(payload);
+            });
+    }
+
+    private static Func<TCase, TUnion> CompileCaseCtor<TCase>(ConstructorInfo ctor)
+    {
+        var payload = Expression.Parameter(typeof(TCase), "payload");
+        return Expression.Lambda<Func<TCase, TUnion>>(Expression.New(ctor, payload), payload).Compile();
+    }
+
+    private static TCase CreateUnitInstance<TCase>()
+    {
+        var caseType = typeof(TCase);
+
+        // Reuse a declared singleton such as None.Instance so reference identity survives a round trip.
+        if (caseType.GetField("Instance", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) is TCase sharedField)
+        {
+            return sharedField;
+        }
+
+        if (caseType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) is TCase sharedProperty)
+        {
+            return sharedProperty;
+        }
+
+        var ctor = caseType.GetConstructor(Type.EmptyTypes)
+            ?? throw new InvalidOperationException(
+                $"Unit-like union case {caseType.FullName} must expose a public parameterless constructor or a public static Instance.");
+
+        return (TCase)ctor.Invoke(null);
     }
 
     private static Func<TUnion, object?> CompileValueGetter()
@@ -183,12 +225,5 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
         return true;
     }
 
-    private struct UnionCase
-    {
-        public Type Type;
-        public bool IsUnit;
-        public Func<object, TUnion> Constructor;
-        public Func<object>? UnitConstructor;
-        public IBcsObjectFormatter? Formatter;
-    }
+    private readonly record struct UnionCase(CaseWriter Write, CaseReader Read);
 }
