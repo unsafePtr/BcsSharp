@@ -16,7 +16,8 @@ public static class OptionFormatterCache
 }
 
 /// <summary>
-/// Formatter for BCS Option<T> type - handles nullable value types
+/// BCS <c>Option&lt;T&gt;</c> over a value type: <c>0x00</c> for None, <c>0x01</c> followed by the payload for Some.
+/// Any other discriminant is rejected rather than treated as Some.
 /// </summary>
 public sealed class OptionFormatter<T> : IBcsFormatter<T?> where T : struct
 {
