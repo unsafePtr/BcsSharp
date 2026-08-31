@@ -8,7 +8,7 @@ High-performance C# implementation of [Binary Canonical Serialization (BCS)](htt
 - **Zero-allocation Serialize via `IBufferWriter<byte>` overload.** Caller-owned output buffer + typed per-field dispatch eliminates every box on the hot path.
 - **Zero-allocation Deserialize for value-type targets.** Struct fields are written via compiled `ref T` setters, no instance boxing.
 - **C# 15 `union` types** as the first-class way to model Rust tagged enums and `Option<T>` for reference types.
-- **136 tests** including cross-implementation byte-level checks against the Rust reference crate.
+- **192 tests** including cross-implementation byte-level checks against the Rust reference crate.
 
 ## Requirements
 
@@ -274,29 +274,29 @@ dotnet restore
 dotnet build -p:WarningLevel=0 -v:q --no-restore
 
 # Test (xUnit v3 + Microsoft.Testing.Platform)
-dotnet run --project BcsSharp/BcsSharp.Tests/BcsSharp.Tests.csproj --no-build
+dotnet run --project BcsSharp.Tests/BcsSharp.Tests.csproj --no-build
 
 # Filter
-dotnet run --project BcsSharp/BcsSharp.Tests/BcsSharp.Tests.csproj -- -class BcsSharp.Tests.RustBcsCompatibilityTests
+dotnet run --project BcsSharp.Tests/BcsSharp.Tests.csproj -- -class BcsSharp.Tests.RustBcsCompatibilityTests
 ```
 
 ## Project layout
 
 ```
-BcsSharp/
-├── BcsSharp.Core/         # The library
-│   ├── Attributes/        # [BcsStruct], [BcsField], [BcsEnum*], [BcsFormatter]
-│   ├── Formatters/        # IBcsFormatter<T> implementations + UnionFormatter, ByteArrayFormatter
-│   ├── Resolvers/         # Composite chain entries
-│   ├── Unions/            # Option<T>, None
-│   ├── Polyfills/         # System.Runtime.CompilerServices.UnionAttribute / IUnion
-│   ├── BcsSerializer.cs   # Public entry points
-│   ├── BcsReader.cs       # ref struct
-│   ├── BcsWriter.cs       # ref struct
-│   └── ScratchBufferWriter.cs
-└── BcsSharp.Tests/        # 136 tests, xUnit v3 MTP
-
-rust-sui-bcs-test/         # Reference Rust implementation + golden .bcs vectors
+BcsSharp.slnx
+BcsSharp.Core/             # The library — the only project that ships
+├── Attributes/            # [BcsStruct], [BcsField], [BcsEnum*], [BcsFormatter]
+├── Formatters/            # IBcsFormatter<T> implementations + UnionFormatter, ByteArrayFormatter
+├── Resolvers/             # Composite chain entries
+├── Unions/                # Option<T>, None
+├── Polyfills/             # System.Runtime.CompilerServices.UnionAttribute / IUnion
+├── BcsSerializer.cs       # Public entry points
+├── BcsReader.cs           # ref struct
+├── BcsWriter.cs           # ref struct
+└── ScratchBufferWriter.cs
+BcsSharp.Tests/            # 192 tests, xUnit v3 MTP
+└── Fixtures/rust-bcs/     # Reference Rust implementation + golden .bcs vectors
+BcsSharp.Benchmarks/       # BenchmarkDotNet harness
 ```
 
 ## Rust compatibility

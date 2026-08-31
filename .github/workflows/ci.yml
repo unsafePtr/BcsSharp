@@ -61,7 +61,7 @@ jobs:
       # xUnit v3 + Microsoft.Testing.Platform — `dotnet run` is the canonical runner.
       # `dotnet test` also works but rebuilds; --no-build keeps CI fast.
       - name: Test
-        run: dotnet run --project BcsSharp/BcsSharp.Tests/BcsSharp.Tests.csproj --no-build --no-restore -c Debug
+        run: dotnet run --project BcsSharp.Tests/BcsSharp.Tests.csproj --no-build --no-restore -c Debug
 
   # Rust cross-implementation parity. Builds a Dockerized Rust fixture generator
   # via Testcontainers, runs the explicit-only tests that compare bytes against the
@@ -95,7 +95,7 @@ jobs:
       # that spin up the Rust Docker container via Testcontainers and compare bytes.
       - name: Parity tests (--explicit on)
         run: >
-          dotnet run --project BcsSharp/BcsSharp.Tests/BcsSharp.Tests.csproj
+          dotnet run --project BcsSharp.Tests/BcsSharp.Tests.csproj
           --no-build --no-restore -c Debug
           --
           -explicit on

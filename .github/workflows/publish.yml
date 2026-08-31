@@ -33,14 +33,14 @@ jobs:
 
       - name: Validate version matches project
         run: |
-          PROJECT_VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' BcsSharp/BcsSharp.Core/BcsSharp.Core.csproj)
+          PROJECT_VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' BcsSharp.Core/BcsSharp.Core.csproj)
           if [ "$PROJECT_VERSION" != "${{ steps.version.outputs.VERSION }}" ]; then
             echo "::error::Tag version (${{ steps.version.outputs.VERSION }}) doesn't match BcsSharp.Core.csproj <Version>$PROJECT_VERSION</Version>"
             exit 1
           fi
 
       - name: Pack
-        run: dotnet pack BcsSharp/BcsSharp.Core/BcsSharp.Core.csproj -c Release -o ./artifacts
+        run: dotnet pack BcsSharp.Core/BcsSharp.Core.csproj -c Release -o ./artifacts
 
       - name: NuGet login (OIDC)
         id: login
