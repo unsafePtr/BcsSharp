@@ -1,0 +1,18 @@
+version: 2
+
+updates:
+  # The workflows pin actions by major tag; this catches the ones that go stale.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+
+  # Test and benchmark dependencies only — BcsSharp.Core ships with none.
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build

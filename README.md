@@ -1,5 +1,8 @@
 # BcsSharp — Binary Canonical Serialization for C#
 
+[![ci](https://github.com/unsafePtr/BcsSharp/actions/workflows/ci.yml/badge.svg)](https://github.com/unsafePtr/BcsSharp/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/BcsSharp.svg)](https://www.nuget.org/packages/BcsSharp)
+
 High-performance C# implementation of [Binary Canonical Serialization (BCS)](https://github.com/diem/bcs), byte-for-byte compatible with Rust's `bcs` crate and the Sui blockchain ecosystem.
 
 ## Highlights
@@ -19,6 +22,10 @@ High-performance C# implementation of [Binary Canonical Serialization (BCS)](htt
 | Language version | `<LangVersion>preview</LangVersion>` |
 
 The compiled binary runs on any .NET 10+ runtime, but the build requires .NET 11 SDK because we use the C# 15 `union` keyword. We polyfill `System.Runtime.CompilerServices.UnionAttribute` and `IUnion` until the BCL ships them.
+
+### Trimming and Native AOT
+
+Not supported. Formatter resolution is reflection-driven (`Expression.Compile`, `Type.MakeGenericType`, `Activator.CreateInstance`), so `PublishTrimmed` can leave a formatter resolving fine at develop time and failing at runtime once the trimmer removes the type it reflects over, and `PublishAot` cannot run those paths at all.
 
 ## Type mapping
 

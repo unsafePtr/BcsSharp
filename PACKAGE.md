@@ -6,6 +6,7 @@ Binary Canonical Serialization (BCS) for .NET. Byte-for-byte wire-compatible wit
 
 - **Runtime**: .NET 10.0 or later
 - **Building** types that use `union` (C# 15 keyword): **.NET 11 SDK or later** + `<LangVersion>preview</LangVersion>`. The C# 15 `union` keyword is the recommended way to model Rust tagged enums. If you're stuck on the .NET 10 SDK, the `[BcsEnum]` attribute-based path produces identical bytes.
+- **Trimming / Native AOT**: not supported. Formatter resolution uses `Expression.Compile`, `MakeGenericType` and `Activator.CreateInstance`, so `PublishTrimmed` can break resolution at runtime and `PublishAot` cannot run the dynamic paths at all.
 
 ## Quick start
 
