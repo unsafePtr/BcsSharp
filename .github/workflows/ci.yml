@@ -56,7 +56,7 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build -p:WarningLevel=0 -v:q --no-restore
+        run: dotnet build -v:q --no-restore
 
       # xUnit v3 + Microsoft.Testing.Platform — `dotnet run` is the canonical runner.
       # `dotnet test` also works but rebuilds; --no-build keeps CI fast.
@@ -89,7 +89,7 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build -p:WarningLevel=0 -v:q --no-restore
+        run: dotnet build -v:q --no-restore
 
       # `-explicit on` enables tests marked [Fact(Explicit = true)] — the parity tests
       # that spin up the Rust Docker container via Testcontainers and compare bytes.
