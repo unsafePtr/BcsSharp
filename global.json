@@ -2,7 +2,6 @@
   "sdk": {
     "version": "11.0.100-preview.3.26207.106",
     "allowPrerelease": true,
-    "rollForward": "latestFeature",
-    "paths": ["C:\\Users\\unsaf\\dotnet"]
+    "rollForward": "latestFeature"
   }
 }
