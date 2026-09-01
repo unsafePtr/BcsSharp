@@ -1,13 +1,16 @@
-# Store every text file with LF, check it out with the platform's native endings.
-# The repository is already uniformly LF; this makes that a property of the repo rather than
-# of whatever core.autocrlf each contributor happens to have set.
-* text=auto
+# Store every text file with LF and check it out with LF on every platform, so the bytes on
+# disk match the bytes in the repository and nothing converts in either direction. The
+# alternative — plain `text=auto`, which checks out CRLF on Windows — is what Roslyn and
+# dotnet/runtime do, but it contradicts end_of_line = lf in .editorconfig. xunit, Humanizer,
+# ReactiveUI, ImageSharp and MudBlazor all pin LF the same way.
+* text=auto eol=lf
 
 # Hunk headers name the enclosing type or member instead of showing a bare line range.
 *.cs text diff=csharp
 
-# Copied into a Linux container by the Rust parity fixture. A CR before a line continuation
-# breaks the build, so these stay LF in the working tree on every platform.
+# Redundant while the rule above is eol=lf, but these must never be CRLF: the Rust parity
+# fixture copies them into a Linux container, where a CR before a line continuation breaks
+# the build. Stated explicitly so they survive a change to the default.
 Dockerfile text eol=lf
 *.sh text eol=lf
 
