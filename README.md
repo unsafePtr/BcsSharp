@@ -1,5 +1,8 @@
 # BcsSharp — Binary Canonical Serialization for C#
 
+[![ci](https://github.com/unsafePtr/BcsSharp/actions/workflows/ci.yml/badge.svg)](https://github.com/unsafePtr/BcsSharp/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/BcsSharp.svg)](https://www.nuget.org/packages/BcsSharp)
+
 High-performance C# implementation of [Binary Canonical Serialization (BCS)](https://github.com/diem/bcs), byte-for-byte compatible with Rust's `bcs` crate and the Sui blockchain ecosystem.
 
 ## Highlights
