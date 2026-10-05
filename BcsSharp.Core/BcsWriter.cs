@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Buffers.Binary;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using BcsSharp.Core.Helpers;
@@ -8,18 +9,28 @@ namespace BcsSharp.Core;
 
 /// <summary>
 /// Writes BCS-encoded bytes into either an <see cref="IBufferWriter{T}"/> (heap-pooled buffer, auto-grow) or a caller-owned <see cref="Span{T}"/> destination (e.g. a <c>stackalloc</c>'d buffer, fixed size).
+/// Over an <see cref="IBufferWriter{T}"/> it keeps the span it was last handed and goes back to the buffer writer only when that span runs out, so a field costs a bounds check rather than two interface calls.
+/// Always pass it by <c>ref</c>: a copy tracks its own uncommitted bytes, so writes through the copy and the original overwrite each other.
 /// </summary>
 public ref struct BcsWriter
 {
     private readonly IBufferWriter<byte>? _bufferWriter;
-    private Span<byte> _spanDest;
-    private int _spanWritten;
+    private Span<byte> _buffer;
+    private int _buffered;
+    private long _flushed;
 
+    [Obsolete("Construct over an IBufferWriter<byte> or a Span<byte> destination.", error: true)]
+    public BcsWriter()
+    {
+    }
+
+    /// <summary>
+    /// Construct over an <see cref="IBufferWriter{T}"/>.
+    /// Written bytes reach <paramref name="bufferWriter"/> only on <see cref="Flush"/>; the <see cref="BcsSerializer"/> overloads that take a buffer writer flush for you.
+    /// </summary>
     public BcsWriter(IBufferWriter<byte> bufferWriter)
     {
         _bufferWriter = bufferWriter ?? throw new ArgumentNullException(nameof(bufferWriter));
-        _spanDest = default;
-        _spanWritten = 0;
     }
 
     /// <summary>
@@ -29,49 +40,70 @@ public ref struct BcsWriter
     /// </summary>
     public BcsWriter(Span<byte> destination)
     {
-        _bufferWriter = null;
-        _spanDest = destination;
-        _spanWritten = 0;
+        _buffer = destination;
     }
 
     /// <summary>
-    /// Bytes written so far.
-    /// Only meaningful in <see cref="Span{T}"/> destination mode — for <see cref="IBufferWriter{T}"/> mode the buffer writer itself tracks this.
+    /// Bytes written so far, including any not yet committed by <see cref="Flush"/>.
     /// </summary>
-    public int WrittenCount =>
-        _bufferWriter is null
-            ? _spanWritten
-            : throw new InvalidOperationException("WrittenCount is only available when constructed with a Span<byte> destination.");
+    public readonly int WrittenCount => checked((int)(_flushed + _buffered));
+
+    /// <summary>
+    /// Commits the bytes written since the last flush to the <see cref="IBufferWriter{T}"/>; a no-op over a <see cref="Span{T}"/>.
+    /// </summary>
+    public void Flush()
+    {
+        if (_bufferWriter is null || _buffered == 0)
+        {
+            return;
+        }
+
+        _bufferWriter.Advance(_buffered);
+        _flushed += _buffered;
+        _buffered = 0;
+
+        // IBufferWriter.Advance invalidates every span the buffer writer handed out.
+        _buffer = default;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Span<byte> GetWriteSpan(int sizeHint)
     {
-        if (_bufferWriter is not null)
+        var remaining = _buffer.Length - _buffered;
+        if ((uint)remaining < (uint)sizeHint)
         {
-            return _bufferWriter.GetSpan(sizeHint);
+            return GetWriteSpanSlow(sizeHint);
         }
 
-        if (_spanDest.Length - _spanWritten < sizeHint)
+        // Slice would repeat the range check the branch above already made.
+        return MemoryMarshal.CreateSpan(ref Unsafe.Add(ref MemoryMarshal.GetReference(_buffer), _buffered), remaining);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private Span<byte> GetWriteSpanSlow(int sizeHint)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(sizeHint);
+
+        if (_bufferWriter is null)
         {
             ThrowHelper.ThrowInvalidOperationException(
-                $"BcsWriter Span<byte> destination is too small (need {sizeHint} more bytes, have {_spanDest.Length - _spanWritten}).");
+                $"BcsWriter Span<byte> destination is too small (need {sizeHint} more bytes, have {_buffer.Length - _buffered}).");
         }
 
-        return _spanDest.Slice(_spanWritten);
+        Flush();
+        _buffer = _bufferWriter.GetSpan(sizeHint);
+
+        if (_buffer.Length < sizeHint)
+        {
+            ThrowHelper.ThrowInvalidOperationException(
+                $"The IBufferWriter<byte> returned a {_buffer.Length}-byte span when asked for at least {sizeHint} bytes.");
+        }
+
+        return _buffer;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void AdvanceWrite(int count)
-    {
-        if (_bufferWriter is not null)
-        {
-            _bufferWriter.Advance(count);
-        }
-        else
-        {
-            _spanWritten += count;
-        }
-    }
+    private void AdvanceWrite(int count) => _buffered += count;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Write(byte value)
@@ -160,22 +192,18 @@ public ref struct BcsWriter
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteULEB(uint value)
     {
-        var span = GetWriteSpan(5); // Max 5 bytes for uint
-        var index = 0;
+        // Requesting the exact length, not the 5-byte maximum, lets an exactly-sized Span<byte> destination end in a length prefix.
+        var length = BitOperations.Log2(value) / 7 + 1;
+        var span = GetWriteSpan(length);
 
-        do
+        for (var i = 0; i < length - 1; i++)
         {
-            var b = (byte)(value & 0x7F);
+            span[i] = (byte)(value | 0x80);
             value >>= 7;
-            if (value != 0)
-            {
-                b |= 0x80;
-            }
+        }
 
-            span[index++] = b;
-        } while (value != 0);
-
-        AdvanceWrite(index);
+        span[length - 1] = (byte)value;
+        AdvanceWrite(length);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

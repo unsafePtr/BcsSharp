@@ -171,6 +171,7 @@ public class BasicFormatterTests
         writer.Write(100);
         writer.WriteString("key"); // Duplicate key
         writer.Write(200);
+        writer.Flush();
 
         var invalidData = bw.WrittenSpan.ToArray();
 
@@ -190,6 +191,7 @@ public class BasicFormatterTests
         writer.Write(100);
         writer.WriteString("alpha");
         writer.Write(200);
+        writer.Flush();
 
         var invalidData = bw.WrittenSpan.ToArray();
 

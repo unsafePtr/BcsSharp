@@ -14,6 +14,11 @@ public ref struct BcsReader
     private int _position;
     private int _remainingDepth;
 
+    [Obsolete("Construct over the encoded bytes.", error: true)]
+    public BcsReader()
+    {
+    }
+
     public BcsReader(byte[] data, int maxContainerDepth = BcsSerializer.MaxContainerDepth)
         : this(new ReadOnlySpan<byte>(data), maxContainerDepth)
     {

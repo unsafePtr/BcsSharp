@@ -60,7 +60,12 @@ public class CanonicalEncodingTests
             (255u, new byte[] { 0xFF, 0x01 }),
             (256u, new byte[] { 0x80, 0x02 }),
             (16383u, new byte[] { 0xFF, 0x7F }),
-            (16384u, new byte[] { 0x80, 0x80, 0x01 })
+            (16384u, new byte[] { 0x80, 0x80, 0x01 }),
+            (2097151u, new byte[] { 0xFF, 0xFF, 0x7F }),
+            (2097152u, new byte[] { 0x80, 0x80, 0x80, 0x01 }),
+            (268435455u, new byte[] { 0xFF, 0xFF, 0xFF, 0x7F }),
+            (268435456u, new byte[] { 0x80, 0x80, 0x80, 0x80, 0x01 }),
+            (uint.MaxValue, new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0x0F })
         };
 
         foreach (var (value, expectedCanonical) in testValues)
@@ -68,6 +73,7 @@ public class CanonicalEncodingTests
             var bw = new System.Buffers.ArrayBufferWriter<byte>(8);
             var writer = new BcsWriter(bw);
             writer.WriteULEB(value);
+            writer.Flush();
             var actualEncoding = bw.WrittenSpan.ToArray();
 
             Assert.Equal(expectedCanonical, actualEncoding);

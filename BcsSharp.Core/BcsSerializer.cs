@@ -42,6 +42,8 @@ public static class BcsSerializer
         {
             var writer = new BcsWriter(bufferWriter);
             Serialize(ref writer, value, resolver);
+            writer.Flush();
+
             return bufferWriter.WrittenSpan.ToArray();
         }
         finally
@@ -51,7 +53,8 @@ public static class BcsSerializer
     }
 
     /// <summary>
-    /// Serialize value to BcsWriter
+    /// Serialize value to BcsWriter.
+    /// The caller owns the writer, so the bytes stay uncommitted until the caller calls <see cref="BcsWriter.Flush"/>.
     /// </summary>
     public static void Serialize<T>(ref BcsWriter writer, T value, IFormatterResolver? resolver = null)
     {
@@ -67,6 +70,7 @@ public static class BcsSerializer
     {
         var writer = new BcsWriter(bufferWriter);
         Serialize(ref writer, value, resolver);
+        writer.Flush();
     }
 
     /// <summary>
