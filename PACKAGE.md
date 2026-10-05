@@ -188,7 +188,7 @@ For maximum throughput, use the `IBufferWriter<byte>` overload and reuse the buf
 
 ## Links
 
-- **Source / issues / full docs**: <https://github.com/yourusername/BcsSharp>
+- **Source / issues / full docs**: <https://github.com/unsafePtr/BcsSharp>
 - **BCS specification**: <https://github.com/diem/bcs>
 
 ## License
