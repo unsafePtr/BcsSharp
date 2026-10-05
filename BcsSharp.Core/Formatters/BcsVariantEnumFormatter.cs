@@ -60,6 +60,8 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
 
     public T Deserialize(ref BcsReader reader)
     {
+        reader.EnterContainer();
+
         // Read ULEB128 variant index
         var variantIndex = reader.ReadULEB32();
 
@@ -74,6 +76,8 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
         {
             DeserializeVariantData(ref reader, instance, variant);
         }
+
+        reader.LeaveContainer();
 
         return (T)instance;
     }

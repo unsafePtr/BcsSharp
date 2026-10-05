@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using BcsSharp.Core.Unions;
 
 namespace BcsSharp.Core.Formatters;
 
@@ -30,6 +31,11 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
 
     private static readonly MethodInfo CreateCaseMethod =
         typeof(UnionFormatter<TUnion>).GetMethod(nameof(CreateCase), BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    // Rust's Option is not a container, so the Option<T> union must not count toward the depth limit.
+    // Unions are structs, so each instantiation gets its own code and the JIT folds this into a constant.
+    private static readonly bool CountsTowardDepth =
+        !(typeof(TUnion).IsGenericType && typeof(TUnion).GetGenericTypeDefinition() == typeof(Option<>));
 
     private readonly UnionCase[] _cases;
     private readonly FrozenDictionary<Type, int> _caseIndexByType;
@@ -103,6 +109,11 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
 
     public TUnion Deserialize(ref BcsReader reader)
     {
+        if (CountsTowardDepth)
+        {
+            reader.EnterContainer();
+        }
+
         var idx = reader.ReadULEB32();
         if (idx >= (uint)_cases.Length)
         {
@@ -110,7 +121,14 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
                 $"Variant index {idx} is out of range for union {typeof(TUnion).FullName} (expected 0..{_cases.Length - 1}).");
         }
 
-        return _cases[idx].Read(ref reader);
+        var value = _cases[idx].Read(ref reader);
+
+        if (CountsTowardDepth)
+        {
+            reader.LeaveContainer();
+        }
+
+        return value;
     }
 
     private static UnionCase CreateCaseReflected(Type caseType, ConstructorInfo ctor, IFormatterResolver? root)

@@ -12,24 +12,47 @@ public ref struct BcsReader
 {
     private readonly ReadOnlySpan<byte> _data;
     private int _position;
+    private int _remainingDepth;
 
-    public BcsReader(byte[] data)
+    public BcsReader(byte[] data, int maxContainerDepth = BcsSerializer.MaxContainerDepth)
+        : this(new ReadOnlySpan<byte>(data), maxContainerDepth)
     {
+    }
+
+    public BcsReader(ReadOnlyMemory<byte> data, int maxContainerDepth = BcsSerializer.MaxContainerDepth)
+        : this(data.Span, maxContainerDepth)
+    {
+    }
+
+    /// <param name="data">The encoded bytes.</param>
+    /// <param name="maxContainerDepth">How deep structs and enums may nest; it can only be lowered from <see cref="BcsSerializer.MaxContainerDepth"/>, as in Rust's <c>from_bytes_with_limit</c>.</param>
+    public BcsReader(ReadOnlySpan<byte> data, int maxContainerDepth = BcsSerializer.MaxContainerDepth)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(maxContainerDepth);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(maxContainerDepth, BcsSerializer.MaxContainerDepth);
+
         _data = data;
         _position = 0;
+        _remainingDepth = maxContainerDepth;
     }
 
-    public BcsReader(ReadOnlyMemory<byte> data)
+    /// <summary>
+    /// Counts one level of struct or enum nesting, throwing once the depth limit is reached; pair every call with <see cref="LeaveContainer"/>.
+    /// Formatters for structs and enums call this so crafted input cannot nest deep enough to overflow the stack; sequences, maps, tuples and options do not count, matching Rust's <c>bcs</c>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void EnterContainer()
     {
-        _data = data.Span;
-        _position = 0;
+        if (_remainingDepth == 0)
+        {
+            ThrowHelper.ThrowContainerDepthExceeded();
+        }
+
+        _remainingDepth--;
     }
 
-    public BcsReader(ReadOnlySpan<byte> data)
-    {
-        _data = data;
-        _position = 0;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void LeaveContainer() => _remainingDepth++;
 
     /// <summary>
     /// Get remaining bytes count
@@ -270,6 +293,23 @@ public ref struct BcsReader
     }
 
     /// <summary>
+    /// Reads the ULEB128 length prefix of a sequence, map, string or byte vector.
+    /// The prefix is untrusted: callers must not size an allocation from it alone, since a few bytes can claim billions of elements.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int ReadLength()
+    {
+        var length = ReadULEB32();
+
+        if (length > BcsSerializer.MaxSequenceLength)
+        {
+            ThrowHelper.ThrowSequenceTooLong(length);
+        }
+
+        return (int)length;
+    }
+
+    /// <summary>
     /// Read boolean value
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -291,8 +331,8 @@ public ref struct BcsReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public string ReadString()
     {
-        var length = ReadULEB32();
-        var span = ReadBytesAsSpan(unchecked((int)length));
+        var span = ReadBytesAsSpan(ReadLength());
+
         return System.Text.Encoding.UTF8.GetString(span);
     }
 

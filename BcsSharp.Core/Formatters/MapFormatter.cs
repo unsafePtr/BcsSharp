@@ -106,16 +106,17 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
 
     public void Deserialize(ref BcsReader reader, ref Dictionary<TKey, TValue> value)
     {
-        var count = reader.ReadULEB32();
+        var count = reader.ReadLength();
+        var capacity = InitialCapacity(count, ref reader);
 
         if (value is null)
         {
-            value = new Dictionary<TKey, TValue>((int)count);
+            value = new Dictionary<TKey, TValue>(capacity);
         }
         else
         {
             value.Clear();
-            value.EnsureCapacity((int)count);
+            value.EnsureCapacity(capacity);
         }
 
         if (count == 0)
@@ -126,7 +127,7 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
         int prevKeyStart = -1;
         int prevKeyEnd = -1;
 
-        for (uint i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
             var keyStart = reader.Position;
             var key = _keyFormatter.Deserialize(ref reader);
@@ -153,6 +154,11 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
             }
         }
     }
+
+    /// <summary>
+    /// Caps the up-front capacity at what the remaining input could fill, because the count comes from the input and a few bytes can claim billions of entries.
+    /// </summary>
+    private static int InitialCapacity(int count, ref BcsReader reader) => Math.Min(count, reader.RemainingBytes);
 
     /// <summary>Byte offsets and lengths into a shared serialization scratch buffer.</summary>
     private readonly struct PairOffsets(int keyOffset, int keyLen, int valOffset, int valLen)
