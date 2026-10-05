@@ -314,7 +314,7 @@ BcsSharp.Core/             # The library — the only project that ships
 └── ScratchBufferWriter.cs
 BcsSharp.Tests/            # 209 tests, xUnit v3 MTP
 └── Fixtures/rust-bcs/     # Rust reference that generates the .bcs parity fixtures
-BcsSharp.Benchmarks/       # BenchmarkDotNet harness
+BcsSharp.Benchmarks/       # BenchmarkDotNet harness; results against MessagePack in its README
 ```
 
 ## Rust compatibility
