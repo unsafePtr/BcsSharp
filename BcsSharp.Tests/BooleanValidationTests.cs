@@ -1,3 +1,4 @@
+using System.Globalization;
 using BcsSharp.Core;
 using Xunit;
 
@@ -41,7 +42,7 @@ public class BooleanValidationTests
             catch (InvalidOperationException ex)
             {
                 Assert.Contains("Invalid boolean value", ex.Message);
-                Assert.Contains(invalidValue.ToString(), ex.Message);
+                Assert.Contains(invalidValue.ToString(CultureInfo.InvariantCulture), ex.Message);
             }
         }
     }
