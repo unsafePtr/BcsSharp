@@ -8,7 +8,7 @@ namespace BcsSharp.Tests;
 /// For 128+ ULEB128 uses two or more bytes — at index 128 the encoding is [0x80, 0x01], not [0x80].
 /// These tests guard against the single-byte regression in <c>BcsSimpleEnumFormatter</c>.
 ///
-/// Ground-truth bytes were produced by running rust-sui-bcs-test's large_enum binary against the Rust bcs 0.1.x crate (see rust-sui-bcs-test/large_enum_*.bcs).
+/// Ground-truth bytes come from the large_enum binary in Fixtures/rust-bcs; <c>RustParityTests.LargeEnumVariantIndex</c> checks them against the live fixture.
 /// </summary>
 public class BcsSimpleEnumUlebTests
 {
@@ -27,14 +27,14 @@ public class BcsSimpleEnumUlebTests
     [Fact]
     public void EnumPosition128_SerializesAsULEB128_TwoBytes()
     {
-        // From rust-sui-bcs-test/large_enum_128.bcs: V128 -> [0x80, 0x01]
+        // From large_enum_128.bcs: V128 -> [0x80, 0x01]
         Assert.Equal(new byte[] { 0x80, 0x01 }, BcsSerializer.Serialize(LargeEnum.V128));
     }
 
     [Fact]
     public void EnumPosition129_SerializesAsULEB128_TwoBytes()
     {
-        // From rust-sui-bcs-test/large_enum_129.bcs: V129 -> [0x81, 0x01]
+        // From large_enum_129.bcs: V129 -> [0x81, 0x01]
         Assert.Equal(new byte[] { 0x81, 0x01 }, BcsSerializer.Serialize(LargeEnum.V129));
     }
 
