@@ -114,6 +114,14 @@ fn main() -> Result<()> {
     large_string_map.insert("nu".to_string(), 14000);
     large_string_map.insert("xi".to_string(), 15000);
 
+    // Struct keys: the derived Ord puts hi = 256 last, but bcs orders entries by serialized
+    // key bytes, where its little-endian 00 01 sorts first.
+    let mut struct_key_map = BTreeMap::new();
+    struct_key_map.insert(ObjectId { hi: 1, lo: 0 }, 100u32);
+    struct_key_map.insert(ObjectId { hi: 2, lo: 0 }, 200);
+    struct_key_map.insert(ObjectId { hi: 256, lo: 0 }, 300);
+    struct_key_map.insert(ObjectId { hi: 1, lo: 1 }, 400);
+
     // Demonstrate BCS serialization
     println!("\n📦 Serializing structs to BCS format...\n");
 
@@ -125,6 +133,7 @@ fn main() -> Result<()> {
     serialize_and_display("TupleExamples", &tuple_examples)?;
     serialize_and_display("MapExamples", &map_examples)?;
     serialize_and_display("LargeStringMap", &large_string_map)?;
+    serialize_and_display("StructKeyMap", &struct_key_map)?;
 
     // Serialize GlobalStats for each object, stats are different each time
     println!("\n🌐 Serializing GlobalStats with each object...\n");
@@ -210,7 +219,7 @@ fn main() -> Result<()> {
 
     // Export serialized bytes to files for C# comparison
     println!("\n💾 Exporting serialized bytes to files for C# comparison...");
-    export_serialized_bytes(&user, &asset, &transaction, &marketplace_item, &tuple_examples, &map_examples, &large_string_map, &stats_all_rarities, &sui_data)?;
+    export_serialized_bytes(&user, &asset, &transaction, &marketplace_item, &tuple_examples, &map_examples, &large_string_map, &struct_key_map, &stats_all_rarities, &sui_data)?;
 
     Ok(())
 }
@@ -281,6 +290,7 @@ fn export_serialized_bytes(
     tuple_examples: &TupleExamples,
     map_examples: &MapExamples,
     large_string_map: &BTreeMap<String, u32>,
+    struct_key_map: &BTreeMap<ObjectId, u32>,
     global_stats: &GlobalStats,
     sui_data: &SuiCompatibleData
 ) -> Result<()> {
@@ -292,6 +302,7 @@ fn export_serialized_bytes(
     let tuple_bytes = bcs::to_bytes(tuple_examples)?;
     let map_bytes = bcs::to_bytes(map_examples)?;
     let large_string_map_bytes = bcs::to_bytes(large_string_map)?;
+    let struct_key_map_bytes = bcs::to_bytes(struct_key_map)?;
     let global_stats_bytes = bcs::to_bytes(global_stats)?;
     let sui_data_bytes = bcs::to_bytes(sui_data)?;
 
@@ -303,6 +314,7 @@ fn export_serialized_bytes(
     fs::write("tuples.bcs", &tuple_bytes)?;
     fs::write("maps.bcs", &map_bytes)?;
     fs::write("large_string_map.bcs", &large_string_map_bytes)?;
+    fs::write("struct_key_map.bcs", &struct_key_map_bytes)?;
     fs::write("global_stats.bcs", &global_stats_bytes)?;
     fs::write("sui_data.bcs", &sui_data_bytes)?;
 

@@ -324,6 +324,7 @@ Verified byte-for-byte against fixtures that `BcsSharp.Tests/Fixtures/rust-bcs` 
 - `Transaction`, `MarketplaceItem` (nested structs)
 - `MapExamples` (BTreeMap with string and uint keys)
 - `LargeStringMap` (15-element map, verifies BCS sort order)
+- `StructKeyMap` (BTreeMap keyed by a struct with no `IComparable`, ordered by key bytes)
 - `TupleExamples` (tuples of mixed primitives and nested structs)
 - `Rarity` union variants (Common, Uncommon, Rare, Epic, Legendary)
 - `LargeEnum` at variant indices 0, 127, 128, 129 (ULEB128 boundary)

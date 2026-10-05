@@ -129,17 +129,13 @@ public sealed class StandardResolver : IFormatterResolver
             var keyType = typeArgs[0];
             var valueType = typeArgs[1];
 
-            // Key must implement IComparable<TKey> for BCS maps
-            var comparableInterface = typeof(IComparable<>).MakeGenericType(keyType);
-            if (comparableInterface.IsAssignableFrom(keyType))
-            {
-                var keyFormatter = GetFormatterForType(keyType, root);
-                var valueFormatter = GetFormatterForType(valueType, root);
+            // No IComparable requirement: entries are ordered by their serialized key bytes, as in Rust's bcs.
+            var keyFormatter = GetFormatterForType(keyType, root);
+            var valueFormatter = GetFormatterForType(valueType, root);
 
-                if (keyFormatter != null && valueFormatter != null)
-                {
-                    return CreateMapFormatter(keyType, valueType, keyFormatter, valueFormatter);
-                }
+            if (keyFormatter != null && valueFormatter != null)
+            {
+                return CreateMapFormatter(keyType, valueType, keyFormatter, valueFormatter);
             }
         }
 
