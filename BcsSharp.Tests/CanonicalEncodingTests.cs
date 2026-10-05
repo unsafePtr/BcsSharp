@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
 using BcsSharp.Core;
 using BcsSharp.Core.Unions;
-using Xunit;
 
 namespace BcsSharp.Tests;
 
@@ -118,7 +114,7 @@ public class CanonicalEncodingTests
         foreach (var (length, expectedLengthPrefix) in testCases)
         {
             var testData = new List<byte>();
-            for (int i = 0; i < length; i++)
+            for (var i = 0; i < length; i++)
             {
                 testData.Add((byte)(i % 256));
             }

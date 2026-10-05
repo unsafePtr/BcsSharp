@@ -1,6 +1,6 @@
+using System.Buffers;
 using BcsSharp.Core;
 using BcsSharp.Core.Attributes;
-using System.Buffers;
 
 namespace BcsSharp.Tests;
 
@@ -13,7 +13,7 @@ public class SpanDeserializeTests
     public void Deserialize_FromReadOnlySpan_RoundTrips()
     {
         var original = new Point { X = 7, Y = 13 };
-        byte[] bytes = BcsSerializer.Serialize(original);
+        var bytes = BcsSerializer.Serialize(original);
 
         // Pass as ReadOnlySpan<byte>.
         ReadOnlySpan<byte> span = bytes;
@@ -43,7 +43,7 @@ public class SpanDeserializeTests
     public void Deserialize_FromSlice_OfLargerBuffer()
     {
         var original = new Point { X = 1, Y = 2 };
-        byte[] payload = BcsSerializer.Serialize(original);
+        var payload = BcsSerializer.Serialize(original);
 
         // Embed the payload inside a larger buffer with arbitrary leading bytes.
         var combined = new byte[16];

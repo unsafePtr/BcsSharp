@@ -65,7 +65,7 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
 
         _cases = new UnionCase[ctors.Length];
         var indexBuilder = new Dictionary<Type, int>(ctors.Length);
-        for (int i = 0; i < ctors.Length; i++)
+        for (var i = 0; i < ctors.Length; i++)
         {
             var caseType = ctors[i].GetParameters()[0].ParameterType;
 
@@ -222,6 +222,7 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
         {
             access = Expression.Convert(access, typeof(object));
         }
+
         return Expression.Lambda<Func<TUnion, object?>>(access, p).Compile();
     }
 
@@ -239,6 +240,7 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
             {
                 continue;
             }
+
             return false;
         }
 

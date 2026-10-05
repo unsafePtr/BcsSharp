@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
-using DotNet.Testcontainers.Images;
 
 namespace BcsSharp.Tests.RustParity;
 

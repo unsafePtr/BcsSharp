@@ -1,7 +1,6 @@
 using BcsSharp.Core;
 using BcsSharp.Core.Attributes;
 using BcsSharp.Core.Unions;
-using Xunit;
 
 namespace BcsSharp.Tests;
 

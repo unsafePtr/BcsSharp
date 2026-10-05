@@ -104,20 +104,18 @@ Some allocates exactly the payload — nothing wrapping it.
 
 ### Strings are never optional by annotation
 
-BCS has no null string — `Option<String>` is the optional form. C# nullable annotations are
-erased at runtime, so `string` and `string?` are the *same* type and the library cannot tell
-them apart. Serializing a null string therefore throws `ArgumentNullException` rather than
-silently encoding it as empty:
+BCS has no null string — `Option<String>` is the optional form.
+C# nullable annotations are erased at runtime, so `string` and `string?` are the *same* type and the library cannot tell them apart.
+Serializing a null string therefore throws `ArgumentNullException` rather than silently encoding it as empty:
 
 ```csharp
 [BcsField(0)] public string Name { get; set; } = "";                      // required
 [BcsField(1)] public Option<string> Email { get; set; } = None.Instance;  // optional
 ```
 
-`string? Email` is **not** a shorthand for `Option<string>`. It encodes `"hi"` as
-`02 68 69`, missing the `0x01` discriminant that Rust's `Option<String>` writes — a silent
-wire mismatch. Only the absent case coincides (`0x00` for both a zero-length string and
-`Option.None`), which is exactly what makes the mistake hard to spot.
+`string? Email` is **not** a shorthand for `Option<string>`.
+It encodes `"hi"` as `02 68 69`, missing the `0x01` discriminant that Rust's `Option<String>` writes — a silent wire mismatch.
+Only the absent case coincides (`0x00` for both a zero-length string and `Option.None`), which is exactly what makes the mistake hard to spot.
 
 Deserialization never returns null: a zero-length string decodes to `""`.
 

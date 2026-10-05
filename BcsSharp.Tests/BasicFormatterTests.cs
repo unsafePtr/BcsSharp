@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using BcsSharp.Core;
 using BcsSharp.Core.Formatters;
-using Xunit;
 
 namespace BcsSharp.Tests;
 

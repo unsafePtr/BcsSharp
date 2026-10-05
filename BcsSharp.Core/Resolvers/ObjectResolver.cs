@@ -31,11 +31,15 @@ public sealed class ObjectResolver : IFormatterResolver
             // Check if it's a BCS struct (marked with [BcsStruct])
             var bcsStructAttr = type.GetCustomAttribute<BcsStructAttribute>();
             if (bcsStructAttr == null)
+            {
                 return null;
+            }
 
             // Must be a class or struct
             if (!type.IsClass && !type.IsValueType)
+            {
                 return null;
+            }
 
             // Must have a parameterless constructor for deserialization
             if (type.IsClass)

@@ -1,6 +1,5 @@
 using System.Globalization;
 using BcsSharp.Core;
-using Xunit;
 
 namespace BcsSharp.Tests;
 

@@ -71,6 +71,7 @@ internal sealed class ScratchBufferWriter : IBufferWriter<byte>
         {
             throw new InvalidOperationException("Advance exceeded the buffer's writable region.");
         }
+
         _written += count;
     }
 
@@ -98,6 +99,7 @@ internal sealed class ScratchBufferWriter : IBufferWriter<byte>
         {
             return;
         }
+
         Grow(_written + needed);
     }
 

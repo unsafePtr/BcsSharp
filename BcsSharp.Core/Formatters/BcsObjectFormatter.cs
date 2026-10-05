@@ -136,6 +136,7 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>
                 {
                     throw new InvalidOperationException($"Property {member.Name} in {objectType.Name} must be readable");
                 }
+
                 if (!property.CanWrite)
                 {
                     throw new InvalidOperationException($"Property {member.Name} in {objectType.Name} must be writable");

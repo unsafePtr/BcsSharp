@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using BcsSharp.Core.Formatters;
 using BcsSharp.Core.Helpers;
 
@@ -25,21 +23,71 @@ public sealed class StandardResolver : IFormatterResolver
     private static object? CreateFormatter(Type type, IFormatterResolver root)
     {
         // Primitive types
-        if (type == typeof(byte)) return ByteFormatter.Instance;
-        if (type == typeof(sbyte)) return SByteFormatter.Instance;
-        if (type == typeof(ushort)) return UInt16Formatter.Instance;
-        if (type == typeof(short)) return Int16Formatter.Instance;
-        if (type == typeof(uint)) return UInt32Formatter.Instance;
-        if (type == typeof(int)) return Int32Formatter.Instance;
-        if (type == typeof(ulong)) return UInt64Formatter.Instance;
-        if (type == typeof(long)) return Int64Formatter.Instance;
-        if (type == typeof(UInt128)) return UInt128Formatter.Instance;
-        if (type == typeof(Int128)) return Int128Formatter.Instance;
-        if (type == typeof(bool)) return BoolFormatter.Instance;
-        if (type == typeof(string)) return StringFormatter.Instance;
+        if (type == typeof(byte))
+        {
+            return ByteFormatter.Instance;
+        }
+
+        if (type == typeof(sbyte))
+        {
+            return SByteFormatter.Instance;
+        }
+
+        if (type == typeof(ushort))
+        {
+            return UInt16Formatter.Instance;
+        }
+
+        if (type == typeof(short))
+        {
+            return Int16Formatter.Instance;
+        }
+
+        if (type == typeof(uint))
+        {
+            return UInt32Formatter.Instance;
+        }
+
+        if (type == typeof(int))
+        {
+            return Int32Formatter.Instance;
+        }
+
+        if (type == typeof(ulong))
+        {
+            return UInt64Formatter.Instance;
+        }
+
+        if (type == typeof(long))
+        {
+            return Int64Formatter.Instance;
+        }
+
+        if (type == typeof(UInt128))
+        {
+            return UInt128Formatter.Instance;
+        }
+
+        if (type == typeof(Int128))
+        {
+            return Int128Formatter.Instance;
+        }
+
+        if (type == typeof(bool))
+        {
+            return BoolFormatter.Instance;
+        }
+
+        if (type == typeof(string))
+        {
+            return StringFormatter.Instance;
+        }
 
         // Unit type
-        if (type == typeof(Unit)) return UnitFormatter.Instance;
+        if (type == typeof(Unit))
+        {
+            return UnitFormatter.Instance;
+        }
 
         // Nullable value types (T?) - delegate to NullableResolver
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))

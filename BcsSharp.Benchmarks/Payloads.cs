@@ -1,5 +1,3 @@
-using BcsSharp.Core.Unions;
-
 namespace BcsSharp.Benchmarks;
 
 /// <summary>

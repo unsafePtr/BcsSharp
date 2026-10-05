@@ -61,7 +61,7 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
 
             // Serialize every (key, value) into the shared scratch, tracking offsets.
             var scratchWriter = new BcsWriter(scratch);
-            int i = 0;
+            var i = 0;
             foreach (var kvp in value)
             {
                 var keyStart = scratch.WrittenCount;
@@ -124,8 +124,8 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
             return;
         }
 
-        int prevKeyStart = -1;
-        int prevKeyEnd = -1;
+        var prevKeyStart = -1;
+        var prevKeyEnd = -1;
 
         for (var i = 0; i < count; i++)
         {
@@ -145,6 +145,7 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
                     throw new InvalidOperationException("Map keys must be in strictly increasing lexicographical order by BCS bytes");
                 }
             }
+
             prevKeyStart = keyStart;
             prevKeyEnd = keyEnd;
 

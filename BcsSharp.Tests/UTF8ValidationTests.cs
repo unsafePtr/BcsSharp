@@ -1,7 +1,4 @@
-using System;
-using System.Text;
 using BcsSharp.Core;
-using Xunit;
 
 namespace BcsSharp.Tests;
 

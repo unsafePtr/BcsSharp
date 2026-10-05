@@ -1,9 +1,7 @@
-using System;
 using BcsSharp.Core;
 using BcsSharp.Core.Attributes;
 using BcsSharp.Core.Formatters;
 using BcsSharp.Core.Resolvers;
-using Xunit;
 
 namespace BcsSharp.Tests;
 
@@ -182,7 +180,7 @@ public class NullableResolverTests
         var tasks = new System.Threading.Tasks.Task<IBcsFormatter<int?>?>[10];
 
         // Act - Concurrent access to resolver
-        for (int i = 0; i < tasks.Length; i++)
+        for (var i = 0; i < tasks.Length; i++)
         {
             tasks[i] = System.Threading.Tasks.Task.Run(() => _resolver.GetFormatter<int?>());
         }
@@ -193,7 +191,7 @@ public class NullableResolverTests
         var firstFormatter = await tasks[0];
         Assert.NotNull(firstFormatter);
 
-        for (int i = 1; i < tasks.Length; i++)
+        for (var i = 1; i < tasks.Length; i++)
         {
             Assert.Same(firstFormatter, await tasks[i]);
         }
