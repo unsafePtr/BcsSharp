@@ -193,4 +193,4 @@ For maximum throughput, use the `IBufferWriter<byte>` overload and reuse the buf
 
 ## License
 
-Apache-2.0
+MIT

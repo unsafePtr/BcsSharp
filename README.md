@@ -321,4 +321,4 @@ Verified byte-for-byte against `rust-sui-bcs-test/*.bcs` for:
 
 ## License
 
-Apache-2.0
+MIT
