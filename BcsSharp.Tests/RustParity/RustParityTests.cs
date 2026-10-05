@@ -145,6 +145,24 @@ public class RustParityTests(RustBcsContainer rust)
     }
 
     [Fact(Explicit = true)]
+    public async Task StructKeyMap()
+    {
+        // ObjectId has no IComparable; entries sort by serialized key bytes, so Hi = 256 (little-endian 00 01) comes first.
+        var map = new Dictionary<DictionaryKeyConstraintTests.ObjectId, uint>
+        {
+            [new() { Hi = 1, Lo = 0 }] = 100,
+            [new() { Hi = 2, Lo = 0 }] = 200,
+            [new() { Hi = 256, Lo = 0 }] = 300,
+            [new() { Hi = 1, Lo = 1 }] = 400,
+        };
+
+        var csharpBytes = BcsSerializer.Serialize(map);
+        var rustBytes = await rust.ReadFixtureAsync("struct_key_map.bcs", TestContext.Current.CancellationToken);
+
+        Assert.Equal(rustBytes, csharpBytes);
+    }
+
+    [Fact(Explicit = true)]
     public async Task GlobalStatsWithEveryRarity()
     {
         // Covers the tagged-enum path end to end: every Rarity variant, reached through

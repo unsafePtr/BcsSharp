@@ -178,6 +178,13 @@ pub struct TupleExamples {
     pub complex_tuple: (User, Transaction, bool),
 }
 
+/// Struct map key, shaped like a Sui ObjectID split into two words.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ObjectId {
+    pub hi: u64,
+    pub lo: u64,
+}
+
 /// Using BTreeMap because it already sots keys.
 /// If there is need for plain Map serilization this one can be used
 /// https://github.com/diem/bcs/blob/master/src/ser.rs#L457-L516
