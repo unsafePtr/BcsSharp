@@ -76,22 +76,16 @@ public class SpanWriterTests
     }
 
     [Fact]
-    public void WrittenCount_OnIBufferWriterMode_Throws()
+    public void ExactSizeDestination_EndingInLengthPrefix()
     {
-        InvalidOperationException? caught = null;
-        try
-        {
-            var bw = new System.Buffers.ArrayBufferWriter<byte>(16);
-            var writer = new BcsWriter(bw);
-            writer.Write(1u);
-            _ = writer.WrittenCount;
-        }
-        catch (InvalidOperationException ex)
-        {
-            caught = ex;
-        }
+        var msg = new Named { Id = 7, Name = "ab" };
+        var heapBytes = BcsSerializer.Serialize(msg);
 
-        Assert.NotNull(caught);
+        Span<byte> exact = stackalloc byte[heapBytes.Length];
+        var writer = new BcsWriter(exact);
+        BcsSerializer.Serialize(ref writer, msg);
+
+        Assert.True(exact.SequenceEqual(heapBytes));
     }
 
     [BcsStruct]
@@ -99,5 +93,12 @@ public class SpanWriterTests
     {
         [BcsField(0)] public uint Id { get; set; }
         [BcsField(1)] public bool Flag { get; set; }
+    }
+
+    [BcsStruct]
+    public sealed class Named
+    {
+        [BcsField(0)] public uint Id { get; set; }
+        [BcsField(1)] public string Name { get; set; } = "";
     }
 }

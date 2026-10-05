@@ -64,15 +64,17 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
             var i = 0;
             foreach (var kvp in value)
             {
-                var keyStart = scratch.WrittenCount;
+                var keyStart = scratchWriter.WrittenCount;
                 _keyFormatter.Serialize(ref scratchWriter, kvp.Key);
-                var keyEnd = scratch.WrittenCount;
+                var keyEnd = scratchWriter.WrittenCount;
 
                 _valueFormatter.Serialize(ref scratchWriter, kvp.Value);
-                var valEnd = scratch.WrittenCount;
+                var valEnd = scratchWriter.WrittenCount;
 
                 pairs[i++] = new PairOffsets(keyStart, keyEnd - keyStart, keyEnd, valEnd - keyEnd);
             }
+
+            scratchWriter.Flush();
 
             // Sort by serialized key bytes. The comparer is a struct that holds a
             // ReadOnlyMemory<byte> view of the scratch — passed by value through the

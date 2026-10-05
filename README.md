@@ -246,6 +246,7 @@ writer.Write(42u);                  // u32 LE
 writer.WriteString("Alice");        // ULEB length + UTF-8
 writer.WriteBool(true);
 writer.WriteULEB(1000u);
+writer.Flush();                     // commits the bytes to bw
 
 // Read
 var reader = new BcsReader(bw.WrittenMemory);
@@ -258,7 +259,10 @@ var u = reader.ReadULEB32();        // 1000
 ReadOnlySpan<byte> raw = reader.ReadBytesAsSpan(8);
 ```
 
-`BcsWriter` is a `ref struct` over an `IBufferWriter<byte>`. `BcsReader` is a `ref struct` over `ReadOnlyMemory<byte>`.
+`BcsWriter` is a `ref struct` over an `IBufferWriter<byte>` or a caller-owned `Span<byte>`.
+Over an `IBufferWriter<byte>` it writes into the span it was last handed and commits only on `Flush()`, so call it before reading the buffer writer; the `BcsSerializer` overloads flush for you.
+Pass it by `ref`: a copy tracks its own uncommitted bytes, so writes through the copy are lost.
+`BcsReader` is a `ref struct` over `ReadOnlyMemory<byte>`.
 
 ## Important rules
 
