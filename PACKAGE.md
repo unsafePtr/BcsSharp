@@ -4,8 +4,8 @@ Binary Canonical Serialization (BCS) for .NET. Byte-for-byte wire-compatible wit
 
 ## Requirements
 
-- **Runtime**: .NET 10.0 or later
-- **Building** types that use `union` (C# 15 keyword): **.NET 11 SDK or later** + `<LangVersion>preview</LangVersion>`. The C# 15 `union` keyword is the recommended way to model Rust tagged enums. If you're stuck on the .NET 10 SDK, the `[BcsEnum]` attribute-based path produces identical bytes.
+- **Runtime**: .NET 11 or later
+- **Building** types that use `union` (C# 15 keyword): **.NET 11 SDK** RC1 or later. The C# 15 `union` keyword is the recommended way to model Rust tagged enums; the `[BcsEnum]` attribute-based path produces identical bytes.
 
 ## Quick start
 

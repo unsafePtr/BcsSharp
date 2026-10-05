@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # global.json pins 11.0.100-preview.3.26207.106 with allowPrerelease: true.
+      # global.json pins 11.0.100-rc.1.26425.128 with allowPrerelease: true.
       # setup-dotnet@v4 reads the exact build and fetches it from Microsoft's CDN.
       # If that exact preview ever 404s (preview rotations sometimes get pulled),
       # swap to the manual dotnet-install fallback at the bottom of this file.
@@ -109,7 +109,7 @@ jobs:
 #     run: |
 #       curl -sSL https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh -o dotnet-install.sh
 #       chmod +x dotnet-install.sh
-#       ./dotnet-install.sh --version 11.0.100-preview.3.26207.106 --install-dir $HOME/.dotnet
+#       ./dotnet-install.sh --version 11.0.100-rc.1.26425.128 --install-dir $HOME/.dotnet
 #       echo "$HOME/.dotnet" >> $GITHUB_PATH
 #       echo "DOTNET_ROOT=$HOME/.dotnet" >> $GITHUB_ENV
 #
@@ -118,6 +118,6 @@ jobs:
 #     shell: pwsh
 #     run: |
 #       Invoke-WebRequest https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.ps1 -OutFile dotnet-install.ps1
-#       ./dotnet-install.ps1 -Version 11.0.100-preview.3.26207.106 -InstallDir "$env:USERPROFILE\.dotnet"
+#       ./dotnet-install.ps1 -Version 11.0.100-rc.1.26425.128 -InstallDir "$env:USERPROFILE\.dotnet"
 #       Add-Content $env:GITHUB_PATH "$env:USERPROFILE\.dotnet"
 #       Add-Content $env:GITHUB_ENV "DOTNET_ROOT=$env:USERPROFILE\.dotnet"

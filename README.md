@@ -18,10 +18,11 @@ High-performance C# implementation of [Binary Canonical Serialization (BCS)](htt
 | | |
 |---|---|
 | Target framework | `net11.0` |
-| SDK to build | **.NET 11 SDK** or later (C# 15 compiler required for `union` keyword) |
-| Language version | `<LangVersion>preview</LangVersion>` |
+| SDK to build | **.NET 11 SDK** RC1 or later (C# 15 compiler required for `union` keyword) |
+| Language version | C# 15 (the `net11.0` default) |
 
-The compiled binary runs on any .NET 10+ runtime, but the build requires .NET 11 SDK because we use the C# 15 `union` keyword. We polyfill `System.Runtime.CompilerServices.UnionAttribute` and `IUnion` until the BCL ships them.
+Consumers need .NET 11 or later.
+`System.Runtime.CompilerServices.UnionAttribute` and `IUnion`, which the `union` keyword lowers to, ship in the .NET 11 BCL from RC1 on; earlier previews lack them.
 
 ## Type mapping
 
@@ -292,7 +293,6 @@ BcsSharp.Core/             # The library — the only project that ships
 ├── Formatters/            # IBcsFormatter<T> implementations + UnionFormatter, ByteArrayFormatter
 ├── Resolvers/             # Composite chain entries
 ├── Unions/                # Option<T>, None
-├── Polyfills/             # System.Runtime.CompilerServices.UnionAttribute / IUnion
 ├── BcsSerializer.cs       # Public entry points
 ├── BcsReader.cs           # ref struct
 ├── BcsWriter.cs           # ref struct
