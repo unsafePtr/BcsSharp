@@ -30,14 +30,10 @@ public sealed class ListFormatter<T> : IBcsFormatter<List<T>>
 
     public List<T> Deserialize(ref BcsReader reader)
     {
-        var length = reader.ReadULEB32();
-        if (length == 0)
-        {
-            return new List<T>(0);
-        }
+        var length = reader.ReadLength();
 
-        var result = new List<T>(unchecked((int)length));
-        for (int i = 0; i < length; i++)
+        var result = new List<T>(InitialCapacity(length, ref reader));
+        for (var i = 0; i < length; i++)
         {
             result.Add(_elementFormatter.Deserialize(ref reader));
         }
@@ -47,25 +43,33 @@ public sealed class ListFormatter<T> : IBcsFormatter<List<T>>
 
     public void Deserialize(ref BcsReader reader, ref List<T> value)
     {
-        var length = unchecked((int)reader.ReadULEB32());
+        var length = reader.ReadLength();
+        var capacity = InitialCapacity(length, ref reader);
 
         if (value is null)
         {
-            value = new List<T>(length);
+            value = new List<T>(capacity);
         }
         else
         {
             value.Clear();
-            if (value.Capacity < length)
+
+            if (value.Capacity < capacity)
             {
-                value.Capacity = length;
+                value.Capacity = capacity;
             }
         }
 
-        for (int i = 0; i < length; i++)
+        for (var i = 0; i < length; i++)
         {
             value.Add(_elementFormatter.Deserialize(ref reader));
         }
     }
+
+    /// <summary>
+    /// Caps the up-front capacity at what the remaining input could fill, so a forged length cannot allocate more than the input could ever hold.
+    /// Only the capacity is capped: an element can encode to zero bytes (a unit), so a length larger than the remaining input is valid.
+    /// </summary>
+    private static int InitialCapacity(int length, ref BcsReader reader) => Math.Min(length, reader.RemainingBytes);
 
 }

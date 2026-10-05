@@ -185,6 +185,13 @@ For maximum throughput, use the `IBufferWriter<byte>` overload and reuse the buf
 - **Variant index = declaration order** for both `union` and `[BcsEnum]` paths.
 - **A null `string` is rejected.** BCS has no null string, so `WriteString` throws `ArgumentNullException` instead of coercing to `""`. Use `Option<string>` for an optional string — `string?` is erased to `string` at runtime and encodes without the `Option` discriminant.
 
+## Untrusted input
+
+- **Nesting depth.** Structs and enums may nest at most `BcsSerializer.MaxContainerDepth` (500) deep; lists, maps, tuples and options don't count. `new BcsReader(bytes, maxContainerDepth: 64)` lowers the limit.
+- **Length prefixes.** Lengths above `BcsSerializer.MaxSequenceLength` (2^31 − 1) are rejected, and collections never pre-allocate more than the remaining input could fill.
+- **Leftover bytes.** `Deserialize<T>(bytes)` requires exactly one value; the `ref BcsReader` overload leaves trailing bytes unread.
+- **Canonical form.** Non-minimal ULEB128, booleans other than 0 and 1, invalid UTF-8, and unsorted or duplicate map keys are rejected.
+
 ## Links
 
 - **Source / issues / full docs**: <https://github.com/unsafePtr/BcsSharp>

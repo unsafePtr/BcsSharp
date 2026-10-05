@@ -36,12 +36,17 @@ public sealed class BcsSimpleEnumFormatter<T> : IBcsFormatter<T>
 
     public T Deserialize(ref BcsReader reader)
     {
+        // Rust counts a unit variant as a container too, so an enum at the depth limit is rejected the same way.
+        reader.EnterContainer();
+
         var position = reader.ReadULEB32();
 
         if (position >= (uint)_enumCount)
         {
             throw new InvalidOperationException($"Invalid enum position {position} for {typeof(T).Name}. Enum has {_enumCount} values (0-{_enumCount - 1}).");
         }
+
+        reader.LeaveContainer();
 
         // Use cached enum values array for optimal performance (no reflection)
         return _staticEnumValues[(int)position];

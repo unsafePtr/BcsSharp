@@ -11,7 +11,7 @@ High-performance C# implementation of [Binary Canonical Serialization (BCS)](htt
 - **Zero-allocation Serialize via `IBufferWriter<byte>` overload.** Caller-owned output buffer + typed per-field dispatch eliminates every box on the hot path.
 - **Zero-allocation Deserialize for value-type targets.** Struct fields are written via compiled `ref T` setters, no instance boxing.
 - **C# 15 `union` types** as the first-class way to model Rust tagged enums and `Option<T>` for reference types.
-- **192 tests** including cross-implementation byte-level checks against the Rust reference crate.
+- **209 tests** including cross-implementation byte-level checks against the Rust reference crate.
 
 ## Requirements
 
@@ -270,6 +270,17 @@ ReadOnlySpan<byte> raw = reader.ReadBytesAsSpan(8);
 - **Variant index = declaration order** for both `union` and `[BcsEnum]` paths. Re-ordering breaks the wire.
 - **A null `string` is rejected.** BCS has no null string, so `WriteString` throws `ArgumentNullException` instead of coercing to `""`. Use `Option<string>` for an optional string — `string?` is erased to `string` at runtime and encodes without the `Option` discriminant.
 
+## Untrusted input
+
+Deserialization treats its input as untrusted:
+
+- **Nesting depth.** Structs and enums may nest at most `BcsSerializer.MaxContainerDepth` (500) deep; lists, maps, tuples and options don't count. Deeper input throws instead of overflowing the stack. `new BcsReader(bytes, maxContainerDepth: 64)` lowers the limit, and a custom formatter for a recursive type calls `reader.EnterContainer()` / `reader.LeaveContainer()` around each level.
+- **Length prefixes.** A declared length above `BcsSerializer.MaxSequenceLength` (2^31 − 1) is rejected, and collections never pre-allocate more than the remaining input could fill, so a few forged bytes cannot claim gigabytes.
+- **Leftover bytes.** `Deserialize<T>(bytes)` requires the input to hold exactly one value. The `ref BcsReader` overload leaves trailing bytes unread, for reading several values from one buffer.
+- **Canonical form.** Non-minimal ULEB128, booleans other than 0 and 1, invalid UTF-8, and unsorted or duplicate map keys are rejected.
+
+Serialization trusts the object graph it is given: a cyclic graph is not detected.
+
 ## Building & testing
 
 ```powershell
@@ -297,7 +308,7 @@ BcsSharp.Core/             # The library — the only project that ships
 ├── BcsReader.cs           # ref struct
 ├── BcsWriter.cs           # ref struct
 └── ScratchBufferWriter.cs
-BcsSharp.Tests/            # 192 tests, xUnit v3 MTP
+BcsSharp.Tests/            # 209 tests, xUnit v3 MTP
 └── Fixtures/rust-bcs/     # Rust reference that generates the .bcs parity fixtures
 BcsSharp.Benchmarks/       # BenchmarkDotNet harness
 ```

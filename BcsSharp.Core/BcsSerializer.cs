@@ -9,6 +9,18 @@ namespace BcsSharp.Core;
 /// </summary>
 public static class BcsSerializer
 {
+    /// <summary>
+    /// How deep structs and enums may nest in valid BCS data; sequences, maps, tuples and options do not count.
+    /// The value and counting rule follow Rust's <c>bcs::MAX_CONTAINER_DEPTH</c>.
+    /// Enforced only when deserializing, where the input is untrusted; like MessagePack, serialization trusts the caller's object graph.
+    /// </summary>
+    public const int MaxContainerDepth = 500;
+
+    /// <summary>
+    /// The largest element count a sequence, map, string or byte vector may declare, the same as Rust's <c>bcs::MAX_SEQUENCE_LENGTH</c> (2^31 - 1).
+    /// </summary>
+    public const int MaxSequenceLength = int.MaxValue;
+
     private static IFormatterResolver _defaultResolver = CompositeResolver.Default;
 
     /// <summary>
@@ -59,26 +71,32 @@ public static class BcsSerializer
     }
 
     /// <summary>
-    /// Deserialize from ReadOnlyMemory
+    /// Deserialize from ReadOnlyMemory.
+    /// The input must hold exactly one value: leftover bytes are rejected, as Rust's <c>bcs::from_bytes</c> does, so two different byte strings never decode to the same value.
     /// </summary>
     public static T Deserialize<T>(ReadOnlyMemory<byte> data, IFormatterResolver? resolver = null)
     {
-        var reader = new BcsReader(data);
-        return Deserialize<T>(ref reader, resolver);
+        return Deserialize<T>(data.Span, resolver);
     }
 
     /// <summary>
     /// Deserialize from ReadOnlySpan&lt;byte&gt;.
     /// Zero-copy entry point for callers holding a stack-allocated buffer, a slice of a larger array, or any other span source.
+    /// The input must hold exactly one value: leftover bytes are rejected, as Rust's <c>bcs::from_bytes</c> does.
     /// </summary>
     public static T Deserialize<T>(ReadOnlySpan<byte> data, IFormatterResolver? resolver = null)
     {
         var reader = new BcsReader(data);
-        return Deserialize<T>(ref reader, resolver);
+        var value = Deserialize<T>(ref reader, resolver);
+
+        ThrowIfBytesRemain(ref reader);
+
+        return value;
     }
 
     /// <summary>
-    /// Deserialize from BcsReader
+    /// Deserialize from BcsReader.
+    /// Bytes after the value are left unread, so a caller can decode several values from one buffer; check <see cref="BcsReader.HasRemainingBytes"/> when the input should hold just one.
     /// </summary>
     public static T Deserialize<T>(ref BcsReader reader, IFormatterResolver? resolver = null)
     {
@@ -91,19 +109,24 @@ public static class BcsSerializer
     /// In-place deserialize.
     /// Mutates <paramref name="value"/> rather than allocating: class targets reuse the existing instance (allocates only if null), collections are cleared and refilled, value-type targets are written directly into the caller's storage.
     /// Useful for pooled-message loops.
+    /// Leftover bytes are rejected, as in the allocating overload.
     /// </summary>
     public static void Deserialize<T>(ReadOnlySpan<byte> data, ref T value, IFormatterResolver? resolver = null)
     {
         var reader = new BcsReader(data);
         Deserialize(ref reader, ref value, resolver);
+
+        ThrowIfBytesRemain(ref reader);
     }
 
     public static void Deserialize<T>(ReadOnlyMemory<byte> data, ref T value, IFormatterResolver? resolver = null)
     {
-        var reader = new BcsReader(data);
-        Deserialize(ref reader, ref value, resolver);
+        Deserialize(data.Span, ref value, resolver);
     }
 
+    /// <summary>
+    /// In-place deserialize from BcsReader; like the allocating reader overload, bytes after the value are left unread.
+    /// </summary>
     public static void Deserialize<T>(ref BcsReader reader, ref T value, IFormatterResolver? resolver = null)
     {
         resolver ??= _defaultResolver;
@@ -127,4 +150,12 @@ public static class BcsSerializer
     /// A scoped chain from <see cref="CompositeResolver.Create"/> is unaffected — clear it via its own <see cref="CompositeResolver.Clear"/>.
     /// </summary>
     public static void ClearFormatterCache() => CompositeResolver.ClearCache();
+
+    private static void ThrowIfBytesRemain(ref BcsReader reader)
+    {
+        if (reader.HasRemainingBytes)
+        {
+            Helpers.ThrowHelper.ThrowRemainingBytes(reader.RemainingBytes);
+        }
+    }
 }

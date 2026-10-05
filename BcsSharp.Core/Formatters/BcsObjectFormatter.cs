@@ -60,16 +60,23 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>
 
     public T Deserialize(ref BcsReader reader)
     {
+        reader.EnterContainer();
+
         var instance = _constructor();
         foreach (var field in _fields)
         {
             field.Deserialize(ref reader, ref instance);
         }
+
+        reader.LeaveContainer();
+
         return instance;
     }
 
     public void Deserialize(ref BcsReader reader, ref T value)
     {
+        reader.EnterContainer();
+
         if (!_isValueType && value is null)
         {
             value = _constructor();
@@ -79,6 +86,8 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>
         {
             field.Deserialize(ref reader, ref value);
         }
+
+        reader.LeaveContainer();
     }
 
     private static Func<T> CreateConstructorDelegate()
