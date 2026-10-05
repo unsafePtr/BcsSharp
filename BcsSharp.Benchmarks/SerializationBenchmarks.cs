@@ -1,3 +1,4 @@
+using System.Buffers;
 using BcsSharp.Core;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -6,123 +7,90 @@ using MessagePack;
 
 namespace BcsSharp.Benchmarks;
 
+[SimpleJob(RuntimeMoniker.Net11_0)]
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net90)]
-public class SerializationBenchmarks
+[CategoriesColumn]
+[GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
+[Config(typeof(PayloadSizeConfig))]
+// MessagePack runs on its default options: StandardResolver already picks up the source-generated formatters, and wrapping them in a CompositeResolver adds a lookup per field.
+public abstract class SerializationBenchmarks<TBcs, TMsgPack> : IPayloadSize
 {
-    private User _singleUser = null!;
-    private List<User> _userList = null!;
-    private GameData _complexData = null!;
-    private List<GameData> _complexDataList = null!;
-    private Dictionary<string, int> _largeMap = null!;
+    private const string Serialize = "Serialize";
+    private const string SerializeToBuffer = "SerializeToBuffer";
+    private const string Deserialize = "Deserialize";
 
-    private byte[] _bcsUserBytes = null!;
-    private byte[] _msgPackUserBytes = null!;
-    private byte[] _bcsComplexBytes = null!;
-    private byte[] _msgPackComplexBytes = null!;
+    private readonly ArrayBufferWriter<byte> _buffer = new(64 * 1024);
+    private TBcs _bcs = default!;
+    private TMsgPack _msgPack = default!;
+    private byte[] _bcsBytes = null!;
+    private byte[] _msgPackBytes = null!;
+
+    protected abstract (TBcs Bcs, TMsgPack MsgPack) CreatePayload();
 
     [GlobalSetup]
     public void Setup()
     {
-        // Generate test data
-        _singleUser = DataGenerator.GenerateUser();
-        _userList = DataGenerator.GenerateUsers(100);
-        _complexData = DataGenerator.GenerateGameData();
-        _complexDataList = DataGenerator.GenerateGameDataList(50);
-        _largeMap = DataGenerator.GenerateStringIntMap(1000);
-
-        // Pre-serialize for deserialization benchmarks
-        _bcsUserBytes = BcsSerializer.Serialize(_singleUser);
-        _msgPackUserBytes = MessagePackSerializer.Serialize(_singleUser);
-        _bcsComplexBytes = BcsSerializer.Serialize(_complexData);
-        _msgPackComplexBytes = MessagePackSerializer.Serialize(_complexData);
+        (_bcs, _msgPack) = CreatePayload();
+        _bcsBytes = BcsSerializer.Serialize(_bcs);
+        _msgPackBytes = MessagePackSerializer.Serialize(_msgPack);
     }
 
-    // ========== BCS Serialization ==========
+    [Benchmark(Baseline = true, Description = "BCS"), BenchmarkCategory(Serialize)]
+    public byte[] BcsSerialize() => BcsSerializer.Serialize(_bcs);
 
-    [Benchmark(Description = "BCS - Serialize User")]
-    public byte[] BcsSerializeUser()
+    [Benchmark(Description = "MessagePack"), BenchmarkCategory(Serialize)]
+    public byte[] MessagePackSerialize() => MessagePackSerializer.Serialize(_msgPack);
+
+    [Benchmark(Baseline = true, Description = "BCS"), BenchmarkCategory(SerializeToBuffer)]
+    public void BcsSerializeToBuffer()
     {
-        return BcsSerializer.Serialize(_singleUser);
+        _buffer.ResetWrittenCount();
+        BcsSerializer.Serialize(_buffer, _bcs);
     }
 
-    [Benchmark(Description = "BCS - Deserialize User")]
-    public User BcsDeserializeUser()
+    [Benchmark(Description = "MessagePack"), BenchmarkCategory(SerializeToBuffer)]
+    public void MessagePackSerializeToBuffer()
     {
-        return BcsSerializer.Deserialize<User>(_bcsUserBytes);
+        _buffer.ResetWrittenCount();
+        MessagePackSerializer.Serialize(_buffer, _msgPack);
     }
 
-    [Benchmark(Description = "BCS - Serialize User List")]
-    public byte[] BcsSerializeUserList()
-    {
-        return BcsSerializer.Serialize(_userList);
-    }
+    [Benchmark(Baseline = true, Description = "BCS"), BenchmarkCategory(Deserialize)]
+    public TBcs BcsDeserialize() => BcsSerializer.Deserialize<TBcs>(_bcsBytes);
 
-    [Benchmark(Description = "BCS - Serialize GameData")]
-    public byte[] BcsSerializeComplex()
-    {
-        return BcsSerializer.Serialize(_complexData);
-    }
+    [Benchmark(Description = "MessagePack"), BenchmarkCategory(Deserialize)]
+    public TMsgPack MessagePackDeserialize() => MessagePackSerializer.Deserialize<TMsgPack>(_msgPackBytes);
 
-    [Benchmark(Description = "BCS - Deserialize GameData")]
-    public GameData BcsDeserializeComplex()
-    {
-        return BcsSerializer.Deserialize<GameData>(_bcsComplexBytes);
-    }
+    public int BcsSize() => BcsSerializer.Serialize(CreatePayload().Bcs).Length;
 
-    [Benchmark(Description = "BCS - Serialize Large Map")]
-    public byte[] BcsSerializeLargeMap()
-    {
-        return BcsSerializer.Serialize(_largeMap);
-    }
+    public int MessagePackSize() => MessagePackSerializer.Serialize(CreatePayload().MsgPack).Length;
+}
 
-    [Benchmark(Description = "BCS - Serialize GameData List")]
-    public byte[] BcsSerializeBulkComplex()
-    {
-        return BcsSerializer.Serialize(_complexDataList);
-    }
+public class UserBenchmarks : SerializationBenchmarks<Bcs.User, MsgPack.User>
+{
+    protected override (Bcs.User Bcs, MsgPack.User MsgPack) CreatePayload() => Payloads.User(new Random(42));
+}
 
-    // ========== MessagePack Serialization ==========
+public class UserListBenchmarks : SerializationBenchmarks<List<Bcs.User>, List<MsgPack.User>>
+{
+    protected override (List<Bcs.User> Bcs, List<MsgPack.User> MsgPack) CreatePayload() => Payloads.Users(new Random(42), 100);
+}
 
-    [Benchmark(Description = "MessagePack - Serialize User")]
-    public byte[] MessagePackSerializeUser()
-    {
-        return MessagePackSerializer.Serialize(_singleUser);
-    }
+public class GameDataBenchmarks : SerializationBenchmarks<Bcs.GameData, MsgPack.GameData>
+{
+    protected override (Bcs.GameData Bcs, MsgPack.GameData MsgPack) CreatePayload() => Payloads.GameData(new Random(42));
+}
 
-    [Benchmark(Description = "MessagePack - Deserialize User")]
-    public User MessagePackDeserializeUser()
-    {
-        return MessagePackSerializer.Deserialize<User>(_msgPackUserBytes);
-    }
+public class GameDataListBenchmarks : SerializationBenchmarks<List<Bcs.GameData>, List<MsgPack.GameData>>
+{
+    protected override (List<Bcs.GameData> Bcs, List<MsgPack.GameData> MsgPack) CreatePayload() => Payloads.GameDataList(new Random(42), 50);
+}
 
-    [Benchmark(Description = "MessagePack - Serialize User List")]
-    public byte[] MessagePackSerializeUserList()
+public class StringMapBenchmarks : SerializationBenchmarks<Dictionary<string, int>, Dictionary<string, int>>
+{
+    protected override (Dictionary<string, int> Bcs, Dictionary<string, int> MsgPack) CreatePayload()
     {
-        return MessagePackSerializer.Serialize(_userList);
-    }
-
-    [Benchmark(Description = "MessagePack - Serialize GameData")]
-    public byte[] MessagePackSerializeComplex()
-    {
-        return MessagePackSerializer.Serialize(_complexData);
-    }
-
-    [Benchmark(Description = "MessagePack - Deserialize GameData")]
-    public GameData MessagePackDeserializeComplex()
-    {
-        return MessagePackSerializer.Deserialize<GameData>(_msgPackComplexBytes);
-    }
-
-    [Benchmark(Description = "MessagePack - Serialize Large Map")]
-    public byte[] MessagePackSerializeLargeMap()
-    {
-        return MessagePackSerializer.Serialize(_largeMap);
-    }
-
-    [Benchmark(Description = "MessagePack - Serialize GameData List")]
-    public byte[] MessagePackSerializeBulkComplex()
-    {
-        return MessagePackSerializer.Serialize(_complexDataList);
+        var map = Payloads.StringIntMap(new Random(42), 1000);
+        return (map, map);
     }
 }
