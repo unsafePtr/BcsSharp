@@ -1,6 +1,4 @@
 using BcsSharp.Core;
-using BcsSharp.Core.Attributes;
-using BcsSharp.Core.Formatters;
 using BcsSharp.Core.Resolvers;
 
 namespace BcsSharp.Tests;
@@ -28,7 +26,7 @@ public class ScratchBufferTests
         // 64 KB scratch + ULEB length prefix means a 200 000-element int list (~800 KB)
         // forces several grow steps onto the ArrayPool path.
         var values = new List<int>(200_000);
-        for (int i = 0; i < 200_000; i++)
+        for (var i = 0; i < 200_000; i++)
         {
             values.Add(i);
         }
@@ -46,7 +44,7 @@ public class ScratchBufferTests
     {
         // After the first call, the thread-static scratch is initialised. Each subsequent
         // call must produce a fresh, correct payload — i.e. Return() resets state cleanly.
-        for (int i = 0; i < 20; i++)
+        for (var i = 0; i < 20; i++)
         {
             var bytes = BcsSerializer.Serialize<uint>((uint)i);
             var back = BcsSerializer.Deserialize<uint>(bytes);
@@ -84,12 +82,12 @@ public class ScratchBufferTests
 
         var failures = 0;
         var threads = new Thread[threadCount];
-        for (int t = 0; t < threadCount; t++)
+        for (var t = 0; t < threadCount; t++)
         {
             var threadId = t;
             threads[t] = new Thread(() =>
             {
-                for (int i = 0; i < iterationsPerThread; i++)
+                for (var i = 0; i < iterationsPerThread; i++)
                 {
                     // Distinct payload per (thread, iteration). If two threads were
                     // sharing scratch, the round-trip would mismatch.
@@ -104,8 +102,15 @@ public class ScratchBufferTests
             });
         }
 
-        foreach (var thread in threads) thread.Start();
-        foreach (var thread in threads) thread.Join();
+        foreach (var thread in threads)
+        {
+            thread.Start();
+        }
+
+        foreach (var thread in threads)
+        {
+            thread.Join();
+        }
 
         Assert.Equal(0, failures);
     }

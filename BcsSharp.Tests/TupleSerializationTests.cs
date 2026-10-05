@@ -1,7 +1,4 @@
-using System;
-using System.IO;
 using BcsSharp.Core;
-using Xunit;
 
 namespace BcsSharp.Tests;
 
@@ -223,7 +220,7 @@ public class TupleSerializationTests
     }
 
     /// <summary>
-    /// Represents (String, Vec<u32>) tuple
+    /// Represents (String, Vec&lt;u32&gt;) tuple
     /// </summary>
     public class TupleWithArray
     {

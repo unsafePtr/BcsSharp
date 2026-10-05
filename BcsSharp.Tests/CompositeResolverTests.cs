@@ -82,7 +82,7 @@ public class CompositeResolverTests
         var tasks = new Task<IBcsFormatter<int>?>[20];
 
         // Act - Concurrent access from multiple threads
-        for (int i = 0; i < tasks.Length; i++)
+        for (var i = 0; i < tasks.Length; i++)
         {
             tasks[i] = Task.Run(resolver.GetFormatter<int>);
         }
@@ -93,7 +93,7 @@ public class CompositeResolverTests
         var firstFormatter = await tasks[0];
         Assert.NotNull(firstFormatter);
 
-        for (int i = 1; i < tasks.Length; i++)
+        for (var i = 1; i < tasks.Length; i++)
         {
             Assert.Same(firstFormatter, await tasks[i]);
         }

@@ -1,8 +1,3 @@
-using System;
-using BcsSharp.Core;
-
-using Xunit;
-
 namespace BcsSharp.Tests;
 
 public class StructSerializationTests

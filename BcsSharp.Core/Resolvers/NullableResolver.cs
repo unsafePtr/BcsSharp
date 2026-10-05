@@ -1,4 +1,3 @@
-using System;
 using BcsSharp.Core.Formatters;
 
 namespace BcsSharp.Core.Resolvers;
@@ -27,7 +26,9 @@ public sealed class NullableResolver : IFormatterResolver
             // Check for cached common formatters first
             var cachedFormatter = GetCachedFormatter(underlyingType);
             if (cachedFormatter != null)
+            {
                 return cachedFormatter;
+            }
 
             // Fall back to dynamic creation for other types
             var underlyingFormatter = GetFormatterForUnderlyingType(underlyingType, root);
@@ -44,17 +45,60 @@ public sealed class NullableResolver : IFormatterResolver
     private static object? GetCachedFormatter(Type underlyingType)
     {
         // Return cached common option formatters
-        if (underlyingType == typeof(byte)) return OptionFormatterCache.ByteOptionFormatter;
-        if (underlyingType == typeof(sbyte)) return OptionFormatterCache.SByteOptionFormatter;
-        if (underlyingType == typeof(ushort)) return OptionFormatterCache.UInt16OptionFormatter;
-        if (underlyingType == typeof(short)) return OptionFormatterCache.Int16OptionFormatter;
-        if (underlyingType == typeof(uint)) return OptionFormatterCache.UInt32OptionFormatter;
-        if (underlyingType == typeof(int)) return OptionFormatterCache.Int32OptionFormatter;
-        if (underlyingType == typeof(ulong)) return OptionFormatterCache.UInt64OptionFormatter;
-        if (underlyingType == typeof(long)) return OptionFormatterCache.Int64OptionFormatter;
-        if (underlyingType == typeof(UInt128)) return OptionFormatterCache.UInt128OptionFormatter;
-        if (underlyingType == typeof(Int128)) return OptionFormatterCache.Int128OptionFormatter;
-        if (underlyingType == typeof(bool)) return OptionFormatterCache.BoolOptionFormatter;
+        if (underlyingType == typeof(byte))
+        {
+            return OptionFormatterCache.ByteOptionFormatter;
+        }
+
+        if (underlyingType == typeof(sbyte))
+        {
+            return OptionFormatterCache.SByteOptionFormatter;
+        }
+
+        if (underlyingType == typeof(ushort))
+        {
+            return OptionFormatterCache.UInt16OptionFormatter;
+        }
+
+        if (underlyingType == typeof(short))
+        {
+            return OptionFormatterCache.Int16OptionFormatter;
+        }
+
+        if (underlyingType == typeof(uint))
+        {
+            return OptionFormatterCache.UInt32OptionFormatter;
+        }
+
+        if (underlyingType == typeof(int))
+        {
+            return OptionFormatterCache.Int32OptionFormatter;
+        }
+
+        if (underlyingType == typeof(ulong))
+        {
+            return OptionFormatterCache.UInt64OptionFormatter;
+        }
+
+        if (underlyingType == typeof(long))
+        {
+            return OptionFormatterCache.Int64OptionFormatter;
+        }
+
+        if (underlyingType == typeof(UInt128))
+        {
+            return OptionFormatterCache.UInt128OptionFormatter;
+        }
+
+        if (underlyingType == typeof(Int128))
+        {
+            return OptionFormatterCache.Int128OptionFormatter;
+        }
+
+        if (underlyingType == typeof(bool))
+        {
+            return OptionFormatterCache.BoolOptionFormatter;
+        }
 
         return null;
     }

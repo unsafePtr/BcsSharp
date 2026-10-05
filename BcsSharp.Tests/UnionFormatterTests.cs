@@ -86,14 +86,19 @@ public class UnionFormatterTests
         Option<Address> sink = default;
 
         // Warm up
-        for (int i = 0; i < 1000; i++) sink = addr;
-        GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
-
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (int i = 0; i < 100_000; i++)
+        for (var i = 0; i < 1000; i++)
         {
             sink = addr;
         }
+
+        GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 100_000; i++)
+        {
+            sink = addr;
+        }
+
         var after = GC.GetAllocatedBytesForCurrentThread();
 
         var perOp = (after - before) / 100_000.0;
@@ -128,14 +133,19 @@ public class UnionFormatterTests
     public void Option_None_Singleton_IsZeroAlloc()
     {
         Option<Address> sink = default;
-        for (int i = 0; i < 1000; i++) sink = None.Instance;
-        GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
-
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (int i = 0; i < 100_000; i++)
+        for (var i = 0; i < 1000; i++)
         {
             sink = None.Instance;
         }
+
+        GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 100_000; i++)
+        {
+            sink = None.Instance;
+        }
+
         var after = GC.GetAllocatedBytesForCurrentThread();
 
         var perOp = (after - before) / 100_000.0;

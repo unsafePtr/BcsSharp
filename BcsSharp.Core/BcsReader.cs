@@ -223,14 +223,16 @@ public ref struct BcsReader
     public uint ReadULEB32()
     {
         uint result = 0;
-        ReadOnlySpan<byte> span = _data;
-        int startPosition = _position;
+        var span = _data;
+        var startPosition = _position;
 
         // Byte 1
-        byte b = span[_position++];
+        var b = span[_position++];
         result = (uint)(b & 0x7F);
         if ((b & 0x80) == 0)
+        {
             return result;
+        }
 
         // Byte 2
         b = span[_position++];
@@ -243,6 +245,7 @@ public ref struct BcsReader
                 _position = startPosition;
                 ThrowHelper.ThrowInvalidOperationException("Non-canonical ULEB128 encoding detected");
             }
+
             return result;
         }
 
@@ -257,6 +260,7 @@ public ref struct BcsReader
                 _position = startPosition;
                 ThrowHelper.ThrowInvalidOperationException("Non-canonical ULEB128 encoding detected");
             }
+
             return result;
         }
 
@@ -271,6 +275,7 @@ public ref struct BcsReader
                 _position = startPosition;
                 ThrowHelper.ThrowInvalidOperationException("Non-canonical ULEB128 encoding detected");
             }
+
             return result;
         }
 
@@ -368,10 +373,10 @@ public ref struct BcsReader
         var sourceSpan = _data.Slice(_position, byteLength);
         var destBytes = MemoryMarshal.AsBytes(destination);
 
-        for (int i = 0; i < destination.Length; i++)
+        for (var i = 0; i < destination.Length; i++)
         {
             // Convert from little-endian (BCS format) to big-endian (host format)
-            for (int j = 0; j < typeSize; j++)
+            for (var j = 0; j < typeSize; j++)
             {
                 destBytes[i * typeSize + j] = sourceSpan[i * typeSize + (typeSize - 1 - j)];
             }

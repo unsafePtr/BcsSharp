@@ -41,12 +41,16 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
     public void Serialize(ref BcsWriter writer, T value)
     {
         if (value == null)
+        {
             throw new ArgumentNullException(nameof(value));
+        }
 
         var valueType = value.GetType();
 
         if (!_variantsByType.TryGetValue(valueType, out var variant))
+        {
             throw new InvalidOperationException($"Unknown variant type: {valueType.Name}");
+        }
 
         // Write ULEB128 variant index (as per BCS specification)
         writer.WriteULEB(variant.Index);
@@ -66,7 +70,9 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
         var variantIndex = reader.ReadULEB32();
 
         if (!_variantsByIndex.TryGetValue(variantIndex, out var variant))
+        {
             throw new InvalidOperationException($"Unknown variant index: {variantIndex}");
+        }
 
         // Create instance of variant type using compiled constructor delegate
         var instance = variant.Constructor() ?? throw new InvalidOperationException($"Failed to create instance of {variant.VariantType.Name}");
@@ -92,7 +98,9 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
         {
             var variantAttr = nestedType.GetCustomAttribute<BcsEnumVariantAttribute>();
             if (variantAttr == null)
+            {
                 continue;
+            }
 
             if (IsVariantOfEnum(nestedType, enumBaseType))
             {
@@ -121,11 +129,15 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
             {
                 // Skip if it's the enum base type itself
                 if (type == enumBaseType)
+                {
                     continue;
+                }
 
                 var variantAttr = type.GetCustomAttribute<BcsEnumVariantAttribute>();
                 if (variantAttr == null)
+                {
                     continue;
+                }
 
                 // Check if type implements/inherits from the enum base type
                 if (IsVariantOfEnum(type, enumBaseType))
@@ -173,7 +185,9 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
         {
             var dataAttr = prop.GetCustomAttribute<BcsEnumDataAttribute>();
             if (dataAttr == null)
+            {
                 continue;
+            }
 
             var formatter = BcsSerializerExtensions.GetFormatter(prop.PropertyType, _root) ?? throw new InvalidOperationException($"No BCS formatter found for property {prop.Name} of type {prop.PropertyType.Name}");
             properties.Add(new BcsDataProperty
@@ -342,7 +356,9 @@ public static class BcsSerializerExtensions
         var formatter = genericMethod?.Invoke(null, [root]); // null falls back to the default chain
 
         if (formatter == null)
+        {
             return null;
+        }
 
         var adapterType = typeof(BcsObjectFormatterAdapter<>).MakeGenericType(type);
         return (IBcsObjectFormatter?)Activator.CreateInstance(adapterType, formatter);

@@ -14,11 +14,19 @@ public class ByteArrayFormatterAllocTests
 
     private static double MeasureBytesPerOp(Action work)
     {
-        for (int i = 0; i < 1_000; i++) work();
+        for (var i = 0; i < 1_000; i++)
+        {
+            work();
+        }
+
         GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
 
         var before = GC.GetAllocatedBytesForCurrentThread();
-        for (int i = 0; i < Iters; i++) work();
+        for (var i = 0; i < Iters; i++)
+        {
+            work();
+        }
+
         var after = GC.GetAllocatedBytesForCurrentThread();
         return (after - before) / (double)Iters;
     }

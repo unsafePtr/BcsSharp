@@ -1,7 +1,5 @@
-using System;
 using BcsSharp.Core;
 using BcsSharp.Core.Attributes;
-using Xunit;
 
 namespace BcsSharp.Tests;
 
@@ -95,7 +93,7 @@ public class BcsEnumSerializationTests
     }
 
     /// <summary>
-    /// Optional-like enum similar to Rust Option<T>
+    /// Optional-like enum similar to Rust Option&lt;T&gt;
     /// </summary>
     [BcsEnum]
     public interface IOption<T> { }

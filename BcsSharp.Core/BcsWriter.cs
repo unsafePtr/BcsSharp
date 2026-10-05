@@ -56,6 +56,7 @@ public ref struct BcsWriter
             ThrowHelper.ThrowInvalidOperationException(
                 $"BcsWriter Span<byte> destination is too small (need {sizeHint} more bytes, have {_spanDest.Length - _spanWritten}).");
         }
+
         return _spanDest.Slice(_spanWritten);
     }
 
@@ -159,17 +160,18 @@ public ref struct BcsWriter
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteULEB(uint value)
     {
-        Span<byte> span = GetWriteSpan(5); // Max 5 bytes for uint
-        int index = 0;
+        var span = GetWriteSpan(5); // Max 5 bytes for uint
+        var index = 0;
 
         do
         {
-            byte b = (byte)(value & 0x7F);
+            var b = (byte)(value & 0x7F);
             value >>= 7;
             if (value != 0)
             {
                 b |= 0x80;
             }
+
             span[index++] = b;
         } while (value != 0);
 
@@ -223,16 +225,17 @@ public ref struct BcsWriter
         else
         {
             // Big-endian fallback: reverse byte order per element.
-            int typeSize = Unsafe.SizeOf<T>();
+            var typeSize = Unsafe.SizeOf<T>();
             var span = GetWriteSpan(values.Length * typeSize);
-            for (int i = 0; i < values.Length; i++)
+            for (var i = 0; i < values.Length; i++)
             {
                 var valueBytes = MemoryMarshal.AsBytes(values.Slice(i, 1));
-                for (int j = 0; j < typeSize; j++)
+                for (var j = 0; j < typeSize; j++)
                 {
                     span[i * typeSize + j] = valueBytes[typeSize - 1 - j];
                 }
             }
+
             AdvanceWrite(values.Length * typeSize);
         }
     }
@@ -241,7 +244,11 @@ public ref struct BcsWriter
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteBytes(scoped ReadOnlySpan<byte> bytes)
     {
-        if (bytes.Length == 0) return;
+        if (bytes.Length == 0)
+        {
+            return;
+        }
+
         var span = GetWriteSpan(bytes.Length);
         bytes.CopyTo(span);
         AdvanceWrite(bytes.Length);
