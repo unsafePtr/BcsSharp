@@ -35,6 +35,12 @@ internal static class ThrowHelper
     }
 
     [DoesNotReturn]
+    public static void ThrowDuplicateMapKey()
+    {
+        throw new InvalidOperationException("Map contains two keys with the same BCS encoding.");
+    }
+
+    [DoesNotReturn]
     public static void ThrowRemainingBytes(int count)
     {
         throw new InvalidOperationException($"{count} bytes remain after the BCS value; the input must hold exactly one value.");

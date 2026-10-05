@@ -1,11 +1,13 @@
 using System.Buffers;
 using System.Runtime.CompilerServices;
+using BcsSharp.Core.Helpers;
 
 namespace BcsSharp.Core.Formatters;
 
 /// <summary>
 /// Formatter for Dictionary/Map types in BCS format.
 /// Keys are sorted by lexicographical order of their BCS-serialized bytes for deterministic output — matches Rust's <c>bcs::ser::MapSerializer</c>, which re-sorts pairs by serialized key bytes regardless of the source container's iteration order.
+/// Two keys with the same bytes are rejected, where Rust keeps the first: dictionary iteration order is undefined, so "the first" would be arbitrary.
 /// </summary>
 public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, TValue>>
     where TKey : notnull
@@ -81,8 +83,22 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
             // generic constraint, no boxing.
             pairs.Sort(new ByteRangeComparer(scratch.WrittenMemory));
 
-            // Emit in sorted order into the real writer.
             var buffer = scratch.WrittenSpan;
+
+            // Keys that differ by Equals can still share their bytes, and the sort puts any such keys side by side.
+            // Checking here, before the emit loop, keeps a rejected map out of the real writer.
+            for (var j = 1; j < pairs.Length; j++)
+            {
+                var previous = buffer.Slice(pairs[j - 1].KeyOffset, pairs[j - 1].KeyLen);
+                var current = buffer.Slice(pairs[j].KeyOffset, pairs[j].KeyLen);
+
+                if (current.SequenceEqual(previous))
+                {
+                    ThrowHelper.ThrowDuplicateMapKey();
+                }
+            }
+
+            // Emit in sorted order into the real writer.
             foreach (var pair in pairs)
             {
                 writer.WriteBytes(buffer.Slice(pair.KeyOffset, pair.KeyLen));
