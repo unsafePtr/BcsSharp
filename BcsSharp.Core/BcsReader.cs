@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text.Unicode;
 using BcsSharp.Core.Helpers;
 
 namespace BcsSharp.Core;
@@ -336,12 +337,18 @@ public ref struct BcsReader
     }
 
     /// <summary>
-    /// Read string value (length-prefixed UTF-8)
+    /// Reads a length-prefixed UTF-8 string.
+    /// Invalid UTF-8 is rejected, as in Rust's bcs, rather than replaced with U+FFFD, which would let two different byte strings decode to the same string.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public string ReadString()
     {
         var span = ReadBytesAsSpan(ReadLength());
+
+        if (!Utf8.IsValid(span))
+        {
+            ThrowHelper.ThrowInvalidUtf8();
+        }
 
         return System.Text.Encoding.UTF8.GetString(span);
     }

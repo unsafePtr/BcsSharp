@@ -37,57 +37,38 @@ public class UTF8ValidationTests
         }
     }
 
-    [Fact]
-    public void InvalidUTF8Bytes_ShouldThrowOnDeserialization()
+    // Every length prefix matches its payload, so a rejection can only come from the UTF-8 check, not from running out of input.
+    [Theory]
+    [InlineData("0180")]         // lone continuation byte
+    [InlineData("01C2")]         // truncated 2-byte sequence
+    [InlineData("02E080")]       // truncated 3-byte sequence
+    [InlineData("03F08080")]     // truncated 4-byte sequence
+    [InlineData("02FF00")]       // 0xFF never occurs in UTF-8
+    [InlineData("02FE00")]       // 0xFE never occurs in UTF-8
+    [InlineData("02C080")]       // overlong encoding of NUL
+    [InlineData("03E08080")]     // overlong 3-byte encoding
+    [InlineData("03EDA080")]     // UTF-16 high surrogate
+    [InlineData("03EDBFBF")]     // UTF-16 low surrogate
+    [InlineData("04F4908080")]   // code point above U+10FFFF
+    [InlineData("04C2C28080")]   // lead byte where a continuation byte is expected
+    [InlineData("058081828384")] // run of continuation bytes
+    public void InvalidUTF8Bytes_ShouldThrowOnDeserialization(string hex)
     {
-        // Test various invalid UTF-8 byte sequences
-        var invalidUTF8Cases = new (byte[] invalidBytes, string description)[]
-        {
-            // Invalid continuation bytes
-            (new byte[] { 0x02, 0x80 }, "Invalid continuation byte"),
+        var bytes = Convert.FromHexString(hex);
 
-            // Incomplete multi-byte sequences
-            (new byte[] { 0x03, 0xC2 }, "Incomplete 2-byte sequence"),
-            (new byte[] { 0x03, 0xE0, 0x80 }, "Incomplete 3-byte sequence"),
-            (new byte[] { 0x04, 0xF0, 0x80, 0x80 }, "Incomplete 4-byte sequence"),
+        var ex = Assert.Throws<InvalidOperationException>(() => BcsSerializer.Deserialize<string>(bytes));
 
-            // Invalid start bytes
-            (new byte[] { 0x02, 0xFF, 0x00 }, "Invalid start byte 0xFF"),
-            (new byte[] { 0x02, 0xFE, 0x00 }, "Invalid start byte 0xFE"),
+        Assert.Equal("String is not valid UTF-8.", ex.Message);
+    }
 
-            // Overlong encodings (non-canonical UTF-8)
-            (new byte[] { 0x02, 0xC0, 0x80 }, "Overlong encoding of null"),
-            (new byte[] { 0x03, 0xE0, 0x80, 0x80 }, "Overlong 3-byte encoding"),
+    [Fact]
+    public void ReplacementCharacter_DecodesOnlyFromItsOwnEncoding()
+    {
+        Assert.Equal("�", BcsSerializer.Deserialize<string>(Convert.FromHexString("03EFBFBD")));
 
-            // Invalid code points
-            (new byte[] { 0x03, 0xED, 0xA0, 0x80 }, "High surrogate (invalid in UTF-8)"),
-            (new byte[] { 0x03, 0xED, 0xBF, 0xBF }, "Low surrogate (invalid in UTF-8)"),
+        var ex = Assert.Throws<InvalidOperationException>(() => BcsSerializer.Deserialize<string>(Convert.FromHexString("01FF")));
 
-            // Bytes that look like UTF-8 but aren't valid
-            (new byte[] { 0x04, 0xC2, 0xC2, 0x80, 0x80 }, "Double-encoded sequence"),
-
-            // Random invalid sequences
-            (new byte[] { 0x05, 0x80, 0x81, 0x82, 0x83, 0x84 }, "Multiple invalid continuation bytes"),
-        };
-
-        foreach (var (invalidBytes, description) in invalidUTF8Cases)
-        {
-            // Create BcsReader with invalid UTF-8 data
-            var reader = new BcsReader(invalidBytes);
-
-            // Reading the string should throw an exception due to invalid UTF-8
-            // Note: Current implementation may throw different exceptions
-            try
-            {
-                reader.ReadString();
-                Assert.Fail($"Expected exception for {description}");
-            }
-            catch (Exception ex)
-            {
-                // Any exception is acceptable for invalid UTF-8
-                Assert.NotNull(ex);
-            }
-        }
+        Assert.Equal("String is not valid UTF-8.", ex.Message);
     }
 
     [Fact]
