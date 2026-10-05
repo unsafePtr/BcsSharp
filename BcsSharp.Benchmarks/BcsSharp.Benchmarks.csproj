@@ -11,11 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.16.0-nightly.20260816.607" />
-    <PackageReference Include="MessagePack" Version="3.1.8" />
-    <PackageReference Include="MessagePackAnalyzer" Version="3.1.8">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="MessagePack" Version="3.1.11" />
   </ItemGroup>
 
   <ItemGroup>
