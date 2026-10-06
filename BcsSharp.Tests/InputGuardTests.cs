@@ -17,7 +17,7 @@ public class InputGuardTests
     // ULEB128 of 2^31 - 1: five bytes claiming the largest legal length.
     private static readonly byte[] LargestLength = [0xFF, 0xFF, 0xFF, 0xFF, 0x07];
 
-    // A self-referential [BcsStruct] cannot be resolved yet (building its formatter recurses forever), so the recursive fixture uses a hand-written formatter — the case EnterContainer is public for.
+    // The recursive fixture uses a hand-written formatter: it exercises the EnterContainer/LeaveContainer pair a custom formatter for a recursive type must call, which a resolved [BcsStruct] (see RecursiveTypeTests) does on its own.
     private static readonly IFormatterResolver NodeResolver = CreateNodeResolver();
 
     [Fact]
