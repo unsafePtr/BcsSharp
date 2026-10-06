@@ -92,8 +92,9 @@ public sealed class StandardResolver : IFormatterResolver
         // Nullable value types (T?) - delegate to NullableResolver
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
         {
-            var method = typeof(NullableResolver).GetMethod(nameof(NullableResolver.GetFormatter))?.MakeGenericMethod(type);
-            return method?.Invoke(NullableResolver.Instance, [root]);
+            return typeof(NullableResolver).GetMethod(nameof(NullableResolver.GetFormatter))!
+                .MakeGenericMethod(type)
+                .InvokeUnwrapped(NullableResolver.Instance, [root]);
         }
 
         // Generic arrays
@@ -187,8 +188,9 @@ public sealed class StandardResolver : IFormatterResolver
     {
         // Resolve children through the chain that started resolution, so a scoped chain
         // does not silently fall back to the global default.
-        var method = typeof(IFormatterResolver).GetMethod(nameof(IFormatterResolver.GetFormatter))?.MakeGenericMethod(type);
-        return method?.Invoke(root, [null]);
+        return typeof(IFormatterResolver).GetMethod(nameof(IFormatterResolver.GetFormatter))!
+            .MakeGenericMethod(type)
+            .InvokeUnwrapped(root, [null]);
     }
 
     private static bool IsPrimitiveType(Type type)

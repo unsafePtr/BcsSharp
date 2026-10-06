@@ -1,7 +1,7 @@
-using System.Collections.Concurrent;
 using System.Reflection;
 using BcsSharp.Core.Attributes;
 using BcsSharp.Core.Formatters;
+using BcsSharp.Core.Helpers;
 
 namespace BcsSharp.Core.Resolvers;
 
@@ -12,8 +12,6 @@ namespace BcsSharp.Core.Resolvers;
 public sealed class ObjectResolver : IFormatterResolver
 {
     public static readonly ObjectResolver Instance = new();
-
-    private readonly ConcurrentDictionary<Type, object?> _formatterCache = new();
 
     private ObjectResolver() { }
 
@@ -26,35 +24,12 @@ public sealed class ObjectResolver : IFormatterResolver
 
     private static object? CreateFormatter(Type type, IFormatterResolver root)
     {
-        try
+        if (type.GetCustomAttribute<BcsStructAttribute>() is null)
         {
-            // Check if it's a BCS struct (marked with [BcsStruct])
-            var bcsStructAttr = type.GetCustomAttribute<BcsStructAttribute>();
-            if (bcsStructAttr == null)
-            {
-                return null;
-            }
-
-            // Must be a class or struct
-            if (!type.IsClass && !type.IsValueType)
-            {
-                return null;
-            }
-
-            // Must have a parameterless constructor for deserialization
-            if (type.IsClass)
-            {
-                var constructor = type.GetConstructor(Type.EmptyTypes) ?? throw new InvalidOperationException($"Type {type.Name} must have a parameterless constructor for BCS deserialization");
-            }
-
-            // Create BcsObjectFormatter<T>
-            var formatterType = typeof(BcsObjectFormatter<>).MakeGenericType(type);
-            return Activator.CreateInstance(formatterType, root);
-        }
-        catch (Exception)
-        {
-            // If formatter creation fails, return null to indicate no formatter available
             return null;
         }
+
+        // A misconfigured struct must fail with the message that names the mistake, not as a missing formatter.
+        return ReflectionHelper.CreateInstanceUnwrapped(typeof(BcsObjectFormatter<>).MakeGenericType(type), root);
     }
 }

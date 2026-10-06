@@ -1,6 +1,7 @@
 using System.Reflection;
 using BcsSharp.Core.Attributes;
 using BcsSharp.Core.Formatters;
+using BcsSharp.Core.Helpers;
 
 namespace BcsSharp.Core.Resolvers;
 
@@ -34,7 +35,6 @@ public sealed class VariantEnumResolver : IFormatterResolver
             return null;
         }
 
-        var formatterType = typeof(BcsVariantEnumFormatter<>).MakeGenericType(type);
-        return Activator.CreateInstance(formatterType, root);
+        return ReflectionHelper.CreateInstanceUnwrapped(typeof(BcsVariantEnumFormatter<>).MakeGenericType(type), root);
     }
 }

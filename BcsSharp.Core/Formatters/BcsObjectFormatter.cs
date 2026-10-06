@@ -184,9 +184,9 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>
 
     private static object? GetTypedFormatter(Type type, IFormatterResolver? root)
     {
-        var method = typeof(BcsSerializer).GetMethod(nameof(BcsSerializer.GetFormatter), BindingFlags.Public | BindingFlags.Static);
-        var generic = method?.MakeGenericMethod(type);
-        return generic?.Invoke(null, [root]);
+        return typeof(BcsSerializer).GetMethod(nameof(BcsSerializer.GetFormatter), BindingFlags.Public | BindingFlags.Static)!
+            .MakeGenericMethod(type)
+            .InvokeUnwrapped(null, [root]);
     }
 }
 

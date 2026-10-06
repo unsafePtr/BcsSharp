@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using BcsSharp.Core.Formatters;
+using BcsSharp.Core.Helpers;
 
 namespace BcsSharp.Core.Resolvers;
 
@@ -27,7 +28,6 @@ public sealed class SimpleEnumResolver : IFormatterResolver
             return null;
         }
 
-        var formatterType = typeof(BcsSimpleEnumFormatter<>).MakeGenericType(type);
-        return Activator.CreateInstance(formatterType);
+        return ReflectionHelper.CreateInstanceUnwrapped(typeof(BcsSimpleEnumFormatter<>).MakeGenericType(type));
     }
 }

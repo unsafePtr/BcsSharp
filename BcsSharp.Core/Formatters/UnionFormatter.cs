@@ -2,7 +2,7 @@ using System.Collections.Frozen;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
+using BcsSharp.Core.Helpers;
 using BcsSharp.Core.Unions;
 
 namespace BcsSharp.Core.Formatters;
@@ -131,19 +131,8 @@ public sealed class UnionFormatter<TUnion> : IBcsFormatter<TUnion>
         return value;
     }
 
-    private static UnionCase CreateCaseReflected(Type caseType, ConstructorInfo ctor, IFormatterResolver? root)
-    {
-        try
-        {
-            return (UnionCase)CreateCaseMethod.MakeGenericMethod(caseType).Invoke(null, [ctor, root])!;
-        }
-        catch (TargetInvocationException ex) when (ex.InnerException is not null)
-        {
-            // Surface the case-level diagnostic, not the reflection wrapper around it.
-            ExceptionDispatchInfo.Throw(ex.InnerException);
-            throw;
-        }
-    }
+    private static UnionCase CreateCaseReflected(Type caseType, ConstructorInfo ctor, IFormatterResolver? root) =>
+        (UnionCase)CreateCaseMethod.MakeGenericMethod(caseType).InvokeUnwrapped(null, [ctor, root])!;
 
     private static UnionCase CreateCase<TCase>(ConstructorInfo ctor, IFormatterResolver? root)
     {
