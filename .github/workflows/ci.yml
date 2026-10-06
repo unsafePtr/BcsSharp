@@ -29,7 +29,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # global.json pins 11.0.100-rc.1.26425.128 with allowPrerelease: true.
       # setup-dotnet@v4 reads the exact build and fetches it from Microsoft's CDN.
@@ -73,7 +73,7 @@ jobs:
   rust-parity:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET (from global.json)
         uses: actions/setup-dotnet@v4

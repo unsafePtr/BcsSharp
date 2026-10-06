@@ -19,7 +19,7 @@ jobs:
       DOTNET_NOLOGO: '1'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Use the same SDK pin as CI. .NET 11 preview SDK is required for C# 15 union.
       - name: Setup .NET (from global.json)
