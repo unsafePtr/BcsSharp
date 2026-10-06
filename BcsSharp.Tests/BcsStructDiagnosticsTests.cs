@@ -49,6 +49,23 @@ public class BcsStructDiagnosticsTests
         Assert.Equal("Type WithoutFields has no serializable fields marked with [BcsField]", ex.Message);
     }
 
+    [Fact]
+    public void DuplicateFieldOrder_NamesBothMembers()
+    {
+        // Two members with one order would leave the wire order to the sort.
+        var ex = Assert.Throws<InvalidOperationException>(() => BcsSerializer.Serialize(new DuplicateOrder()));
+
+        Assert.Equal("DuplicateOrder declares [BcsField(0)] on both A and B.", ex.Message);
+    }
+
+    [Fact]
+    public void GappedFieldOrders_NameTheExpectedRange()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => BcsSerializer.Serialize(new GappedOrder()));
+
+        Assert.Equal("GappedOrder must number its [BcsField] members 0..1 without gaps; found 0, 5.", ex.Message);
+    }
+
     [BcsStruct]
     public sealed class WithArray
     {
@@ -79,5 +96,19 @@ public class BcsStructDiagnosticsTests
     public sealed class WithoutFields
     {
         public uint Value { get; set; }
+    }
+
+    [BcsStruct]
+    public sealed class DuplicateOrder
+    {
+        [BcsField(0)] public uint A { get; set; }
+        [BcsField(0)] public uint B { get; set; }
+    }
+
+    [BcsStruct]
+    public sealed class GappedOrder
+    {
+        [BcsField(0)] public uint A { get; set; }
+        [BcsField(5)] public uint B { get; set; }
     }
 }

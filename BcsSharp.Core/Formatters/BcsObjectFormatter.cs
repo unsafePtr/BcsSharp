@@ -108,7 +108,24 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>
 
     private static BcsObjectFieldSerializer<T>[] DiscoverAndCompileFields(Type objectType, IFormatterResolver? root)
     {
-        var serializers = new List<BcsObjectFieldSerializer<T>>();
+        var fields = DiscoverFields(objectType);
+        var serializers = new BcsObjectFieldSerializer<T>[fields.Count];
+
+        for (var i = 0; i < serializers.Length; i++)
+        {
+            serializers[i] = CreateTypedFieldSerializer(fields[i].Member, fields[i].Type, root);
+        }
+
+        return serializers;
+    }
+
+    /// <summary>
+    /// The annotated members in wire order.
+    /// The orders must be exactly 0..n-1: a duplicate would leave the wire order to the sort, and a gap usually means a field was removed, which is a wire break the author should see.
+    /// </summary>
+    private static List<(MemberInfo Member, Type Type, int Order)> DiscoverFields(Type objectType)
+    {
+        var fields = new List<(MemberInfo Member, Type Type, int Order)>();
 
         List<MemberInfo> members =
         [
@@ -147,13 +164,28 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>
                 continue;
             }
 
-            var serializer = CreateTypedFieldSerializer(member, memberType, root);
-            serializer.Order = fieldAttr.Order;
-            serializers.Add(serializer);
+            fields.Add((member, memberType, fieldAttr.Order));
         }
 
-        serializers.Sort((a, b) => a.Order.CompareTo(b.Order));
-        return [.. serializers];
+        // OrderBy is stable, so a duplicate is reported the same way on every run.
+        fields = [.. fields.OrderBy(f => f.Order)];
+
+        for (var i = 0; i < fields.Count; i++)
+        {
+            if (fields[i].Order == i)
+            {
+                continue;
+            }
+
+            if (i > 0 && fields[i].Order == fields[i - 1].Order)
+            {
+                throw new InvalidOperationException($"{objectType.Name} declares [BcsField({fields[i].Order})] on both {fields[i - 1].Member.Name} and {fields[i].Member.Name}.");
+            }
+
+            throw new InvalidOperationException($"{objectType.Name} must number its [BcsField] members 0..{fields.Count - 1} without gaps; found {string.Join(", ", fields.Select(f => f.Order))}.");
+        }
+
+        return fields;
     }
 
     private static BcsObjectFieldSerializer<T> CreateTypedFieldSerializer(MemberInfo member, Type memberType, IFormatterResolver? root)
@@ -197,7 +229,6 @@ public sealed class BcsObjectFormatter<T> : IBcsFormatter<T>
 /// <typeparam name="TInstance">The object type whose field is being serialized.</typeparam>
 internal abstract class BcsObjectFieldSerializer<TInstance>
 {
-    public int Order { get; set; }
     public abstract void Serialize(ref BcsWriter writer, TInstance instance);
     public abstract void Deserialize(ref BcsReader reader, ref TInstance instance);
 }

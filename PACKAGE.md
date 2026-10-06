@@ -180,7 +180,7 @@ For maximum throughput, use the `IBufferWriter<byte>` overload and reuse the buf
 ## Rules
 
 - **Use `List<T>` for vectors.** Plain `T[]` arrays are rejected — `Vec<T>` maps to `List<T>`.
-- **`[BcsField]` numbers must be sequential** (`0, 1, 2, …`). They define the wire order.
+- **`[BcsField]` numbers must be sequential** (`0, 1, 2, …`). They define the wire order; a duplicate or a gap is rejected when the type's formatter is built.
 - **Map keys are sorted by serialized bytes**, not by `IComparable`. Matches the BCS spec and Rust's `bcs::ser::MapSerializer`.
 - **Variant index = declaration order** for both `union` and `[BcsEnum]` paths.
 - **A null `string` is rejected.** BCS has no null string, so `WriteString` throws `ArgumentNullException` instead of coercing to `""`. Use `Option<string>` for an optional string — `string?` is erased to `string` at runtime and encodes without the `Option` discriminant.

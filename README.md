@@ -273,7 +273,7 @@ Pass it by `ref`: a copy tracks its own uncommitted bytes, so writes through the
 ## Important rules
 
 - **Use `List<T>` for vectors.** Plain `T[]` arrays are explicitly rejected — use `List<T>` to mirror Rust's `Vec<T>`.
-- **`[BcsField]` order is the wire order.** Numbering must be sequential `0, 1, 2, …`. Skipping or reordering is a wire break.
+- **`[BcsField]` order is the wire order.** Numbering must be sequential `0, 1, 2, …`; a duplicate or a gap is rejected when the type's formatter is built. Reordering is a wire break.
 - **Map keys are sorted by serialized bytes**, not by `IComparable`. Matches BCS spec and Rust's `bcs::ser::MapSerializer` (which re-sorts after `BTreeMap` iteration). For numeric keys, byte order and numeric order coincide for values 0–127 but diverge above that.
 - **Variant index = declaration order** for both `union` and `[BcsEnum]` paths. Re-ordering breaks the wire.
 - **A null `string` is rejected.** BCS has no null string, so `WriteString` throws `ArgumentNullException` instead of coercing to `""`. Use `Option<string>` for an optional string — `string?` is erased to `string` at runtime and encodes without the `Option` discriminant.
