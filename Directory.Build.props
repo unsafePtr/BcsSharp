@@ -1,7 +1,6 @@
 <Project>
 
   <PropertyGroup>
-    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
     <InvariantGlobalization>true</InvariantGlobalization>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
