@@ -40,7 +40,8 @@ public sealed class BcsEnumDataAttribute : Attribute
 {
     /// <summary>
     /// Gets the order/index of this property in tuple-style variants.
-    /// If not specified, properties are serialized in declaration order.
+    /// If not specified, properties are serialized in declaration order, which reflection reports deterministically since .NET 7; inherited properties come after the variant's own.
+    /// Give every data property of a variant an explicit order or none: an implicit order counts the properties before it, so mixing the two can give two properties the same order.
     /// </summary>
     public int? Order { get; }
 
