@@ -36,7 +36,7 @@ jobs:
       # If that exact preview ever 404s (preview rotations sometimes get pulled),
       # swap to the manual dotnet-install fallback at the bottom of this file.
       - name: Setup .NET (from global.json)
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -76,7 +76,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup .NET (from global.json)
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
