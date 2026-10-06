@@ -305,7 +305,7 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
 /// Non-generic interface for object-based BCS formatting.
 /// Used for enum variant data serialization where the type is known at runtime.
 /// </summary>
-public interface IBcsObjectFormatter
+internal interface IBcsObjectFormatter
 {
     void SerializeObject(ref BcsWriter writer, object? value);
     object? DeserializeObject(ref BcsReader reader);
@@ -314,7 +314,7 @@ public interface IBcsObjectFormatter
 /// <summary>
 /// Adapter to convert generic IBcsFormatter to object-based formatter
 /// </summary>
-public class BcsObjectFormatterAdapter<T> : IBcsObjectFormatter
+internal sealed class BcsObjectFormatterAdapter<T> : IBcsObjectFormatter
 {
     private readonly IBcsFormatter<T> _formatter;
 
@@ -348,7 +348,7 @@ public class BcsObjectFormatterAdapter<T> : IBcsObjectFormatter
 /// <summary>
 /// Helper extension methods for BcsSerializer to support object-based formatting
 /// </summary>
-public static class BcsSerializerExtensions
+internal static class BcsSerializerExtensions
 {
     public static IBcsObjectFormatter? GetFormatter(Type type, IFormatterResolver? root = null)
     {

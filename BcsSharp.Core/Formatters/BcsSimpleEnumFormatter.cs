@@ -70,7 +70,7 @@ public sealed class BcsSimpleEnumFormatter<T> : IBcsFormatter<T>
 /// <summary>
 /// Helper methods for simple enum formatting
 /// </summary>
-public static class BcsSimpleEnumHelper
+internal static class BcsSimpleEnumHelper
 {
     /// <summary>
     /// Checks if a type is a simple C-style enum (not marked with [BcsEnum] for variants)

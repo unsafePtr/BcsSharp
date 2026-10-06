@@ -1,6 +1,6 @@
 namespace BcsSharp.Core.Formatters;
 
-public static class OptionFormatterCache
+internal static class OptionFormatterCache
 {
     public static readonly OptionFormatter<byte> ByteOptionFormatter = new OptionFormatter<byte>(ByteFormatter.Instance);
     public static readonly OptionFormatter<sbyte> SByteOptionFormatter = new OptionFormatter<sbyte>(SByteFormatter.Instance);
