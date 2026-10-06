@@ -11,7 +11,6 @@ High-performance C# implementation of [Binary Canonical Serialization (BCS)](htt
 - **Zero-allocation Serialize via `IBufferWriter<byte>` overload.** Caller-owned output buffer + typed per-field dispatch eliminates every box on the hot path.
 - **Zero-allocation Deserialize for value-type targets.** Struct fields are written via compiled `ref T` setters, no instance boxing.
 - **C# 15 `union` types** as the first-class way to model Rust tagged enums and `Option<T>` for reference types.
-- **209 tests** including cross-implementation byte-level checks against the Rust reference crate.
 
 ## Requirements
 
@@ -319,7 +318,7 @@ BcsSharp.Core/             # The library — the only project that ships
 ├── BcsReader.cs           # ref struct
 ├── BcsWriter.cs           # ref struct
 └── ScratchBufferWriter.cs
-BcsSharp.Tests/            # 209 tests, xUnit v3 MTP
+BcsSharp.Tests/            # xUnit v3 MTP
 └── Fixtures/rust-bcs/     # Rust reference that generates the .bcs parity fixtures
 BcsSharp.Benchmarks/       # BenchmarkDotNet harness; results against MessagePack in its README
 ```
