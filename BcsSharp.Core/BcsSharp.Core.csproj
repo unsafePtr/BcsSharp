@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
 
     <!-- NuGet Package Properties -->
+    <IsPackable>true</IsPackable>
     <PackageId>BcsSharp</PackageId>
     <Version>0.1.0</Version>
     <Authors>Nikolay Zdravkov</Authors>

@@ -6,6 +6,10 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
   <!--
     Debugging metadata for the shipped package. Source Link is part of the SDK since .NET 8,
     so these properties are all it takes — no Microsoft.SourceLink.GitHub reference.
