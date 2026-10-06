@@ -49,8 +49,8 @@ ReadOnlySpan<byte> output = bw.WrittenSpan;
 | `u8`/`u16`/`u32`/`u64`/`u128` | `byte`, `ushort`, `uint`, `ulong`, `UInt128` |
 | `i8`/`i16`/`i32`/`i64`/`i128` | `sbyte`, `short`, `int`, `long`, `Int128` |
 | `bool`, `String` | `bool`, `string` (non-null — see below) |
-| `Vec<T>` | `List<T>` (not `T[]`) |
-| `BTreeMap<K, V>` | `Dictionary<K, V>` (sorted by serialized key bytes) |
+| `Vec<T>` | `List<T>` (non-null; not `T[]`) |
+| `BTreeMap<K, V>` | `Dictionary<K, V>` (non-null; sorted by serialized key bytes) |
 | `Option<T>` (value-type `T`) | `T?` (Nullable) |
 | `Option<T>` (reference-type `T`) | `Option<T>` from `BcsSharp.Core.Unions` |
 | Unit-only enum `Foo { A, B, C }` | `enum Foo { A, B, C }` (CLR enum) |
@@ -74,22 +74,24 @@ Option<Address> none = None.Instance;
 
 Wire: `0x00` = None, `0x01 + payload` = Some. Identical to Rust's `Option<T>`.
 
-### Strings are never optional by annotation
+### Reference types are never optional by annotation
 
-BCS has no null string — `Option<String>` is the optional form.
+BCS has no null — `Option<T>` is the optional form for a string, a vector and a map alike.
 C# nullable annotations are erased at runtime, so `string` and `string?` are the *same* type and the library cannot tell them apart.
-Serializing a null string therefore throws `ArgumentNullException` rather than silently encoding it as empty:
+Serializing a null `string`, `List<T>` or `Dictionary<K, V>` therefore throws `ArgumentNullException` rather than silently encoding it as empty:
 
 ```csharp
-[BcsField(0)] public string Name { get; set; } = "";                      // required
-[BcsField(1)] public Option<string> Email { get; set; } = None.Instance;  // optional
+[BcsField(0)] public string Name { get; set; } = "";                          // required
+[BcsField(1)] public Option<string> Email { get; set; } = None.Instance;      // optional
+[BcsField(2)] public List<Tag> Tags { get; set; } = [];                       // required, may be empty
+[BcsField(3)] public Option<List<Tag>> Aliases { get; set; } = None.Instance; // optional
 ```
 
-`string? Email` is **not** a shorthand for `Option<string>`.
-It encodes `"hi"` as `02 68 69`, missing the `0x01` discriminant that Rust's `Option<String>` writes — a silent wire mismatch.
-Only the absent case coincides (`0x00` for both a zero-length string and `Option.None`), which is exactly what makes the mistake hard to spot.
+`string? Email` is **not** a shorthand for `Option<string>`, nor `List<Tag>?` for `Option<List<Tag>>`.
+A `string?` holding `"hi"` encodes as `02 68 69`, missing the `0x01` discriminant that Rust's `Option<String>` writes — a silent wire mismatch.
+Only the absent case coincides (`0x00` for an empty string, an empty vector and `Option.None` alike), which is exactly what makes the mistake hard to spot.
 
-Deserialization never returns null: a zero-length string decodes to `""`.
+Deserialization never returns null: a zero-length string decodes to `""` and a zero-length vector to an empty `List<T>`.
 
 ## Tagged unions
 
@@ -184,7 +186,7 @@ For maximum throughput, use the `IBufferWriter<byte>` overload and reuse the buf
 - **Recursive types resolve.** A struct or union may reference itself directly or through `Option<T>`, `List<T>`, `Dictionary<K,V>` or a tuple; deserialization bounds the nesting at `MaxContainerDepth`.
 - **Map keys are sorted by serialized bytes**, not by `IComparable`. Matches the BCS spec and Rust's `bcs::ser::MapSerializer`.
 - **Variant index = declaration order** for both `union` and `[BcsEnum]` paths.
-- **A null `string` is rejected.** BCS has no null string, so `WriteString` throws `ArgumentNullException` instead of coercing to `""`. Use `Option<string>` for an optional string — `string?` is erased to `string` at runtime and encodes without the `Option` discriminant.
+- **Null is rejected.** BCS has no null string, vector or map, so a null `string`, `List<T>` or `Dictionary<K, V>` throws `ArgumentNullException` instead of encoding as empty. Use `Option<T>` for an optional value — `string?` and `List<T>?` are erased at runtime and encode without the `Option` discriminant.
 
 ## Untrusted input
 

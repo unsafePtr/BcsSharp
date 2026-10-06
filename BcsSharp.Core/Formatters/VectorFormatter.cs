@@ -1,7 +1,10 @@
+using BcsSharp.Core.Helpers;
+
 namespace BcsSharp.Core.Formatters;
 
 /// <summary>
 /// List/Vector formatter for generic types.
+/// A null list is rejected rather than written as empty: BCS has no null vector, and the optional form is <c>Option&lt;List&lt;T&gt;&gt;</c>.
 /// </summary>
 /// <typeparam name="T"></typeparam>
 public sealed class ListFormatter<T> : IBcsFormatter<List<T>>
@@ -15,13 +18,12 @@ public sealed class ListFormatter<T> : IBcsFormatter<List<T>>
 
     public void Serialize(ref BcsWriter writer, List<T> value)
     {
-        if (value == null || value.Count == 0)
+        if (value is null)
         {
-            writer.WriteULEB(0u);
-            return;
+            ThrowHelper.ThrowNullVector(nameof(value));
         }
 
-        writer.WriteULEB(unchecked((uint)value.Count));
+        writer.WriteULEB((uint)value.Count);
         foreach (var item in value)
         {
             _elementFormatter.Serialize(ref writer, item);
