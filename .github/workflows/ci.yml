@@ -29,14 +29,14 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # global.json pins 11.0.100-rc.1.26425.128 with allowPrerelease: true.
-      # setup-dotnet@v4 reads the exact build and fetches it from Microsoft's CDN.
+      # setup-dotnet reads the exact build and fetches it from Microsoft's CDN.
       # If that exact preview ever 404s (preview rotations sometimes get pulled),
       # swap to the manual dotnet-install fallback at the bottom of this file.
       - name: Setup .NET (from global.json)
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -45,7 +45,7 @@ jobs:
 
       # NuGet package cache. Keyed on the lockfile-equivalent (csproj refs + global.json).
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'global.json') }}
@@ -73,15 +73,15 @@ jobs:
   rust-parity:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET (from global.json)
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'global.json') }}
