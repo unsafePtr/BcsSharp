@@ -45,4 +45,16 @@ internal static class ThrowHelper
     {
         throw new InvalidOperationException($"{count} bytes remain after the BCS value; the input must hold exactly one value.");
     }
+
+    [DoesNotReturn]
+    public static void ThrowNullVector(string paramName)
+    {
+        throw new ArgumentNullException(paramName, "BCS has no null vector; use Option<List<T>> for an optional one.");
+    }
+
+    [DoesNotReturn]
+    public static void ThrowNullMap(string paramName)
+    {
+        throw new ArgumentNullException(paramName, "BCS has no null map; use Option<Dictionary<TKey, TValue>> for an optional one.");
+    }
 }

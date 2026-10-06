@@ -12,15 +12,19 @@ public sealed class PrimitiveListFormatter<T> : IBcsFormatter<List<T>> where T :
 
     public void Serialize(ref BcsWriter writer, List<T> value)
     {
-        if (value == null || value.Count == 0)
+        if (value is null)
         {
-            writer.WriteULEB(0u);
+            ThrowHelper.ThrowNullVector(nameof(value));
+        }
+
+        var count = value.Count;
+        writer.WriteULEB((uint)count);
+        if (count == 0)
+        {
             return;
         }
 
-        writer.WriteULEB(unchecked((uint)value.Count));
-        var span = CollectionsMarshal.AsSpan(value);
-        writer.WritePrimitiveArray<T>(span);
+        writer.WritePrimitiveArray<T>(CollectionsMarshal.AsSpan(value));
     }
 
     public List<T> Deserialize(ref BcsReader reader)

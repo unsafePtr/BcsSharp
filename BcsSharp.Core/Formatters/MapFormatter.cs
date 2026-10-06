@@ -26,10 +26,9 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
 
     public void Serialize(ref BcsWriter writer, Dictionary<TKey, TValue> value)
     {
-        if (value == null)
+        if (value is null)
         {
-            writer.WriteULEB(0u);
-            return;
+            ThrowHelper.ThrowNullMap(nameof(value));
         }
 
         var count = value.Count;
