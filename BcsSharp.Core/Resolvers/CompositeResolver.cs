@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using BcsSharp.Core.Formatters;
 
 namespace BcsSharp.Core.Resolvers;
 
@@ -21,6 +22,11 @@ public sealed class CompositeResolver : IFormatterResolver
     ];
 
     private readonly ConcurrentDictionary<Type, object?> _formatterCache = new();
+
+    // Types whose formatter the current thread is still building, per chain. A recursive type asks for its own
+    // formatter before the first one is cached, so without this the chain would build formatters until the stack ran out.
+    [ThreadStatic]
+    private static Dictionary<(CompositeResolver Chain, Type Type), object>? t_resolving;
 
     public CompositeResolver(params IFormatterResolver[] resolvers)
     {
@@ -46,18 +52,35 @@ public sealed class CompositeResolver : IFormatterResolver
 
     private IBcsFormatter<T>? GetFormatterSlow<T>(IFormatterResolver root)
     {
-        foreach (var resolver in _resolvers)
+        var resolving = t_resolving ??= new();
+        var key = (this, typeof(T));
+
+        if (resolving.TryGetValue(key, out var deferred))
         {
-            var formatter = resolver.GetFormatter<T>(root);
-            if (formatter != null)
-            {
-                _formatterCache.TryAdd(typeof(T), formatter);
-                return formatter;
-            }
+            // Back edge of a recursive type: the stand-in binds to the finished formatter on first use.
+            return (IBcsFormatter<T>)deferred;
         }
 
-        _formatterCache.TryAdd(typeof(T), null);
-        return null;
+        resolving.Add(key, new DeferredFormatter<T>(this));
+        try
+        {
+            foreach (var resolver in _resolvers)
+            {
+                var formatter = resolver.GetFormatter<T>(root);
+                if (formatter != null)
+                {
+                    _formatterCache.TryAdd(typeof(T), formatter);
+                    return formatter;
+                }
+            }
+
+            _formatterCache.TryAdd(typeof(T), null);
+            return null;
+        }
+        finally
+        {
+            resolving.Remove(key);
+        }
     }
 
     /// <summary>
