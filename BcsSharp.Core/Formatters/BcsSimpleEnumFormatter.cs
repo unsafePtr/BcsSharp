@@ -4,27 +4,21 @@ using BcsSharp.Core.Attributes;
 namespace BcsSharp.Core.Formatters;
 
 /// <summary>
-/// High-performance formatter for simple C-style enums (integer-backed enums).
-/// BCS specification: variant index = ordinal position within the enum declaration (the assigned discriminant values are ignored), encoded as ULEB128.
-/// For positions 0-127 ULEB128 collapses to a single byte; positions 128+ produce 2+ bytes — matching what Rust's <c>bcs</c> crate emits for unit-only enums.
-///
-/// Example: enum Status { Pending = 100, Active = 200, Disabled = 300 }
-/// Status.Active serializes as ULEB128(1) = [0x01], not [0xC8] (assigned value 200) and not [0x01] (which would also be correct for raw u8; the encoding diverges for positions ≥ 128).
+/// Formatter for plain CLR enums, the C# shape of a unit-only Rust enum.
+/// The wire carries the ULEB128 of the member's position in the enum declaration, as serde ignores explicit discriminants: in <c>enum Status { Pending = 100, Active = 200 }</c>, <c>Active</c> is <c>[0x01]</c>.
+/// Positions 0-127 collapse to one byte; 128+ take two or more.
+/// <c>Enum.GetValues</c> cannot supply that order because it sorts by value; the enum's fields come back in declaration order instead.
+/// Two members with the same value are rejected: the wire has one index per member, so the alias could not round-trip.
 /// </summary>
 /// <typeparam name="T">The enum type</typeparam>
 public sealed class BcsSimpleEnumFormatter<T> : IBcsFormatter<T>
     where T : struct, Enum
 {
-    // Static cache per generic type - this is efficient and appropriate for enum values
-    private static readonly T[] _staticEnumValues = Enum.GetValues<T>();
-    private static readonly int _enumCount = _staticEnumValues.Length;
+    private readonly T[] _declaredValues = ReadDeclaredValues();
 
     public void Serialize(ref BcsWriter writer, T value)
     {
-        // BCS C-style enum serialization: Use ordinal position (index) within enum definition, not assigned values
-        // This ensures consistent serialization regardless of actual enum values
-        // Use cached enum values for optimal performance
-        var position = Array.IndexOf(_staticEnumValues, value);
+        var position = Array.IndexOf(_declaredValues, value);
 
         if (position == -1)
         {
@@ -41,15 +35,35 @@ public sealed class BcsSimpleEnumFormatter<T> : IBcsFormatter<T>
 
         var position = reader.ReadULEB32();
 
-        if (position >= (uint)_enumCount)
+        if (position >= (uint)_declaredValues.Length)
         {
-            throw new InvalidOperationException($"Invalid enum position {position} for {typeof(T).Name}. Enum has {_enumCount} values (0-{_enumCount - 1}).");
+            throw new InvalidOperationException($"Invalid enum position {position} for {typeof(T).Name}. Enum has {_declaredValues.Length} values (0-{_declaredValues.Length - 1}).");
         }
 
         reader.LeaveContainer();
 
-        // Use cached enum values array for optimal performance (no reflection)
-        return _staticEnumValues[(int)position];
+        return _declaredValues[(int)position];
+    }
+
+    private static T[] ReadDeclaredValues()
+    {
+        var fields = typeof(T).GetFields(BindingFlags.Public | BindingFlags.Static);
+        var values = new T[fields.Length];
+
+        for (var i = 0; i < fields.Length; i++)
+        {
+            var value = (T)fields[i].GetValue(null)!;
+
+            var alias = Array.IndexOf(values, value, 0, i);
+            if (alias >= 0)
+            {
+                throw new InvalidOperationException($"Enum {typeof(T).Name} declares {fields[alias].Name} and {fields[i].Name} with the same value, which BCS cannot encode as two variants.");
+            }
+
+            values[i] = value;
+        }
+
+        return values;
     }
 }
 
