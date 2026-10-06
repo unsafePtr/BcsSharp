@@ -1,11 +1,15 @@
 # BcsSharp
 
-Binary Canonical Serialization (BCS) for .NET. Byte-for-byte wire-compatible with Rust's `bcs` crate. Zero-allocation hot path. Built for Sui/Move and other BCS-based protocols.
+Binary Canonical Serialization (BCS) for .NET.
+Byte-for-byte wire-compatible with Rust's `bcs` crate, with a zero-allocation hot path.
+Built for Sui/Move and other BCS-based protocols.
 
 ## Requirements
 
-- **Runtime**: .NET 11 or later
-- **Building** types that use `union` (C# 15 keyword): **.NET 11 SDK** RC1 or later. The C# 15 `union` keyword is the recommended way to model Rust tagged enums; the `[BcsEnum]` attribute-based path produces identical bytes.
+The package needs .NET 11 or later at runtime.
+
+Declaring `union` types needs the .NET 11 SDK RC1 or later, for the C# 15 compiler.
+The `union` keyword is the recommended way to model Rust tagged enums; the attribute-based `[BcsEnum]` path produces identical bytes.
 
 ## Quick start
 
@@ -71,12 +75,12 @@ Option<Address> some = new Address { City = "Sofia" };
 Option<Address> none = None.Instance;
 ```
 
-Wire: `0x00` = None, `0x01 + payload` = Some. Identical to Rust's `Option<T>`.
+On the wire, None is `0x00` and Some is `0x01` followed by the payload, exactly as Rust writes `Option<T>`.
 
 ### Reference types are never optional by annotation
 
 BCS has no null — `Option<T>` is the optional form for a string, a vector and a map alike.
-C# nullable annotations are erased at runtime, so `string` and `string?` are the *same* type and the library cannot tell them apart.
+C# nullable annotations are erased at runtime, so `string` and `string?` are the same type and the library cannot tell them apart.
 Serializing a null `string`, `List<T>` or `Dictionary<K, V>` therefore throws `ArgumentNullException` rather than silently encoding it as empty:
 
 ```csharp
@@ -86,7 +90,7 @@ Serializing a null `string`, `List<T>` or `Dictionary<K, V>` therefore throws `A
 [BcsField(3)] public Option<List<Tag>> Aliases { get; set; } = None.Instance; // optional
 ```
 
-`string? Email` is **not** a shorthand for `Option<string>`, nor `List<Tag>?` for `Option<List<Tag>>`.
+`string? Email` is not a shorthand for `Option<string>`, nor is `List<Tag>?` one for `Option<List<Tag>>`.
 A `string?` holding `"hi"` encodes as `02 68 69`, missing the `0x01` discriminant that Rust's `Option<String>` writes — a silent wire mismatch.
 Only the absent case coincides (`0x00` for an empty string, an empty vector and `Option.None` alike), which is exactly what makes the mistake hard to spot.
 
@@ -107,7 +111,7 @@ byte[] bytes = BcsSerializer.Serialize(r);
 // → [0x03, 0x05, 'S', 'w', 'o', 'r', 'd']  (variant 3 + ULEB-prefixed UTF-8)
 ```
 
-Variant index = declaration order of constructors (Common=0, Uncommon=1, …). Re-ordering variants is a wire-breaking change.
+The variant index is the declaration order of the cases (Common = 0, Uncommon = 1, …), so reordering them breaks the wire.
 
 ## CLR enums (Rust's unit-only enums)
 
@@ -115,8 +119,9 @@ Variant index = declaration order of constructors (Common=0, Uncommon=1, …). R
 public enum AssetType { Weapon, Armor, Consumable, Material, Currency }
 ```
 
-Wire: ULEB128 of the **declaration index**, not the explicit discriminant value. `AssetType.Material` (4th declared) serializes as `0x03`.
-Values need not ascend. Two members with the same value are rejected, since the wire has one index per member.
+On the wire a member is the ULEB128 of its declaration index, not of its value, so `AssetType.Material`, declared fourth, serializes as `0x03`.
+Values need not ascend.
+Two members with the same value are rejected, since the wire has one index per member.
 
 ## Custom formatters
 
@@ -134,7 +139,8 @@ public sealed class SuiAddressFormatter : ByteArrayFormatter<SuiAddress>
 }
 ```
 
-`ByteArrayFormatter<T>` is the recommended base for fixed-length byte-array-backed types. All overrides are span-based → zero-alloc deserialize.
+`ByteArrayFormatter<T>` is the recommended base for fixed-length byte-array-backed types.
+All its overrides are span-based, so deserializing through it allocates nothing.
 
 ### Imperative — `CustomFormatterResolver`
 
@@ -145,11 +151,13 @@ CustomFormatterResolver.Instance.Register<ThirdPartyType>(new ThirdPartyFormatte
 BcsSerializer.ClearFormatterCache();   // only needed if registering late
 ```
 
-`CustomFormatterResolver` sits first in the resolver chain — overrides any built-in formatter.
+`CustomFormatterResolver` sits first in the resolver chain, so it overrides any built-in formatter.
 
 ### 256-bit integers (Sui `u256`)
 
-Not shipped, by design: BCS has no 256-bit type — the format and serde's data model both stop at 128 bits. Sui's Move `u256` delegates to a fixed `[u8; 32]` array, encoded as **32 bare little-endian bytes with no length prefix** (as a `Vec<u8>` it would be 33). That framing is an application convention, not BCS, so it lives in a consumer formatter:
+These are not shipped, by design: BCS has no 256-bit type, and the format and serde's data model both stop at 128 bits.
+Sui's Move `u256` delegates to a fixed `[u8; 32]` array, encoded as 32 bare little-endian bytes with no length prefix; as a `Vec<u8>` it would be 33.
+That framing is an application convention, not BCS, so it lives in a consumer formatter:
 
 ```csharp
 public void Serialize(ref BcsWriter writer, UInt256 value)   // Nethermind.Int256
@@ -172,32 +180,38 @@ Measured for a `[BcsStruct]` with two `uint` fields:
 | Path | Bytes per op |
 |---|---|
 | `Serialize<T>(T) → byte[]` | 32 B (output array only) |
-| `Serialize<T>(IBufferWriter<byte>, T)` | **0 B** |
-| `Deserialize<T>(bytes)` value-type T | **0 B** |
+| `Serialize<T>(IBufferWriter<byte>, T)` | 0 B |
+| `Deserialize<T>(bytes)` value-type T | 0 B |
 | `Deserialize<T>(bytes)` class T | 24 B (the class instance itself; intrinsic) |
 
 For maximum throughput, use the `IBufferWriter<byte>` overload and reuse the buffer writer.
 
-## Rules
+## Rules worth knowing
 
-- **Use `List<T>` for vectors.** Plain `T[]` arrays are rejected — `Vec<T>` maps to `List<T>`.
-- **`[BcsField]` numbers must be sequential** (`0, 1, 2, …`). They define the wire order; a duplicate or a gap is rejected when the type's formatter is built.
-- **Recursive types resolve.** A struct or union may reference itself directly or through `Option<T>`, `List<T>`, `Dictionary<K,V>` or a tuple; deserialization bounds the nesting at `MaxContainerDepth`.
-- **Map keys are sorted by serialized bytes**, not by `IComparable`. Matches the BCS spec and Rust's `bcs::ser::MapSerializer`.
-- **Variant index = declaration order** for both `union` and `[BcsEnum]` paths.
-- **Null is rejected.** BCS has no null string, vector or map, so a null `string`, `List<T>` or `Dictionary<K, V>` throws `ArgumentNullException` instead of encoding as empty. Use `Option<T>` for an optional value — `string?` and `List<T>?` are erased at runtime and encode without the `Option` discriminant.
+- Vectors are `List<T>`, mirroring Rust's `Vec<T>`; plain `T[]` arrays are rejected.
+- `[BcsField]` numbers are the wire order and must run `0, 1, 2, …`.
+  A duplicate or a gap is rejected when the type's formatter is built.
+- Variant indices are part of the wire format.
+  A `union` numbers its cases in declaration order, and a `[BcsEnum]` variant takes its index from `[BcsEnumVariant]`.
+- Recursive types resolve.
+  A struct or union may reference itself directly or through `Option<T>`, `List<T>`, `Dictionary<K,V>` or a tuple; deserialization bounds the nesting at `MaxContainerDepth`.
+- Map keys are sorted by their serialized bytes, not by `IComparable`, matching the BCS spec and Rust's `bcs::ser::MapSerializer`.
+- Null is rejected.
+  BCS has no null string, vector or map, so a null `string`, `List<T>` or `Dictionary<K, V>` throws `ArgumentNullException` instead of encoding as empty.
+  Use `Option<T>` for an optional value — `string?` and `List<T>?` are erased at runtime and encode without the `Option` discriminant.
 
 ## Untrusted input
 
-- **Nesting depth.** Structs and enums may nest at most `BcsSerializer.MaxContainerDepth` (500) deep; lists, maps, tuples and options don't count. `new BcsReader(bytes, maxContainerDepth: 64)` lowers the limit.
-- **Length prefixes.** Lengths above `BcsSerializer.MaxSequenceLength` (2^31 − 1) are rejected, and collections never pre-allocate more than the remaining input could fill.
-- **Leftover bytes.** `Deserialize<T>(bytes)` requires exactly one value; the `ref BcsReader` overload leaves trailing bytes unread.
-- **Canonical form.** Non-minimal ULEB128, booleans other than 0 and 1, invalid UTF-8, and unsorted or duplicate map keys are rejected.
+- Structs and enums may nest at most `BcsSerializer.MaxContainerDepth` (500) deep; lists, maps, tuples and options don't count.
+  `new BcsReader(bytes, maxContainerDepth: 64)` lowers the limit.
+- Lengths above `BcsSerializer.MaxSequenceLength` (2^31 − 1) are rejected, and collections never pre-allocate more than the remaining input could fill.
+- `Deserialize<T>(bytes)` requires exactly one value; the `ref BcsReader` overload leaves trailing bytes unread.
+- Input must be canonical: non-minimal ULEB128, booleans other than 0 and 1, invalid UTF-8, and unsorted or duplicate map keys are rejected.
 
 ## Links
 
-- **Source / issues / full docs**: <https://github.com/unsafePtr/BcsSharp>
-- **BCS specification**: <https://github.com/diem/bcs>
+- Source, issues and full docs: <https://github.com/unsafePtr/BcsSharp>
+- BCS specification: <https://github.com/diem/bcs>
 
 ## License
 

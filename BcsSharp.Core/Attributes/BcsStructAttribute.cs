@@ -12,7 +12,7 @@ public sealed class BcsStructAttribute : Attribute
 
 /// <summary>
 /// Marks a field or property for BCS serialization within a struct.
-/// Fields are serialized in lexicographic order unless explicit order is specified.
+/// Fields are serialized in ascending <see cref="Order"/>, which is the wire order.
 /// </summary>
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false)]
 public sealed class BcsFieldAttribute : Attribute
