@@ -155,6 +155,8 @@ A union stores its payload in an `object` slot, so a `struct` case is boxed once
 
 Same wire output as `union`. Prefer `union` for new code.
 
+Every variant needs an explicit, unique index and must be declared in the marker's assembly; other assemblies are never searched.
+
 ## CLR enums (Rust's unit-only enums)
 
 ```csharp
