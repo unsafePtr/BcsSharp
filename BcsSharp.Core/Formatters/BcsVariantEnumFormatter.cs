@@ -104,9 +104,7 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
 
         if (variants.Count == 0)
         {
-            throw new InvalidOperationException($"No variants found for enum {enumBaseType.Name}. " +
-                $"Ensure variant classes are marked with [BcsEnumVariant] and implement/inherit from {enumBaseType.Name}. " +
-                $"Searched {enumBaseType.GetNestedTypes().Length} nested types and {enumBaseType.Assembly.GetTypes().Length} assembly types.");
+            throw new InvalidOperationException(DescribeMissingVariants(enumBaseType));
         }
 
         // Ties are ordered by name so a duplicate index is reported the same way on every run.
@@ -146,6 +144,56 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
         }
 
         return variants;
+    }
+
+    /// <summary>
+    /// Loaded assemblies are searched only here, to name misplaced variants; the result never builds a formatter, so load order can only make the message less specific.
+    /// </summary>
+    private static string DescribeMissingVariants(Type enumBaseType)
+    {
+        var home = enumBaseType.Assembly;
+        var homeName = home.GetName().Name;
+        var problem = $"{enumBaseType.Name} has no [BcsEnumVariant] types in its own assembly {homeName}, the only place variants are discovered. ";
+
+        var elsewhere = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(assembly => assembly != home && !assembly.IsDynamic && References(assembly, homeName))
+            .Select(assembly => (Assembly: assembly.GetName().Name, Variants: VariantNames(assembly, enumBaseType)))
+            .Where(found => found.Variants.Length > 0)
+            .OrderBy(found => found.Assembly, StringComparer.Ordinal)
+            .Select(found => $"{found.Assembly} ({string.Join(", ", found.Variants)})")
+            .ToArray();
+
+        if (elsewhere.Length == 0)
+        {
+            return problem + $"Each variant must be declared there, implement {enumBaseType.Name} and carry [BcsEnumVariant(index)].";
+        }
+
+        return problem + $"Found in other assemblies: {string.Join("; ", elsewhere)}. Declare the variants next to the marker, or model the enum as a union.";
+    }
+
+    // A type implementing the marker can only live in an assembly that references the marker's, so the rest are skipped unread.
+    private static bool References(Assembly assembly, string? name) =>
+        assembly.GetReferencedAssemblies().Any(reference => reference.Name == name);
+
+    private static string[] VariantNames(Assembly assembly, Type enumBaseType)
+    {
+        Type?[] types;
+
+        try
+        {
+            types = assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            // An assembly with a missing dependency still yields the types that did load.
+            types = ex.Types;
+        }
+
+        return [.. types
+            .OfType<Type>()
+            .Where(type => IsVariantOfEnum(type, enumBaseType) && type.GetCustomAttribute<BcsEnumVariantAttribute>() is not null)
+            .Select(type => type.Name)
+            .Order(StringComparer.Ordinal)];
     }
 
     private static bool IsVariantOfEnum(Type candidateType, Type enumBaseType)
