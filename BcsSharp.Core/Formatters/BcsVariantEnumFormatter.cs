@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 using BcsSharp.Core.Attributes;
+using BcsSharp.Core.Helpers;
 
 namespace BcsSharp.Core.Formatters;
 
@@ -351,9 +352,9 @@ public static class BcsSerializerExtensions
 {
     public static IBcsObjectFormatter? GetFormatter(Type type, IFormatterResolver? root = null)
     {
-        var method = typeof(BcsSerializer).GetMethod(nameof(BcsSerializer.GetFormatter), BindingFlags.Public | BindingFlags.Static);
-        var genericMethod = method?.MakeGenericMethod(type);
-        var formatter = genericMethod?.Invoke(null, [root]); // null falls back to the default chain
+        var formatter = typeof(BcsSerializer).GetMethod(nameof(BcsSerializer.GetFormatter), BindingFlags.Public | BindingFlags.Static)!
+            .MakeGenericMethod(type)
+            .InvokeUnwrapped(null, [root]); // null falls back to the default chain
 
         if (formatter == null)
         {

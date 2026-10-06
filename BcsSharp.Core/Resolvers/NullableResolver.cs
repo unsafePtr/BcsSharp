@@ -1,4 +1,5 @@
 using BcsSharp.Core.Formatters;
+using BcsSharp.Core.Helpers;
 
 namespace BcsSharp.Core.Resolvers;
 
@@ -109,8 +110,8 @@ public sealed class NullableResolver : IFormatterResolver
         // attribute-registered types, etc. all work as Nullable<T> payloads — not just
         // the primitive/collection set that StandardResolver knows about. Matches the
         // delegate-to-chain pattern used by GetFormatterForType in StandardResolver.
-        var method = typeof(IFormatterResolver).GetMethod(nameof(IFormatterResolver.GetFormatter))
-            ?.MakeGenericMethod(type);
-        return method?.Invoke(root, [null]);
+        return typeof(IFormatterResolver).GetMethod(nameof(IFormatterResolver.GetFormatter))!
+            .MakeGenericMethod(type)
+            .InvokeUnwrapped(root, [null]);
     }
 }

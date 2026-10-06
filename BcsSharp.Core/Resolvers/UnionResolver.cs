@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using BcsSharp.Core.Formatters;
+using BcsSharp.Core.Helpers;
 
 namespace BcsSharp.Core.Resolvers;
 
@@ -23,7 +24,6 @@ public sealed class UnionResolver : IFormatterResolver
             return null;
         }
 
-        var formatterType = typeof(UnionFormatter<>).MakeGenericType(type);
-        return Activator.CreateInstance(formatterType, root);
+        return ReflectionHelper.CreateInstanceUnwrapped(typeof(UnionFormatter<>).MakeGenericType(type), root);
     }
 }
