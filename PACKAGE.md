@@ -114,6 +114,7 @@ public enum AssetType { Weapon, Armor, Consumable, Material, Currency }
 ```
 
 Wire: ULEB128 of the **declaration index**, not the explicit discriminant value. `AssetType.Material` (4th declared) serializes as `0x03`.
+Values need not ascend. Two members with the same value are rejected, since the wire has one index per member.
 
 ## Custom formatters
 

@@ -157,6 +157,8 @@ public enum AssetType { Weapon = 100, Armor, Consumable, Material, Currency }
 ```
 
 Wire format: ULEB128 of the **declaration index**, not the assigned discriminant value. `AssetType.Material` (4th declared) serializes as `0x03`, not `0x40 0x42 0x0F 0x00` (= 1,000,000 LE).
+Values need not ascend: in `enum Level { High = 30, Low = 10 }`, `High` is `0x00`.
+Two members with the same value are rejected, because the wire has one index per member and the alias could not round-trip.
 
 ## Custom formatters
 
@@ -328,6 +330,7 @@ Verified byte-for-byte against fixtures that `BcsSharp.Tests/Fixtures/rust-bcs` 
 - `TupleExamples` (tuples of mixed primitives and nested structs)
 - `Rarity` union variants (Common, Uncommon, Rare, Epic, Legendary)
 - `LargeEnum` at variant indices 0, 127, 128, 129 (ULEB128 boundary)
+- `Descending` enum with non-ascending explicit discriminants (declaration index, not value)
 
 ## License
 

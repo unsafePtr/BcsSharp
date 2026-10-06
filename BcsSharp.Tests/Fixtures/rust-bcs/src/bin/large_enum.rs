@@ -135,6 +135,14 @@ enum LargeEnum {
     V129,
 }
 
+/// Explicit discriminants that do not ascend: serde encodes the declaration index, so First is variant 0 whatever its value.
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+enum Descending {
+    First = 30,
+    Second = 20,
+    Third = 10,
+}
+
 fn main() {
     let cases: [(LargeEnum, &str); 4] = [
         (LargeEnum::V0,   "large_enum_0.bcs"),
@@ -145,6 +153,19 @@ fn main() {
 
     println!("=== LargeEnum BCS variant-index encoding ===");
     for (value, file) in &cases {
+        let bytes = bcs::to_bytes(value).unwrap();
+        fs::write(file, &bytes).unwrap();
+        println!("{:?} -> {} bytes: {:02X?}", value, bytes.len(), bytes);
+    }
+
+    let descending: [(Descending, &str); 3] = [
+        (Descending::First,  "descending_enum_0.bcs"),
+        (Descending::Second, "descending_enum_1.bcs"),
+        (Descending::Third,  "descending_enum_2.bcs"),
+    ];
+
+    println!("=== Descending BCS variant-index encoding ===");
+    for (value, file) in &descending {
         let bytes = bcs::to_bytes(value).unwrap();
         fs::write(file, &bytes).unwrap();
         println!("{:?} -> {} bytes: {:02X?}", value, bytes.len(), bytes);

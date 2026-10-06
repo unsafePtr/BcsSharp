@@ -228,6 +228,19 @@ public class RustParityTests(RustBcsContainer rust)
         Assert.Equal(rustBytes, csharpBytes);
     }
 
+    [Theory(Explicit = true)]
+    [InlineData(BcsSharp.Tests.SimpleEnumDeclarationOrderTests.Descending.First, "descending_enum_0.bcs")]
+    [InlineData(BcsSharp.Tests.SimpleEnumDeclarationOrderTests.Descending.Second, "descending_enum_1.bcs")]
+    [InlineData(BcsSharp.Tests.SimpleEnumDeclarationOrderTests.Descending.Third, "descending_enum_2.bcs")]
+    public async Task NonAscendingEnumVariantIndex(BcsSharp.Tests.SimpleEnumDeclarationOrderTests.Descending value, string fixture)
+    {
+        // serde ignores explicit discriminants: First = 30 is still variant 0.
+        var csharpBytes = BcsSerializer.Serialize(value);
+        var rustBytes = await rust.ReadFixtureAsync(fixture, TestContext.Current.CancellationToken);
+
+        Assert.Equal(rustBytes, csharpBytes);
+    }
+
     // --- Sample data shared across tests (matches what Rust main.rs constructs) ---
 
     private static RustBcsCompatibilityTests.User SampleUser() => new()
