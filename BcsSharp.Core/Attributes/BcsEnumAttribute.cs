@@ -14,28 +14,17 @@ public sealed class BcsEnumAttribute : Attribute
 /// <summary>
 /// Marks a class as a BCS enum variant.
 /// Each variant class represents one possible state of the enum with its associated data.
+/// The class must be declared in the marker's assembly, nested in the marker or beside it; no other assembly is searched.
+/// The index is required because inferring it from discovery order would tie the wire format to the order the compiler emits types in.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 public sealed class BcsEnumVariantAttribute : Attribute
 {
     /// <summary>
-    /// Gets the variant index (0-based).
-    /// If not specified, variants are indexed in the order they appear in the enum definition.
+    /// The 0-based variant index written on the wire, unique within the enum.
     /// </summary>
-    public uint? Index { get; }
+    public uint Index { get; }
 
-    /// <summary>
-    /// Initializes a new instance with automatic index assignment.
-    /// </summary>
-    public BcsEnumVariantAttribute()
-    {
-        Index = null;
-    }
-
-    /// <summary>
-    /// Initializes a new instance with explicit variant index.
-    /// </summary>
-    /// <param name="index">The 0-based variant index.</param>
     public BcsEnumVariantAttribute(uint index)
     {
         Index = index;

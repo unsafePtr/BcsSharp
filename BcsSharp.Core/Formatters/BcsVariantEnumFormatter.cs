@@ -89,74 +89,17 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
         return (T)instance;
     }
 
+    /// <summary>
+    /// Finds the variants nested in the marker, or failing that, declared anywhere in the marker's assembly.
+    /// Nothing outside that assembly is searched: which assemblies are loaded depends on what ran first, so a wider search could cache a formatter missing variants, and any loaded assembly could add one.
+    /// </summary>
     private List<BcsVariantInfo> DiscoverVariants(Type enumBaseType)
     {
-        // Strategy 1: Look for nested types first (common pattern)
-        var nestedTypes = enumBaseType.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic);
-        var variants = new List<BcsVariantInfo>(nestedTypes.Length);
-        uint nextIndex = 0;
-        foreach (var nestedType in nestedTypes)
-        {
-            var variantAttr = nestedType.GetCustomAttribute<BcsEnumVariantAttribute>();
-            if (variantAttr == null)
-            {
-                continue;
-            }
+        var variants = CollectVariants(enumBaseType.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic), enumBaseType);
 
-            if (IsVariantOfEnum(nestedType, enumBaseType))
-            {
-                var index = variantAttr.Index ?? nextIndex;
-
-                variants.Add(new BcsVariantInfo
-                {
-                    Index = index,
-                    Name = nestedType.Name, // Only used for debugging/diagnostics
-                    VariantType = nestedType,
-                    Constructor = GetOrCreateConstructorDelegate(nestedType),
-                    DataProperties = DiscoverDataProperties(nestedType)
-                });
-
-                nextIndex = Math.Max(nextIndex, index + 1);
-            }
-        }
-
-        // Strategy 2: Look for types in the same assembly (for standalone variant classes)
         if (variants.Count == 0)
         {
-            var assembly = enumBaseType.Assembly;
-            var allTypes = assembly.GetTypes();
-
-            foreach (var type in allTypes)
-            {
-                // Skip if it's the enum base type itself
-                if (type == enumBaseType)
-                {
-                    continue;
-                }
-
-                var variantAttr = type.GetCustomAttribute<BcsEnumVariantAttribute>();
-                if (variantAttr == null)
-                {
-                    continue;
-                }
-
-                // Check if type implements/inherits from the enum base type
-                if (IsVariantOfEnum(type, enumBaseType))
-                {
-                    var index = variantAttr.Index ?? nextIndex;
-
-                    variants.Add(new BcsVariantInfo
-                    {
-                        Index = index,
-                        Name = type.Name, // Only used for debugging/diagnostics
-                        VariantType = type,
-                        Constructor = GetOrCreateConstructorDelegate(type),
-                        DataProperties = DiscoverDataProperties(type)
-                    });
-
-                    nextIndex = Math.Max(nextIndex, index + 1);
-                }
-            }
+            variants = CollectVariants(enumBaseType.Assembly.GetTypes(), enumBaseType);
         }
 
         if (variants.Count == 0)
@@ -166,7 +109,43 @@ public sealed class BcsVariantEnumFormatter<T> : IBcsFormatter<T>
                 $"Searched {enumBaseType.GetNestedTypes().Length} nested types and {enumBaseType.Assembly.GetTypes().Length} assembly types.");
         }
 
-        return [.. variants.OrderBy(v => v.Index)];
+        // Ties are ordered by name so a duplicate index is reported the same way on every run.
+        variants = [.. variants.OrderBy(v => v.Index).ThenBy(v => v.VariantType.FullName, StringComparer.Ordinal)];
+
+        for (var i = 1; i < variants.Count; i++)
+        {
+            if (variants[i].Index == variants[i - 1].Index)
+            {
+                throw new InvalidOperationException($"{enumBaseType.Name} declares [BcsEnumVariant({variants[i].Index})] on both {variants[i - 1].Name} and {variants[i].Name}.");
+            }
+        }
+
+        return variants;
+    }
+
+    private List<BcsVariantInfo> CollectVariants(Type[] candidates, Type enumBaseType)
+    {
+        var variants = new List<BcsVariantInfo>();
+
+        foreach (var type in candidates)
+        {
+            var variantAttr = type.GetCustomAttribute<BcsEnumVariantAttribute>();
+            if (variantAttr is null || !IsVariantOfEnum(type, enumBaseType))
+            {
+                continue;
+            }
+
+            variants.Add(new BcsVariantInfo
+            {
+                Index = variantAttr.Index,
+                Name = type.Name,
+                VariantType = type,
+                Constructor = GetOrCreateConstructorDelegate(type),
+                DataProperties = DiscoverDataProperties(type)
+            });
+        }
+
+        return variants;
     }
 
     private static bool IsVariantOfEnum(Type candidateType, Type enumBaseType)
