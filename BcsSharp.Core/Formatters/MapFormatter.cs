@@ -17,11 +17,16 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
 
     private readonly IBcsFormatter<TKey> _keyFormatter;
     private readonly IBcsFormatter<TValue> _valueFormatter;
+    private readonly IEqualityComparer<TKey>? _keyComparer;
 
-    public MapFormatter(IBcsFormatter<TKey> keyFormatter, IBcsFormatter<TValue> valueFormatter)
+    /// <summary>
+    /// <paramref name="keyComparer"/> is used for dictionaries this formatter creates; a dictionary passed in to be refilled keeps its own.
+    /// </summary>
+    public MapFormatter(IBcsFormatter<TKey> keyFormatter, IBcsFormatter<TValue> valueFormatter, IEqualityComparer<TKey>? keyComparer = null)
     {
         _keyFormatter = keyFormatter ?? throw new ArgumentNullException(nameof(keyFormatter));
         _valueFormatter = valueFormatter ?? throw new ArgumentNullException(nameof(valueFormatter));
+        _keyComparer = keyComparer;
     }
 
     public void Serialize(ref BcsWriter writer, Dictionary<TKey, TValue> value)
@@ -128,7 +133,7 @@ public sealed class MapFormatter<TKey, TValue> : IBcsFormatter<Dictionary<TKey, 
 
         if (value is null)
         {
-            value = new Dictionary<TKey, TValue>(capacity);
+            value = new Dictionary<TKey, TValue>(capacity, _keyComparer);
         }
         else
         {

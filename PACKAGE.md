@@ -207,6 +207,8 @@ For maximum throughput, use the `IBufferWriter<byte>` overload and reuse the buf
 - Lengths above `BcsSerializer.MaxSequenceLength` (2^31 − 1) are rejected, and collections never pre-allocate more than the remaining input could fill.
 - `Deserialize<T>(bytes)` requires exactly one value; the `ref BcsReader` overload leaves trailing bytes unread.
 - Input must be canonical: non-minimal ULEB128, booleans other than 0 and 1, invalid UTF-8, and unsorted or duplicate map keys are rejected.
+- Maps keyed by integers or enums use the default hash, which an attacker can make collide to turn decoding quadratic.
+  Opt in to a keyed SipHash comparer with `CompositeResolver.Create(CollisionResistantMapResolver.Instance)`; string keys are already protected by .NET's randomized string hashing.
 
 ## Links
 

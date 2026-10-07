@@ -217,7 +217,7 @@ public sealed class StandardResolver : IFormatterResolver
     private static object CreateMapFormatter(Type keyType, Type valueType, object keyFormatter, object valueFormatter)
     {
         var mapFormatterType = typeof(MapFormatter<,>).MakeGenericType(keyType, valueType);
-        return Activator.CreateInstance(mapFormatterType, keyFormatter, valueFormatter)!;
+        return Activator.CreateInstance(mapFormatterType, keyFormatter, valueFormatter, null)!;
     }
 
     private static object CreateTuple2Formatter(Type type1, Type type2, object formatter1, object formatter2)
