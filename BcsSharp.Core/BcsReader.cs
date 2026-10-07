@@ -420,7 +420,8 @@ public ref struct BcsReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void EnsureEnoughBytes(int count)
     {
-        if (_position + count > _data.Length)
+        // Subtracting instead of adding keeps a count near int.MaxValue from wrapping past the check.
+        if ((uint)count > (uint)(_data.Length - _position))
         {
             ThrowHelper.ThrowEndOfStreamException(count);
         }

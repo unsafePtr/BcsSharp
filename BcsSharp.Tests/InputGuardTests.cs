@@ -214,6 +214,17 @@ public class InputGuardTests
         return depth;
     }
 
+    [Fact]
+    public void StringLengthOfIntMaxValue_ThrowsEndOfStream()
+    {
+        // The prefix itself moves the position past zero, so position + length overflows int.
+        Assert.Throws<EndOfStreamException>(() =>
+        {
+            ReadOnlySpan<byte> bytes = [0xFF, 0xFF, 0xFF, 0xFF, 0x07];
+            BcsSerializer.Deserialize<string>(bytes);
+        });
+    }
+
     private static T ReadWithLimit<T>(byte[] bytes, int maxContainerDepth)
     {
         var reader = new BcsReader(bytes, maxContainerDepth);
