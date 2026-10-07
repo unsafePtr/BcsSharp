@@ -25,7 +25,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        # Ubuntu is named explicitly so a runner image move is a reviewed change, not a silent one.
+        os: [ubuntu-26.04, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -71,7 +72,7 @@ jobs:
   # C# serializer. Linux-only (Docker is native there); kept separate from the main
   # build matrix so it doesn't gate PR feedback on Docker availability.
   rust-parity:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
 
