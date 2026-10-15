@@ -12,7 +12,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.0" />
-    <PackageReference Include="Testcontainers" Version="4.14.0" />
+    <PackageReference Include="Testcontainers" Version="4.16.0" />
     <PackageReference Include="Nethermind.Numerics.Int256" Version="1.6.0" />
     <PackageReference Include="OneOf" Version="3.0.271" />
   </ItemGroup>
